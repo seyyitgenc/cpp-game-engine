@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameEngineFromScratch", "GameEngineFromScratch\GameEngineFromScratch.vcxproj", "{501B9B98-DBF5-4259-8EB6-BCBC943254EF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpp-GameEngine-SDL2", "GameEngineFromScratch\GameEngineFromScratch.vcxproj", "{501B9B98-DBF5-4259-8EB6-BCBC943254EF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
