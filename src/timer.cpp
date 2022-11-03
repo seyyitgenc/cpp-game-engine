@@ -1,4 +1,4 @@
-#include <timer.hpp>
+#include <timer.h>
 
 LTimer::LTimer()
 {
@@ -7,8 +7,8 @@ LTimer::LTimer()
     m_paused = false;
     m_started = false;
 }
-LTimer::~LTimer(){
-    
+LTimer::~LTimer()
+{
 }
 void LTimer::start()
 {
@@ -18,35 +18,6 @@ void LTimer::start()
     // get the current clock time
     m_startTicks = SDL_GetTicks();
     m_pausedTicks = 0;
-}
-void LTimer::stop()
-{
-    m_started = false;
-    m_paused = false;
-
-    m_startTicks = 0;
-    m_pausedTicks = 0;
-}
-void LTimer::pause()
-{
-    // timer is runing and isn't already paused
-    if (m_started && !m_paused)
-    {
-        // pause timer
-        m_paused = true;
-        // calculate pause ticks
-        m_pausedTicks = SDL_GetTicks() - m_startTicks;
-        m_startTicks = 0;
-    }
-}
-void LTimer::unpause()
-{
-    if (m_started && m_paused)
-    {
-        m_paused = false;
-        m_startTicks = SDL_GetTicks() - m_pausedTicks;
-        m_pausedTicks = 0;
-    }
 }
 Uint32 LTimer::getTicks()
 {
@@ -59,4 +30,37 @@ Uint32 LTimer::getTicks()
             time = SDL_GetTicks() - m_startTicks;
 
     return time;
+}
+void LTimer::stop()
+{
+    m_started = false;
+    m_paused = false;
+
+    m_startTicks = 0;
+    m_pausedTicks = 0;
+} 
+void LTimer::pause()
+{
+    if (m_started && !m_paused)
+    {
+        m_paused = true;
+        m_pausedTicks = SDL_GetTicks() - m_startTicks;
+        m_startTicks = 0;
+    }
+}
+//unpause the timer
+void LTimer::unpause()
+{
+    if (m_started && m_paused)
+    {
+        m_paused = false;
+        m_startTicks = SDL_GetTicks() - m_pausedTicks;
+        m_pausedTicks = 0;
+    }
+}
+//reset the timer
+void LTimer::reset()
+{
+    m_startTicks = 0;
+    m_pausedTicks = 0;
 }

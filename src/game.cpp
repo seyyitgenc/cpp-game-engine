@@ -1,44 +1,36 @@
-#include <game.hpp>
-#include <timer.hpp>
-LTimer fpsTimer;
-LTimer capTimer;
-int countedFrames = 0;
+#include <game.h>
+#include <timer.h>
 Game::Game()
 {
 }
 Game::~Game()
 {
-}
-
-void Game::constructGame()
-{
-	fpsTimer.start();
-	while (this->m_isRunning)
-	{
-		capTimer.start();
-		this->handleEvents();
-		this->Render();
-		this->Update();
-		float avgFPS = countedFrames / (fpsTimer.getTicks() / 1000.f);
-		if (avgFPS > 2000000)
-			avgFPS = 0;
-		++countedFrames;
-		// if frame finished early
-		int frameTicks = capTimer.getTicks();
-		if (frameTicks < SCREEN_TICKS_PER_FRAME)
-		{
-			// wait remaining time
-			SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
-		}
-		std::cout<<"TEST"<<std::endl;
-	}
-}
-
-void Game::destructGame()
-{
 	SDL_DestroyRenderer(m_renderer);
 	SDL_DestroyWindow(m_window);
 	SDL_Quit();
+}
+void Game::constructGame()
+{
+	double deltaTime = 0;
+	setScreenFps(60, true);
+	m_fpsTimer.start();
+	while (this->m_isRunning)
+	{
+		m_capTimer.start();
+		this->handleEvents();
+		this->Render();
+		this->Update();
+		int fps = this->getFrameRate(++m_countedFrames, m_fpsTimer.getTicks());
+		int frameTicks = m_capTimer.getTicks();
+		if (frameTicks < SCREEN_TICKS_PER_FRAME)
+		{
+			// Wait remaining time
+			SDL_Delay(this->SCREEN_TICKS_PER_FRAME - frameTicks);
+		}
+		deltaTime = getDeltaTime();
+
+		std::cout << deltaTime << std::endl;
+	}
 }
 
 void Game::Init(const char *title, int x, int y, int w, int h, int flags)
@@ -124,4 +116,27 @@ void Game::Update()
 void Game::setFullScreen()
 {
 	m_flags = m_flags | SDL_WINDOW_FULLSCREEN;
+}
+int Game::getFrameRate(int countedFrames, Uint32 fpsTimer)
+{
+	float avgFps = countedFrames / (fpsTimer / 1000.f);
+	if (avgFps > 2000000)
+		avgFps = 0;
+	return (int)avgFps;
+}
+void Game::setScreenFps(int SCREEN_FPS, bool isFrameLimitEnabled)
+{
+	if (isFrameLimitEnabled)
+		this->SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
+	// else use default value
+}
+double Game::getDeltaTime()
+{
+	LAST = NOW;
+	time.start();
+	NOW = time.getTicks();
+	time.reset();
+	NOW = time.getTicks();
+	double dt = (NOW - LAST) / 1000.f;
+	return dt;
 }
