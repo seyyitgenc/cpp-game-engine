@@ -1,10 +1,12 @@
-#pragma once
+#ifndef TIMER_H
+#define TIMER_H
 #include <SDL2/SDL.h>
-class LTimer
+#endif
+class Timer
 {
 public:
-    LTimer();
-    ~LTimer();
+    Timer();
+    ~Timer();
     // various clock actions
     void start();
     void stop();

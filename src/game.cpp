@@ -15,20 +15,17 @@ void Game::Run()
 		std::cout << "Error Occured" << std::endl;
 	else
 	{
-		if (!window.loadMedia())
-			std::cout << "Failed to load image" << std::endl;
-		else
+		Texture texture;
+		texture.initTexture("assets/texture.png", window.getRenderer());
+		while (window.isOpen())
 		{
-			while (window.isOpen())
-			{
-				Uint64 start = SDL_GetPerformanceCounter();
-				this->handleEvents();
-				this->handleKeyStates(SDL_GetKeyboardState(NULL));
-				Uint64 end = SDL_GetPerformanceCounter();
-				float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
-				this->Update(elapsedMS);
-				window.Render();
-			}
+			Uint64 start = SDL_GetPerformanceCounter();
+			this->handleEvents();
+			this->handleKeyStates(SDL_GetKeyboardState(NULL));
+			Uint64 end = SDL_GetPerformanceCounter();
+			float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+			this->Update(elapsedMS);
+			window.Draw(texture.getNewTexture());
 		}
 	}
 }

@@ -1,10 +1,15 @@
 #pragma once
+#ifndef GAME_H
+#define GAME_H
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #include <iostream>
 #include <headers/timer.h>
 #include <headers/window.h>
+#include <headers/texture.h>
+#endif
+
 class Game
 {
 public:

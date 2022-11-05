@@ -1,13 +1,15 @@
-#pragma once
+#ifndef WINDOW_H
+#define WINDOW_H
 #include <SDL2/SDL.h>
 #include <iostream>
+#endif
 
 class Window
 {
 public:
     Window();
     ~Window();
-    void Render();
+    void Draw(SDL_Texture* texture);
     void setFullScreen();
     void setRendererColor(Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha);
     bool Init(const char *title, int x, int y, int w, int h, int flag);

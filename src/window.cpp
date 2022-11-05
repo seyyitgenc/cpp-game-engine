@@ -60,10 +60,10 @@ void Window::setRendererColor(Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha)
     m_green = green;
     m_alpha = alpha;
 }
-void Window::Render()
+void Window::Draw(SDL_Texture* texture)
 {
-    SDL_SetRenderDrawColor(m_renderer, m_red, m_green, m_blue, m_alpha);
     SDL_RenderClear(m_renderer);
+    SDL_RenderCopy(m_renderer,texture,NULL,NULL);
     SDL_RenderPresent(m_renderer);
 }
 SDL_Surface *Window::loadSurface(std::string path)
