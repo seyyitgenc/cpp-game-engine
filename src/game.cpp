@@ -1,59 +1,34 @@
-#include <game.h>
-#include <timer.h>
+#include <headers/game.h>
 Game::Game()
 {
 }
 Game::~Game()
 {
-	SDL_DestroyRenderer(m_renderer);
-	SDL_DestroyWindow(m_window);
+	SDL_DestroyRenderer(window.getRenderer());
+	SDL_DestroyWindow(window.getWindow());
+	window.close();
 	SDL_Quit();
 }
-void Game::constructGame()
+void Game::Run()
 {
-	double deltaTime = 0;
-	setScreenFps(60, true);
-	m_fpsTimer.start();
-	while (this->m_isRunning)
+	if (!window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1366, 768, SDL_WINDOW_RESIZABLE))
+		std::cout << "Error Occured" << std::endl;
+	else
 	{
-		m_capTimer.start();
-		this->handleEvents();
-		this->Render();
-		this->Update();
-		int fps = this->getFrameRate(++m_countedFrames, m_fpsTimer.getTicks());
-		int frameTicks = m_capTimer.getTicks();
-		if (frameTicks < SCREEN_TICKS_PER_FRAME)
+		if (!window.loadMedia())
+			std::cout << "Failed to load image" << std::endl;
+		else
 		{
-			// Wait remaining time
-			SDL_Delay(this->SCREEN_TICKS_PER_FRAME - frameTicks);
-		}
-		deltaTime = getDeltaTime();
-
-		std::cout << deltaTime << std::endl;
-	}
-}
-
-void Game::Init(const char *title, int x, int y, int w, int h, int flags)
-{
-	m_flags = flags;
-	if (m_fullscreen)
-		m_flags = flags | SDL_WINDOW_FULLSCREEN;
-	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
-	{
-		std::cout << "Subsystems Initialized\n";
-		m_window = SDL_CreateWindow(title, x, y, w, h, flags);
-		if (m_window)
-		{
-			std::cout << "Window Created!\n";
-			SDL_SetWindowMinimumSize(m_window, 100, 100);
-		}
-		m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
-		if (m_renderer)
-		{
-			SDL_SetRenderDrawColor(m_renderer, m_red, m_green, m_blue, m_alpha);
-			std::cout << "Renderer Created!\n";
-			SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
-			m_isRunning = true;
+			while (window.isOpen())
+			{
+				Uint64 start = SDL_GetPerformanceCounter();
+				this->handleEvents();
+				this->handleKeyStates(SDL_GetKeyboardState(NULL));
+				Uint64 end = SDL_GetPerformanceCounter();
+				float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+				this->Update(elapsedMS);
+				window.Render();
+			}
 		}
 	}
 }
@@ -76,9 +51,11 @@ void Game::handleEvents()
 	while (SDL_PollEvent(&event))
 	{
 		if (event.type == SDL_QUIT)
-			m_isRunning = false;
+			window.setisOpen(false);
 		else if (event.type == SDL_KEYDOWN)
 		{
+			if (event.key.keysym.sym == SDLK_a)
+				std::cout << "a" << std::endl;
 			// for starting timer manually
 			//  if (event.key.keysym.sym == SDLK_s)
 			//  	if (timer.isStarted())
@@ -93,50 +70,36 @@ void Game::handleEvents()
 		}
 	}
 }
-void Game::setRenderColor(Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha)
+void Game::Update(float elapsedMS)
 {
-	m_red = red;
-	m_blue = blue;
-	m_green = green;
-	m_alpha = alpha;
+	// DO UPDATE
 }
 
-void Game::Render()
-{
-	SDL_SetRenderDrawColor(m_renderer, m_red, m_green, m_blue, m_alpha);
-	SDL_RenderClear(m_renderer);
-
-	SDL_RenderPresent(m_renderer);
-}
-
-void Game::Update()
-{
-}
-
-void Game::setFullScreen()
-{
-	m_flags = m_flags | SDL_WINDOW_FULLSCREEN;
-}
 int Game::getFrameRate(int countedFrames, Uint32 fpsTimer)
 {
 	float avgFps = countedFrames / (fpsTimer / 1000.f);
 	if (avgFps > 2000000)
 		avgFps = 0;
-	return (int)avgFps;
+	return avgFps;
 }
+
+/// @brief this function will set framerate for your game. You need to use this function
+///	with limitFrameRate() function to apply limitation
+/// @param SCREEN_FPS set your FPS value here
+/// @param isFrameLimitEnabled this parameter specifies if frame limitiation is true/false
 void Game::setScreenFps(int SCREEN_FPS, bool isFrameLimitEnabled)
 {
 	if (isFrameLimitEnabled)
-		this->SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
-	// else use default value
+		SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
+	else
+		SCREEN_TICKS_PER_FRAME = 1000.f / SDL_GetPerformanceCounter();
 }
-double Game::getDeltaTime()
+// limits the frame rate according to SCREEN_FPS
+// this function is good to use with setScreenFps() function
+void Game::limitFrameRate()
 {
-	LAST = NOW;
-	time.start();
-	NOW = time.getTicks();
-	time.reset();
-	NOW = time.getTicks();
-	double dt = (NOW - LAST) / 1000.f;
-	return dt;
+	m_capTimer.start();
+	int frameTicks = m_capTimer.getTicks();
+	if (frameTicks < SCREEN_TICKS_PER_FRAME)
+		SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
 }

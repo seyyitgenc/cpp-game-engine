@@ -1,16 +1,18 @@
-#include <timer.h>
+#include <headers/timer.h>
 
-LTimer::LTimer()
+// constract timer
+Timer::Timer()
 {
     m_startTicks = 0;
     m_pausedTicks = 0;
     m_paused = false;
     m_started = false;
 }
-LTimer::~LTimer()
+Timer::~Timer()
 {
 }
-void LTimer::start()
+// start timer
+void Timer::start()
 {
     // start the timer
     m_started = true;
@@ -19,27 +21,29 @@ void LTimer::start()
     m_startTicks = SDL_GetTicks();
     m_pausedTicks = 0;
 }
-Uint32 LTimer::getTicks()
+// this function will get time when it's called
+Uint32 Timer::getTicks()
 {
     Uint32 time = 0;
 
     if (m_started)
-        if (m_paused)
-            time = m_pausedTicks;
-        else
-            time = SDL_GetTicks() - m_startTicks;
+    {
+        m_paused ? time = m_pausedTicks : time = SDL_GetTicks() - m_startTicks;
+    }
 
     return time;
 }
-void LTimer::stop()
+// stop timer
+void Timer::stop()
 {
     m_started = false;
     m_paused = false;
 
     m_startTicks = 0;
     m_pausedTicks = 0;
-} 
-void LTimer::pause()
+}
+// pause timer
+void Timer::pause()
 {
     if (m_started && !m_paused)
     {
@@ -48,8 +52,8 @@ void LTimer::pause()
         m_startTicks = 0;
     }
 }
-//unpause the timer
-void LTimer::unpause()
+// unpause timer
+void Timer::unpause()
 {
     if (m_started && m_paused)
     {
@@ -58,8 +62,8 @@ void LTimer::unpause()
         m_pausedTicks = 0;
     }
 }
-//reset the timer
-void LTimer::reset()
+// reset timer
+void Timer::reset()
 {
     m_startTicks = 0;
     m_pausedTicks = 0;
