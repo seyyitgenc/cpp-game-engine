@@ -1,33 +1,65 @@
 #include <headers/game.h>
+#include <string>
 Game::Game()
 {
 }
+// TODO : WRITE DOWN BETTER DESTRUCT FUNCTION
 Game::~Game()
 {
-	SDL_DestroyRenderer(window.getRenderer());
-	SDL_DestroyWindow(window.getWindow());
-	window.close();
+	window.~Window();
 	SDL_Quit();
+	TTF_Quit();
 }
+Sprite s1;
+Sprite s2;
+TextTexture text;
 void Game::Run()
 {
-	if (!window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1366, 768, SDL_WINDOW_RESIZABLE))
-		std::cout << "Error Occured" << std::endl;
+	// window and renderer initialiazation done here. Default size of window is 800x600
+	// if you want to initialize window height and width use
+	// setWindowHeight() and setWindowWidth() functions with window object;
+	window.setScreenWidth(1024);
+	window.setScreenHeight(768);
+	window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE);
+
+	float elapsedTime = 0;
+	float deltaTime = 0;
+	float beforeTime = 0;
+	float afterTime = 0;
+	int frame = 0;
+
+	float initialTime = SDL_GetTicks();
+	// Initialize SDL_ttf
+	if (TTF_Init() == -1)
+	{
+		printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+	}
 	else
 	{
-		Texture texture;
-		texture.initTexture("assets/texture.png", window.getRenderer());
+		s1.initTexture("assets/texture.png", window.getRenderer());
+		s2.initTexture("assets/stretch.bmp", window.getRenderer());
+		SDL_Rect renderQuad = {0, 0, 28, 28};
+
 		while (window.isOpen())
 		{
-			Uint64 start = SDL_GetPerformanceCounter();
+			beforeTime = SDL_GetTicks();
 			this->handleEvents();
 			this->handleKeyStates(SDL_GetKeyboardState(NULL));
-			Uint64 end = SDL_GetPerformanceCounter();
-			float elapsedMS = (end - start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
-			this->Update(elapsedMS);
-			window.Draw(texture.getNewTexture());
+			// TODO : SEND 2 RECT TO LIMIT TEXTURE SIZE
+			limitFrameRate();
+			frame++;
+			elapsedTime = SDL_GetTicks() - initialTime;
+			afterTime = SDL_GetTicks();
+			deltaTime = afterTime - beforeTime;
+			text.loadRenderedText(std::to_string((int)(frame / (elapsedTime / 1000.f))), {255, 255, 255}, window.getRenderer());
+			window.Draw(text.getTexture(), renderQuad);
+			text.freeTexture();
 		}
 	}
+	text.freeTexture();
+	text.closeFont();
+	s1.freeTexture();
+	s2.freeTexture();
 }
 
 void Game::handleKeyStates(const std::uint8_t *keystates)
@@ -52,7 +84,11 @@ void Game::handleEvents()
 		else if (event.type == SDL_KEYDOWN)
 		{
 			if (event.key.keysym.sym == SDLK_a)
-				std::cout << "a" << std::endl;
+			{
+			}
+			else if (event.key.keysym.sym == SDLK_s)
+			{
+			}
 			// for starting timer manually
 			//  if (event.key.keysym.sym == SDLK_s)
 			//  	if (timer.isStarted())
