@@ -7,5 +7,6 @@ int main()
 	// this constructor initialize default window
 	game = new Game();
 	game->Run(); // run game
+	game->~Game();
 	return EXIT_SUCCESS;
 }

@@ -6,7 +6,7 @@ Sprite::Sprite() {}
 Sprite::~Sprite() {}
 TextTexture::TextTexture() {}
 TextTexture::~TextTexture() {}
-// frees texture used by sprite class
+// free texture used by sprite class
 void Sprite::freeTexture()
 {
     if (m_texture != NULL)
@@ -17,6 +17,7 @@ void Sprite::freeTexture()
         m_height = 0;
     }
 }
+// free texture used by TextTexture class
 void TextTexture::freeTexture()
 {
     if (m_texture != NULL)
@@ -51,47 +52,75 @@ bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
     }
     return true;
 }
+// draw Sprite object into the screen
+void Sprite::Draw(int x, int y, SDL_Rect *clip, SDL_Renderer *renderer)
+{
+    SDL_Rect renderQuad = {x, y, m_width, m_height};
+    if (clip != NULL)
+    {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+    SDL_RenderCopy(renderer, m_texture, clip, &renderQuad);
+}
+// close font used by TextTexture class
 void TextTexture::closeFont()
 {
     TTF_CloseFont(m_font);
     m_font = NULL;
 }
-
+bool TextTexture::loadFont(std::string path)
+{
+    // this if will ensure that font opened only once
+    if (m_font == NULL)
+    {
+        m_font = TTF_OpenFont(path.c_str(), 22);
+        m_path = path;
+        if (m_font == NULL)
+        {
+            std::cout << "Unable to load font!" << TTF_GetError() << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+// Load specified text to texture
 bool TextTexture::loadRenderedText(std::string textureText, SDL_Color textColor, SDL_Renderer *renderer)
 {
     freeTexture();
-    m_font = TTF_OpenFont("fonts/lazy.ttf", 28);
-    if (m_font == NULL)
+    SDL_Surface *textSurface = TTF_RenderText_Solid(m_font, textureText.c_str(), textColor);
+    if (textSurface == NULL)
     {
-        std::cout << "Failed to load lazy font!\n"
+        std::cout << "Unable to render text surface!\n"
                   << TTF_GetError() << std::endl;
         return false;
     }
     else
     {
-        SDL_Surface *textSurface = TTF_RenderText_Solid(m_font, textureText.c_str(), textColor);
-        if (textSurface == NULL)
+        m_texture = SDL_CreateTextureFromSurface(renderer, textSurface);
+        if (m_texture == NULL)
         {
-            std::cout << "Unable to render text surface!\n"
-                      << TTF_GetError() << std::endl;
+            std::cout << "Unable to create texture fom rendered text!\n"
+                      << SDL_GetError() << std::endl;
             return false;
         }
         else
         {
-            m_texture = SDL_CreateTextureFromSurface(renderer, textSurface);
-            if (m_texture == NULL)
-            {
-                std::cout << "Unable to create texture fom rendered text!\n"
-                          << SDL_GetError() << std::endl;
-                return false;
-            }
-            else
-            {
-                m_width = textSurface->w;
-                m_height = textSurface->h;
-            }
-            SDL_FreeSurface(textSurface);
+            m_width = textSurface->w;
+            m_height = textSurface->h;
         }
+        SDL_FreeSurface(textSurface);
     }
     return true;
+}
+// draw TextTexture object into the screen
+void TextTexture::Draw(int x, int y, SDL_Rect *clip, SDL_Renderer *renderer)
+{
+    SDL_Rect renderQuad = {x, y, m_width, m_height};
+    if (clip != NULL)
+    {
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
+    }
+    SDL_RenderCopy(renderer, m_texture, clip, &renderQuad);
 }

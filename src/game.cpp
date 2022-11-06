@@ -7,12 +7,12 @@ Game::Game()
 Game::~Game()
 {
 	window.~Window();
-	SDL_Quit();
 	TTF_Quit();
+	SDL_Quit();
 }
 Sprite s1;
 Sprite s2;
-TextTexture text;
+TextTexture fpsCounter;
 void Game::Run()
 {
 	// window and renderer initialiazation done here. Default size of window is 800x600
@@ -21,7 +21,7 @@ void Game::Run()
 	window.setScreenWidth(1024);
 	window.setScreenHeight(768);
 	window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE);
-
+	window.setRendererColor(255, 255, 255, 255);
 	float elapsedTime = 0;
 	float deltaTime = 0;
 	float beforeTime = 0;
@@ -38,26 +38,36 @@ void Game::Run()
 	{
 		s1.initTexture("assets/texture.png", window.getRenderer());
 		s2.initTexture("assets/stretch.bmp", window.getRenderer());
-		SDL_Rect renderQuad = {0, 0, 28, 28};
-
+		fpsCounter.setTextColor(255, 0, 0, 255);
+		fpsCounter.loadFont("fonts/aerial.ttf");
 		while (window.isOpen())
 		{
 			beforeTime = SDL_GetTicks();
 			this->handleEvents();
 			this->handleKeyStates(SDL_GetKeyboardState(NULL));
-			// TODO : SEND 2 RECT TO LIMIT TEXTURE SIZE
-			limitFrameRate();
+			// limitFrameRate();
 			frame++;
 			elapsedTime = SDL_GetTicks() - initialTime;
 			afterTime = SDL_GetTicks();
 			deltaTime = afterTime - beforeTime;
-			text.loadRenderedText(std::to_string((int)(frame / (elapsedTime / 1000.f))), {255, 255, 255}, window.getRenderer());
-			window.Draw(text.getTexture(), renderQuad);
-			text.freeTexture();
+			// update pyhsics
+			this->Update(deltaTime);
+			// render stuff here
+			SDL_RenderClear(window.getRenderer());
+			// TODO : SEND 2 RECT TO LIMIT TEXTURE SIZE
+			window.setRendererColor(0, 0, 255, 255);
+			// FPS COUNTER
+			if (!fpsCounter.loadRenderedText(std::to_string(getFrameRate(frame, elapsedTime)), fpsCounter.getTextColor(), window.getRenderer()))
+			{
+				break;
+			}
+			fpsCounter.Draw(0, 0, NULL, window.getRenderer());
+			s1.Draw(100, 100, NULL, window.getRenderer());
+			SDL_RenderPresent(window.getRenderer());
 		}
 	}
-	text.freeTexture();
-	text.closeFont();
+	fpsCounter.freeTexture();
+	fpsCounter.closeFont();
 	s1.freeTexture();
 	s2.freeTexture();
 }

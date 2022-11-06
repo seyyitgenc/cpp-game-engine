@@ -15,17 +15,13 @@ class Game
 public:
 	Game();
 	~Game();
-	void Run();
-
-	void setScreenFps(int, bool);
-
-	void handleEvents();
-	void handleKeyStates(const std::uint8_t *);
-
-	void Update(float);
-
-	int getFrameRate(int, Uint32);
-	void limitFrameRate();
+	void Run();									// run main loop
+	void setScreenFps(int, bool);				// set screen fps
+	void handleEvents();						// handles events created by user
+	void handleKeyStates(const std::uint8_t *); // handles key events this will be used with player movement
+	void Update(float dt);						// updates game physics
+	int getFrameRate(int, Uint32);				// get frame rate
+	void limitFrameRate();						// limits the fps to the fps limit
 
 private:
 	// window and renderer field

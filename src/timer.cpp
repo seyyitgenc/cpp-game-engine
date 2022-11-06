@@ -1,5 +1,4 @@
 #include <headers/timer.h>
-
 // constract timer
 Timer::Timer()
 {
