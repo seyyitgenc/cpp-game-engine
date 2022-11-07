@@ -1,19 +1,19 @@
 #include <headers/timer.h>
-// constract timer
-Timer::Timer()
+// constract Clock
+Clock::Clock()
 {
     m_startTicks = 0;
     m_pausedTicks = 0;
     m_paused = false;
     m_started = false;
 }
-Timer::~Timer()
+Clock::~Clock()
 {
 }
-// start timer
-void Timer::start()
+// start Clock
+void Clock::start()
 {
-    // start the timer
+    // start the Clock
     m_started = true;
     m_paused = false;
     // get the current clock time
@@ -21,7 +21,7 @@ void Timer::start()
     m_pausedTicks = 0;
 }
 // this function will get time when it's called
-Uint32 Timer::getTicks()
+Uint32 Clock::getTicks()
 {
     Uint32 time = 0;
 
@@ -32,8 +32,8 @@ Uint32 Timer::getTicks()
 
     return time;
 }
-// stop timer
-void Timer::stop()
+// stop Clock
+void Clock::stop()
 {
     m_started = false;
     m_paused = false;
@@ -41,8 +41,8 @@ void Timer::stop()
     m_startTicks = 0;
     m_pausedTicks = 0;
 }
-// pause timer
-void Timer::pause()
+// pause Clock
+void Clock::pause()
 {
     if (m_started && !m_paused)
     {
@@ -51,8 +51,8 @@ void Timer::pause()
         m_startTicks = 0;
     }
 }
-// unpause timer
-void Timer::unpause()
+// unpause Clock
+void Clock::unpause()
 {
     if (m_started && m_paused)
     {
@@ -61,9 +61,10 @@ void Timer::unpause()
         m_pausedTicks = 0;
     }
 }
-// reset timer
-void Timer::reset()
+// reset Clock
+Uint32 Clock::restart()
 {
-    m_startTicks = 0;
-    m_pausedTicks = 0;
+    static float initialTime = SDL_GetTicks();
+    m_elapsedTime = SDL_GetTicks() - initialTime;
+    return m_elapsedTime;
 }

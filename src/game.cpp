@@ -6,70 +6,52 @@ Game::Game()
 // TODO : WRITE DOWN BETTER DESTRUCT FUNCTION
 Game::~Game()
 {
-	window.~Window();
+	window.~Window(); // destruct everything after window closed
 	TTF_Quit();
 	SDL_Quit();
 }
-Sprite s1;
-Sprite s2;
-TextTexture fpsCounter;
 void Game::Run()
 {
-	// window and renderer initialiazation done here. Default size of window is 800x600
-	// if you want to initialize window height and width use
-	// setWindowHeight() and setWindowWidth() functions with window object;
-	window.setScreenWidth(1024);
-	window.setScreenHeight(768);
-	window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE);
-	window.setRendererColor(255, 255, 255, 255);
-	float elapsedTime = 0;
-	float deltaTime = 0;
-	float beforeTime = 0;
-	float afterTime = 0;
-	int frame = 0;
-
-	float initialTime = SDL_GetTicks();
-	// Initialize SDL_ttf
-	if (TTF_Init() == -1)
+	TextTexture text;
+	// initialize default sized window 800x600
+	if (window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE))
 	{
-		printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+		if (TTF_Init() == -1)
+		{
+			printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+		}
+		else
+		{
+			text.loadFont("fonts/aerial.ttf");
+			Clock timer;
+			Uint32 initTime = SDL_GetTicks();
+			Uint32 elapsedTime;
+			int frames = 0;
+			while (window.isOpen())
+			{
+				this->handleEvents();
+				this->handleKeyStates(SDL_GetKeyboardState(NULL));
+				// limitFrameRate();
+				frames++;
+				elapsedTime = SDL_GetTicks() - initTime;
+				// this->Update(deltaTime);
+				SDL_RenderClear(window.getRenderer());
+				window.setRendererColor(0, 0, 255, 255);
+				if (!text.loadRenderedText(std::to_string(getFrameRate(frames, elapsedTime)), text.getTextColor(), window.getRenderer()))
+				{
+					break;
+				}
+				text.Draw(0, 0, NULL, window.getRenderer());
+				SDL_RenderPresent(window.getRenderer());
+			}
+		}
 	}
 	else
 	{
-		s1.initTexture("assets/texture.png", window.getRenderer());
-		s2.initTexture("assets/stretch.bmp", window.getRenderer());
-		fpsCounter.setTextColor(255, 0, 0, 255);
-		fpsCounter.loadFont("fonts/aerial.ttf");
-		while (window.isOpen())
-		{
-			beforeTime = SDL_GetTicks();
-			this->handleEvents();
-			this->handleKeyStates(SDL_GetKeyboardState(NULL));
-			// limitFrameRate();
-			frame++;
-			elapsedTime = SDL_GetTicks() - initialTime;
-			afterTime = SDL_GetTicks();
-			deltaTime = afterTime - beforeTime;
-			// update pyhsics
-			this->Update(deltaTime);
-			// render stuff here
-			SDL_RenderClear(window.getRenderer());
-			// TODO : SEND 2 RECT TO LIMIT TEXTURE SIZE
-			window.setRendererColor(0, 0, 255, 255);
-			// FPS COUNTER
-			if (!fpsCounter.loadRenderedText(std::to_string(getFrameRate(frame, elapsedTime)), fpsCounter.getTextColor(), window.getRenderer()))
-			{
-				break;
-			}
-			fpsCounter.Draw(0, 0, NULL, window.getRenderer());
-			s1.Draw(100, 100, NULL, window.getRenderer());
-			SDL_RenderPresent(window.getRenderer());
-		}
+		std::cout << "Somethings Wrong" << std::endl;
 	}
-	fpsCounter.freeTexture();
-	fpsCounter.closeFont();
-	s1.freeTexture();
-	s2.freeTexture();
+	text.freeTexture();
+	text.closeFont();
 }
 
 void Game::handleKeyStates(const std::uint8_t *keystates)

@@ -34,7 +34,7 @@ bool Window::Init(const char *title, int x, int y, int flag)
         m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
         if (m_renderer)
         {
-            std::cout << "Rendere Created!" << std::endl;
+            std::cout << "Renderer Created!" << std::endl;
             m_isRunning = true;
         }
         else

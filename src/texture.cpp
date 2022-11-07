@@ -6,8 +6,9 @@ Sprite::Sprite() {}
 Sprite::~Sprite() {}
 TextTexture::TextTexture() {}
 TextTexture::~TextTexture() {}
-// free texture used by sprite class
-void Sprite::freeTexture()
+
+// free texture used by  Texture derivied class object
+void Texture::freeTexture()
 {
     if (m_texture != NULL)
     {
@@ -17,16 +18,16 @@ void Sprite::freeTexture()
         m_height = 0;
     }
 }
-// free texture used by TextTexture class
-void TextTexture::freeTexture()
+// draw Texture object into the screen
+void Texture::Draw(int x, int y, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip, SDL_Renderer *renderer)
 {
-    if (m_texture != NULL)
+    SDL_Rect renderQuad = {x, y, m_width, m_height};
+    if (clip != NULL)
     {
-        SDL_DestroyTexture(m_texture);
-        m_texture = NULL;
-        m_width = 0;
-        m_height = 0;
+        renderQuad.w = clip->w;
+        renderQuad.h = clip->h;
     }
+    SDL_RenderCopyEx(renderer, m_texture, clip, &renderQuad, angle, center, flip);
 }
 // initialize texture into the created sprite
 bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
@@ -52,17 +53,6 @@ bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
     }
     return true;
 }
-// draw Sprite object into the screen
-void Sprite::Draw(int x, int y, SDL_Rect *clip, SDL_Renderer *renderer)
-{
-    SDL_Rect renderQuad = {x, y, m_width, m_height};
-    if (clip != NULL)
-    {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
-    }
-    SDL_RenderCopy(renderer, m_texture, clip, &renderQuad);
-}
 // close font used by TextTexture class
 void TextTexture::closeFont()
 {
@@ -71,16 +61,12 @@ void TextTexture::closeFont()
 }
 bool TextTexture::loadFont(std::string path)
 {
-    // this if will ensure that font opened only once
+    m_font = TTF_OpenFont(path.c_str(), 22);
+    m_path = path;
     if (m_font == NULL)
     {
-        m_font = TTF_OpenFont(path.c_str(), 22);
-        m_path = path;
-        if (m_font == NULL)
-        {
-            std::cout << "Unable to load font!" << TTF_GetError() << std::endl;
-            return false;
-        }
+        std::cout << "Unable to load font!" << TTF_GetError() << std::endl;
+        return false;
     }
     return true;
 }
@@ -112,15 +98,4 @@ bool TextTexture::loadRenderedText(std::string textureText, SDL_Color textColor,
         SDL_FreeSurface(textSurface);
     }
     return true;
-}
-// draw TextTexture object into the screen
-void TextTexture::Draw(int x, int y, SDL_Rect *clip, SDL_Renderer *renderer)
-{
-    SDL_Rect renderQuad = {x, y, m_width, m_height};
-    if (clip != NULL)
-    {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
-    }
-    SDL_RenderCopy(renderer, m_texture, clip, &renderQuad);
 }
