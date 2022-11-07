@@ -1,5 +1,6 @@
 #include <headers/game.h>
 #include <string>
+#include <headers/entity.h>
 Game::Game()
 {
 }
@@ -22,6 +23,7 @@ void Game::Run()
 		}
 		else
 		{
+			// TODO : Move draw functions into the window class and try to use templates
 			text.loadFont("fonts/aerial.ttf");
 			Clock timer;
 			Uint32 initTime = SDL_GetTicks();
