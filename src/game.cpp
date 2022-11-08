@@ -1,6 +1,4 @@
 #include <headers/game.h>
-#include <string>
-#include <headers/entity.h>
 Game::Game()
 {
 }
@@ -13,7 +11,10 @@ Game::~Game()
 }
 void Game::Run()
 {
-	TextTexture text;
+	TextToTexture text;
+	Sprite s1;
+	vi2d pos = {64, 64};
+	vi2d size = {32, 64};
 	// initialize default sized window 800x600
 	if (window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE))
 	{
@@ -24,26 +25,27 @@ void Game::Run()
 		else
 		{
 			// TODO : Move draw functions into the window class and try to use templates
-			text.loadFont("fonts/aerial.ttf");
 			Clock timer;
 			Uint32 initTime = SDL_GetTicks();
 			Uint32 elapsedTime;
+			s1.initTexture("assets/texture.png", window.getRenderer());
 			int frames = 0;
+
+			text.loadFont("fonts/aerial.ttf");
+			// main loop
+			text.loadRenderedText("zart zurt kart kurt", text.getTextColor(), window.getRenderer());
 			while (window.isOpen())
 			{
 				this->handleEvents();
 				this->handleKeyStates(SDL_GetKeyboardState(NULL));
-				// limitFrameRate();
+				limitFrameRate();
 				frames++;
 				elapsedTime = SDL_GetTicks() - initTime;
 				// this->Update(deltaTime);
 				SDL_RenderClear(window.getRenderer());
 				window.setRendererColor(0, 0, 255, 255);
-				if (!text.loadRenderedText(std::to_string(getFrameRate(frames, elapsedTime)), text.getTextColor(), window.getRenderer()))
-				{
-					break;
-				}
-				text.Draw(0, 0, NULL, window.getRenderer());
+				window.Draw(s1, pos, size, NULL, 0.0, NULL, SDL_FLIP_NONE, window.getRenderer());
+				window.Draw(text,text.getTexturePos(), text.getTextureSize(), NULL, 0.0, NULL, SDL_FLIP_NONE, window.getRenderer());
 				SDL_RenderPresent(window.getRenderer());
 			}
 		}

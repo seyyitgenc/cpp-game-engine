@@ -4,8 +4,8 @@ Texture::Texture() {}
 Texture::~Texture() {}
 Sprite::Sprite() {}
 Sprite::~Sprite() {}
-TextTexture::TextTexture() {}
-TextTexture::~TextTexture() {}
+TextToTexture::TextToTexture() {}
+TextToTexture::~TextToTexture() {}
 
 // free texture used by  Texture derivied class object
 void Texture::freeTexture()
@@ -17,17 +17,6 @@ void Texture::freeTexture()
         m_width = 0;
         m_height = 0;
     }
-}
-// draw Texture object into the screen
-void Texture::Draw(int x, int y, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip, SDL_Renderer *renderer)
-{
-    SDL_Rect renderQuad = {x, y, m_width, m_height};
-    if (clip != NULL)
-    {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
-    }
-    SDL_RenderCopyEx(renderer, m_texture, clip, &renderQuad, angle, center, flip);
 }
 // initialize texture into the created sprite
 bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
@@ -53,13 +42,13 @@ bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
     }
     return true;
 }
-// close font used by TextTexture class
-void TextTexture::closeFont()
+// close font used by TextToTexture class
+void TextToTexture::closeFont()
 {
     TTF_CloseFont(m_font);
     m_font = NULL;
 }
-bool TextTexture::loadFont(std::string path)
+bool TextToTexture::loadFont(std::string path)
 {
     m_font = TTF_OpenFont(path.c_str(), 22);
     m_path = path;
@@ -71,9 +60,11 @@ bool TextTexture::loadFont(std::string path)
     return true;
 }
 // Load specified text to texture
-bool TextTexture::loadRenderedText(std::string textureText, SDL_Color textColor, SDL_Renderer *renderer)
+bool TextToTexture::loadRenderedText(std::string textureText, SDL_Color textColor, SDL_Renderer *renderer)
 {
+    std::cout << "here1" << std::endl;
     freeTexture();
+    std::cout << "here2" << std::endl;
     SDL_Surface *textSurface = TTF_RenderText_Solid(m_font, textureText.c_str(), textColor);
     if (textSurface == NULL)
     {

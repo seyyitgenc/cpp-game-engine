@@ -1,13 +1,12 @@
-#pragma once
 #ifndef GAME_H
 #define GAME_H
-#include <SDL2/SDL.h>
 #include <iostream>
 #include <headers/timer.h>
 #include <headers/window.h>
-#include <headers/texture.h>
+#include <string>
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-
+#include <SDL2/SDL_image.h>
 #endif
 
 class Game

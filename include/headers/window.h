@@ -2,6 +2,8 @@
 #define WINDOW_H
 #include <SDL2/SDL.h>
 #include <iostream>
+#include <headers/texture.h>
+#include <headers/vector2d.h>
 #endif
 
 class Window
@@ -10,7 +12,6 @@ public:
     Window();
     ~Window(); // destruct everthing used by windows event when everthing is done
 
-    void Draw(SDL_Texture *texture, SDL_Rect r1);                           // draw into the screen
     void setFullScreen();                                                   // Enables fullscreen
     void setRendererColor(Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha); // Set renderer color
     bool Init(const char *title, int x, int y, int flag);                   // initialize the window
@@ -23,6 +24,30 @@ public:
     int getScreenWidth() { return m_screenWidth; }                          // Get screen width
     int getScreenHeight() { return m_screenHeight; }                        // Get Screen height
     bool loadMedia();
+
+public:
+    // draw functions
+    template <typename T>
+    void Draw(T &object, vi2d pos, vi2d size, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip, SDL_Renderer *renderer)
+    {
+        SDL_Rect dstRect = {pos.x, pos.y, size.x, size.y};
+        if (clip != NULL)
+        {
+            dstRect.w = clip->w;
+            dstRect.h = clip->h;
+        }
+        SDL_RenderCopyEx(renderer, object.getTexture(), clip, &dstRect, angle, center, flip);
+    }
+    // use template here
+    void Draw(Sprite &object, vi2d pos, vi2d size)
+    {
+    }
+    template <typename T>
+    void Draw(T &object)
+    {
+        // get it's height
+        // get it's location
+    }
 
 private:
     int m_screenWidth = 800, m_screenHeight = 600;
