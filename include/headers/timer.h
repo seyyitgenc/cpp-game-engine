@@ -20,10 +20,10 @@ public:
     bool isPaused() { return m_paused && m_started; }
 
 private:
-    Uint32 m_elapsedTime;
-    Uint32 m_startTicks;
-    Uint32 m_pausedTicks;
-    int m_countedFrames;
-    bool m_paused;
-    bool m_started;
+    Uint32 m_elapsedTime=0;
+    Uint32 m_startTicks=0;
+    Uint32 m_pausedTicks=0;
+
+    bool m_paused=false;
+    bool m_started=false;
 };

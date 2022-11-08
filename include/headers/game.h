@@ -1,13 +1,23 @@
-#ifndef GAME_H
-#define GAME_H
-#include <iostream>
+// timer
+#ifndef timer_h
+#define timer_h
 #include <headers/timer.h>
-#include <headers/window.h>
-#include <string>
+#endif
+// sdl
+#ifndef sdl_h
+#define sdl_h
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #endif
+// window
+#ifndef window_h
+#define window_h
+#include <headers/window.h>
+#endif
+// headers initialized once
+#include <string>
+#include <iostream>
 
 class Game
 {
@@ -21,6 +31,8 @@ public:
 	void Update(float dt);						// updates game physics
 	int getFrameRate(int, Uint32);				// get frame rate
 	void limitFrameRate();						// limits the fps to the fps limit
+public:
+	Clock timer;
 
 private:
 	// window and renderer field

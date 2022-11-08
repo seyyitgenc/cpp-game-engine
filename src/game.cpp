@@ -2,19 +2,19 @@
 Game::Game()
 {
 }
-// TODO : WRITE DOWN BETTER DESTRUCT FUNCTION
 Game::~Game()
 {
 	window.~Window(); // destruct everything after window closed
 	TTF_Quit();
+	IMG_Quit();
 	SDL_Quit();
 }
 void Game::Run()
 {
-	TextToTexture text;
+	TextToTexture fpsCounter;
+	TextToTexture t1;
 	Sprite s1;
-	vi2d pos = {64, 64};
-	vi2d size = {32, 64};
+	s1.setPos(100, 100);
 	// initialize default sized window 800x600
 	if (window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE))
 	{
@@ -24,29 +24,31 @@ void Game::Run()
 		}
 		else
 		{
-			// TODO : Move draw functions into the window class and try to use templates
-			Clock timer;
+			// TODO: Move draw functions into the window class and try to use templates
 			Uint32 initTime = SDL_GetTicks();
 			Uint32 elapsedTime;
 			s1.initTexture("assets/texture.png", window.getRenderer());
 			int frames = 0;
-
-			text.loadFont("fonts/aerial.ttf");
+		
+			TextToTexture::setFont("fonts/aerial.ttf");
 			// main loop
-			text.loadRenderedText("zart zurt kart kurt", text.getTextColor(), window.getRenderer());
 			while (window.isOpen())
 			{
-				this->handleEvents();
-				this->handleKeyStates(SDL_GetKeyboardState(NULL));
 				limitFrameRate();
 				frames++;
 				elapsedTime = SDL_GetTicks() - initTime;
 				// this->Update(deltaTime);
 				SDL_RenderClear(window.getRenderer());
 				window.setRendererColor(0, 0, 255, 255);
-				window.Draw(s1, pos, size, NULL, 0.0, NULL, SDL_FLIP_NONE, window.getRenderer());
-				window.Draw(text,text.getTexturePos(), text.getTextureSize(), NULL, 0.0, NULL, SDL_FLIP_NONE, window.getRenderer());
+				// frame rate counter
+				fpsCounter.loadRenderedText(std::to_string(getFrameRate(frames, elapsedTime)), fpsCounter.getTextColor(), window.getRenderer());
+				t1.loadRenderedText(std::to_string(timer.getTicks() / 1000.0f), t1.getTextColor(), window.getRenderer());
+				t1.setPos({800 - t1.getWidth(), 0});
+				window.Draw(s1);
+				window.Draw(t1);
+				window.Draw(fpsCounter, fpsCounter.getPos(), fpsCounter.getSize(), NULL, 0.0, NULL, SDL_FLIP_NONE);
 				SDL_RenderPresent(window.getRenderer());
+				this->handleEvents();
 			}
 		}
 	}
@@ -54,48 +56,44 @@ void Game::Run()
 	{
 		std::cout << "Somethings Wrong" << std::endl;
 	}
-	text.freeTexture();
-	text.closeFont();
+	TextToTexture::closeFont();
+	t1.freeTexture();
+	fpsCounter.freeTexture();
 }
 
 void Game::handleKeyStates(const std::uint8_t *keystates)
 {
-	if (keystates[SDL_SCANCODE_W])
-	{
-		std::cout << "W" << std::endl;
-	}
-	if (keystates[SDL_SCANCODE_S])
-	{
-		std::cout << "S" << std::endl;
-	}
+	// if (keystates[SDL_SCANCODE_W])
+	// {
+	// 	std::cout << "W" << std::endl;
+	// }
+	// if (keystates[SDL_SCANCODE_S])
+	// {
+	// 	std::cout << "S" << std::endl;
+	// }
 }
 
 void Game::handleEvents()
 {
 	SDL_Event event;
-	while (SDL_PollEvent(&event))
+	while (SDL_PollEvent(&event) != 0)
 	{
 		if (event.type == SDL_QUIT)
 			window.setisOpen(false);
+		if (event.type == SDL_WINDOWEVENT_RESIZED)
+		{
+		}
 		else if (event.type == SDL_KEYDOWN)
 		{
-			if (event.key.keysym.sym == SDLK_a)
+			if (event.key.keysym.sym == SDLK_s)
 			{
+
+				timer.isStarted() ? timer.stop() : timer.start();
 			}
-			else if (event.key.keysym.sym == SDLK_s)
+			else if (event.key.keysym.sym == SDLK_p)
 			{
+				timer.isPaused() ? timer.unpause() : timer.pause();
 			}
-			// for starting timer manually
-			//  if (event.key.keysym.sym == SDLK_s)
-			//  	if (timer.isStarted())
-			//  		timer.stop();
-			//  	else
-			//  		timer.start();
-			//  else if (event.key.keysym.sym == SDLK_p)
-			//  	if (timer.isPaused())
-			//  		timer.unpause();
-			//  	else
-			//  		timer.pause();
 		}
 	}
 }

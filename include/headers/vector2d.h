@@ -1,7 +1,4 @@
-#ifndef VECTOR_H
-#define VECTOR_H
 #include <math.h>
-#endif
 
 // this struct can be generated as any type
 template <class T>

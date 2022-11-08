@@ -1,11 +1,21 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+// sdl
+#ifndef sdl_h
+#define sdl_h
 #include <SDL2/SDL.h>
-#include <iostream>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
+#endif
+// texture
+#ifndef texture_h
+#define texture_h
 #include <headers/texture.h>
+#endif
+// vector
+#ifndef vector_h
+#define vector_h
 #include <headers/vector2d.h>
 #endif
-
+#include <iostream>
 class Window
 {
 public:
@@ -27,8 +37,12 @@ public:
 
 public:
     // draw functions
+
+    // FIXME errors can occur due to the wrong object pass
+    // this template will work with Sprite,TextToTexture please ensure you pass correct object
+    // You can give specific position, size, clip, angle, center, flip values to draw object into the screenkd
     template <typename T>
-    void Draw(T &object, vi2d pos, vi2d size, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip, SDL_Renderer *renderer)
+    void Draw(T &object, vi2d pos, vi2d size, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip)
     {
         SDL_Rect dstRect = {pos.x, pos.y, size.x, size.y};
         if (clip != NULL)
@@ -36,17 +50,29 @@ public:
             dstRect.w = clip->w;
             dstRect.h = clip->h;
         }
-        SDL_RenderCopyEx(renderer, object.getTexture(), clip, &dstRect, angle, center, flip);
+        SDL_RenderCopyEx(m_renderer, object.getTexture(), clip, &dstRect, angle, center, flip);
     }
-    // use template here
-    void Draw(Sprite &object, vi2d pos, vi2d size)
+    
+    // FIXME errors can occur due to the wrong object pass
+    // this template will work with Sprite,TextToTexture please ensure you pass correct object
+    // You can give specific position and size to draw into the screen
+    template <typename T>
+    void Draw(T &object, vi2d pos, vi2d size)
     {
+        SDL_Rect dstRect = {pos.x, pos.y, size.x, size.y};
+        SDL_RenderCopy(m_renderer, object.getTexture(), NULL, &dstRect);
     }
+
+    // FIXME errors can occur due to the wrong object pass
+    // this template will work with Sprite,TextToTexture please ensure you pass correct object
+    // You can simply pass object to draw
     template <typename T>
     void Draw(T &object)
     {
-        // get it's height
-        // get it's location
+        vi2d pos = object.getPos();
+        vi2d size = object.getSize();
+        SDL_Rect dstRect = {pos.x, pos.y, size.x, size.y};
+        SDL_RenderCopy(m_renderer, object.getTexture(), NULL, &dstRect);
     }
 
 private:

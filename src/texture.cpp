@@ -19,11 +19,11 @@ void Texture::freeTexture()
     }
 }
 // initialize texture into the created sprite
+// this function use hardware rendering
 bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
 {
     // load image into loadedSurface object
     SDL_Surface *loadedSurface = IMG_Load(path.c_str());
-
     if (loadedSurface == NULL)
     {
         std::cout << "Unable to load image!\n"
@@ -42,14 +42,41 @@ bool Sprite::initTexture(std::string path, SDL_Renderer *renderer)
     }
     return true;
 }
+// it can be usefull later when rendering multiple textures
+SDL_Surface *Sprite::loadSurface(std::string path, SDL_Surface *screenSurface)
+{
+    // the final optimized image
+    SDL_Surface *optimizedSurface = NULL;
+    SDL_Surface *loadedSurface = IMG_Load(path.c_str());
+    if (loadedSurface == NULL)
+    {
+        std::cout << "Unable to load image\n"
+                  << SDL_GetError() << std::endl;
+    }
+    else
+    {
+        // convert surface to screen format
+        optimizedSurface = SDL_ConvertSurface(loadedSurface, screenSurface->format, 0);
+        if (optimizedSurface == NULL)
+            std::cout << "Unable to optimize image" << SDL_GetError() << std::endl;
+        SDL_FreeSurface(loadedSurface);
+    }
+    return optimizedSurface;
+}
 // close font used by TextToTexture class
 void TextToTexture::closeFont()
 {
-    TTF_CloseFont(m_font);
-    m_font = NULL;
+    if (m_font != NULL)
+    {
+        m_font = NULL;
+        TTF_CloseFont(m_font);
+        std::cout<<"font closed"<<std::endl;
+    }
 }
-bool TextToTexture::loadFont(std::string path)
+// give font path
+bool TextToTexture::setFont(const std::string path)
 {
+    std::cout << "invoked" << std::endl;
     m_font = TTF_OpenFont(path.c_str(), 22);
     m_path = path;
     if (m_font == NULL)
@@ -59,12 +86,12 @@ bool TextToTexture::loadFont(std::string path)
     }
     return true;
 }
+TTF_Font *TextToTexture::m_font{NULL};
+std::string TextToTexture::m_path{"fonts/aerial.ttf"};
 // Load specified text to texture
 bool TextToTexture::loadRenderedText(std::string textureText, SDL_Color textColor, SDL_Renderer *renderer)
 {
-    std::cout << "here1" << std::endl;
     freeTexture();
-    std::cout << "here2" << std::endl;
     SDL_Surface *textSurface = TTF_RenderText_Solid(m_font, textureText.c_str(), textColor);
     if (textSurface == NULL)
     {
@@ -83,8 +110,7 @@ bool TextToTexture::loadRenderedText(std::string textureText, SDL_Color textColo
         }
         else
         {
-            m_width = textSurface->w;
-            m_height = textSurface->h;
+            setSize({textSurface->w, textSurface->h});
         }
         SDL_FreeSurface(textSurface);
     }
