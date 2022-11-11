@@ -1,5 +1,5 @@
 #include <math.h>
-
+#include <iostream>
 // this struct can be generated as any type
 template <class T>
 struct v2d_generic
@@ -46,6 +46,11 @@ struct v2d_generic
         this->x /= rhs;
         this->y /= rhs;
         return *this;
+    }
+    friend std::ostream &operator<<(std::ostream &stream, const v2d_generic &other)
+    {
+        stream << other.x << "," << other.y;
+        return stream;
     }
 };
 // for float vectors

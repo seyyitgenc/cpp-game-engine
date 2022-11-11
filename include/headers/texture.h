@@ -11,13 +11,11 @@
 #include <headers/vector2d.h>
 #endif
 #include <iostream>
+// TODO: REFACTOR TEXTURE CLASS COMPLETLY THIS STRUCTURE SEEMS WRONGGGGGG!!!!!
 // TODO : set texture can be initialized with width and height variable seperatly  like setSize(width,heigh)
 // Texture interface
 class Texture
 {
-public:
-    Texture();  // Constructor
-    ~Texture(); // Destructor
 public:
     // must define this functions from derivied classes
     virtual SDL_Texture *getTexture() = 0;  // Get texture

@@ -36,6 +36,7 @@ bool Window::Init(const char *title, int x, int y, int flag)
         {
             std::cout << "Renderer Created!" << std::endl;
             m_isRunning = true;
+            m_surface = SDL_GetWindowSurface(m_window);
         }
         else
         {

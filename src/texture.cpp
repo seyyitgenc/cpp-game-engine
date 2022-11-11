@@ -1,7 +1,5 @@
 #include <headers/texture.h>
 
-Texture::Texture() {}
-Texture::~Texture() {}
 Sprite::Sprite() {}
 Sprite::~Sprite() {}
 TextToTexture::TextToTexture() {}
@@ -76,7 +74,6 @@ void TextToTexture::closeFont()
 // give font path
 bool TextToTexture::setFont(const std::string path)
 {
-    std::cout << "invoked" << std::endl;
     m_font = TTF_OpenFont(path.c_str(), 22);
     m_path = path;
     if (m_font == NULL)
