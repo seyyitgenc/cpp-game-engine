@@ -10,16 +10,18 @@
 #define timer_h
 #include <headers/timer.h>
 #endif
-#ifndef entity_h
-#define enitity_h
-#include <headers/entity.h>
-#endif
+
 // window
 #ifndef window_h
 #define window_h
 #include <headers/window.h>
 #endif
 
+#ifndef tilemap_h
+#define tilemap_h
+#include <headers/tilemap.h>
+#endif
+#include <vector>
 // headers initialized once
 #include <string>
 #include <iostream>
@@ -29,12 +31,12 @@ class Game
 public:
 	Game();
 	~Game();
-	void Run();										  // run main loop
-	void setScreenFps(int, bool);					  // set screen fps
-	void handleEvents(const std::uint8_t *keystates,const double &dt); // handles events created by user
-	void Update(float dt);							  // updates game physics
-	int getFrameRate(int, Uint32);					  // get frame rate
-	void limitFrameRate();							  // limits the fps to the fps limit
+	void Run();															// run main loop
+	void setScreenFps(int, bool);										// set screen fps
+	void handleEvents(const std::uint8_t *keystates, const double &dt); // handles events created by user
+	void Update(float dt);												// updates game physics
+	int getFrameRate(int, Uint32);										// get frame rate
+	void limitFrameRate();												// limits the fps to the fps limit
 public:
 	Clock timer;
 
@@ -49,4 +51,6 @@ private:
 	// Timer field
 	Clock m_capTimer;
 	unsigned int m_countedFrames = 0;
+	// Tilemap Filter
+	TileMap map;
 };

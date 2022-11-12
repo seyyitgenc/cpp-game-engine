@@ -16,6 +16,7 @@
 #include <headers/vector2d.h>
 #endif
 #include <iostream>
+#include <vector>
 class Window
 {
 public:
@@ -86,4 +87,5 @@ private:
     Uint8 m_red = 10, m_green = 10, m_blue = 10, m_alpha = 0;
     bool m_fullscreen = false;
     bool m_isRunning = false;
+    
 };

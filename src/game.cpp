@@ -1,5 +1,4 @@
 #include <headers/game.h>
-#include <vector>
 Game::Game()
 {
 }
@@ -12,8 +11,8 @@ Game::~Game()
 }
 typedef struct point
 {
-	int x;
-	int y;
+	float x;
+	float y;
 } point;
 std::vector<point> points;
 void addPoints(const int &x, const int &y)
@@ -23,24 +22,23 @@ void addPoints(const int &x, const int &y)
 	p.y = y;
 	points.push_back(p);
 }
-
+float force = 1.0f;
+vf2d test = {0, 0};
 void drawPoints(SDL_Renderer *renderer)
 {
 
 	if (points.size() < 2)
 	{
-		// do nothing
 	}
 	else
 	{
 		for (size_t i = 1; i < points.size(); ++i)
 		{
-			SDL_Rect p1 = {points[i - 1].x, points[i - 1].y, 10, 10};
-			SDL_Rect p2 = {points[i].x, points[i].y, 10, 10};
-			SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
-			SDL_RenderFillRect(renderer, &p1);
-			SDL_RenderFillRect(renderer, &p2);
-
+			for (size_t i = 0; i < points.size(); i++)
+			{
+				points[i].x += test.x;
+				points[i - 1].x += test.x;
+			}
 			SDL_SetRenderDrawColor(renderer, 255, 0, 155, 255);
 			SDL_RenderDrawLine(renderer, points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
 		}
@@ -48,46 +46,25 @@ void drawPoints(SDL_Renderer *renderer)
 		{
 			SDL_RenderDrawLine(renderer, points[0].x, points[0].y, points[points.size() - 1].x, points[points.size() - 1].y);
 		}
+		test.x = 0;
+		test.y = 0;
 	}
+}
+
+void applyForce(double dt)
+{
+	test.x += force * dt;
 }
 // TODO : Refactor this section aswell
 vf2d velocity = {0.0f, 0.0f};
 double mov = 1.5f;
 
-int array[] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-std::vector<SDL_Rect> tilemap;
-
-// TODO : Move this section
 void Game::Run()
 {
 	TextToTexture fpsCounter;
 	TextToTexture t1;
 	Sprite s1;
 	// initialize default sized window 800x600
-
-	for (int i = 0; i < 16; i++)
-	{
-		for (int j = 0; j < 12; j++)
-		{
-			if (array[i + j * 16] == 1)
-			{
-				SDL_Rect tile = {i * 64, j * 64, 64, 64};
-				tilemap.push_back(tile);
-			}
-		}
-	}
 	if (window.Init("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SDL_WINDOW_RESIZABLE))
 	{
 		s1.setPos(100, 100);
@@ -97,7 +74,10 @@ void Game::Run()
 		}
 		else
 		{
-			// TODO: Refactor this section
+			// TODO : ADD COLLISION (AABB)
+			//  this will initialize which tiles have collision or not
+			map.initTileMap(64, 64, window.getScreenWidth(), window.getScreenHeight());
+			// TODO: Redesign this section
 			double initTime = SDL_GetTicks();
 			double elapsedTime;
 			Uint64 NOW = SDL_GetPerformanceCounter();
@@ -122,25 +102,20 @@ void Game::Run()
 				// this->Update(deltaTime);
 
 				// frame rate counter
+				// TODO: store draw objects in some kind of template based data structure
 				fpsCounter.loadRenderedText(std::to_string(getFrameRate(frames, elapsedTime)), fpsCounter.getTextColor(), window.getRenderer());
 				t1.loadRenderedText(std::to_string(timer.getTicks() / 1000.0f), t1.getTextColor(), window.getRenderer());
 				t1.setPos({800 - t1.getWidth(), 0});
 				window.setRendererColor(0, 0, 0, 255);
 				SDL_RenderClear(window.getRenderer());
-				drawPoints(window.getRenderer());
-				// render tile map
-				// TODO : create function for it
-				// for newly created rectangle color
 				window.setRendererColor(255, 255, 0, 255);
-				for (auto t : tilemap)
-				{
-					SDL_RenderFillRect(window.getRenderer(), &t);
-				}
+				// render tile map
+				map.loadTileMap(window.getRenderer());
 
 				handleEvents(SDL_GetKeyboardState(NULL), dt);
 				test.x += velocity.x;
 				test.y += velocity.y;
-				// drawPoints(window.getRenderer());
+				drawPoints(window.getRenderer());
 				window.setRendererColor(255, 0, 0, 255);
 				SDL_RenderFillRectF(window.getRenderer(), &test);
 				window.Draw(t1);
@@ -182,15 +157,19 @@ void Game::handleEvents(const std::uint8_t *keystates, const double &dt)
 		}
 		else if (event.type == SDL_KEYDOWN)
 		{
-			// if (event.key.keysym.sym == SDLK_s)
-			// {
+			if (event.key.keysym.sym == SDLK_o)
+			{
 
-			// 	timer.isStarted() ? timer.stop() : timer.start();
-			// }
-			// else if (event.key.keysym.sym == SDLK_p)
-			// {
-			// 	timer.isPaused() ? timer.unpause() : timer.pause();
-			// }
+				timer.isStarted() ? timer.stop() : timer.start();
+			}
+			else if (event.key.keysym.sym == SDLK_p)
+			{
+				timer.isPaused() ? timer.unpause() : timer.pause();
+			}
+			else if (event.key.keysym.sym == SDLK_f)
+			{
+				applyForce(dt);
+			}
 		}
 	}
 	if (keystates[SDL_SCANCODE_W])

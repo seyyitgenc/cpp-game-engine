@@ -1,5 +1,6 @@
 #include <headers/window.h>
-
+template <typename T>
+std::vector<T> objects;
 Window::Window()
 {
 }
