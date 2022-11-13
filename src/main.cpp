@@ -1,21 +1,18 @@
-#include <headers/game.h>
+#include "Engine/Game.h"
 
-#include "headers/ECS/ECS.h"
-#include "headers/ECS/Entity.h"
-#include "headers/ECS/Transform.h"
-#include "headers/ECS/EntityManager.h"
+#include "ECS/ECS.h"
+#include "ECS/Entity/Entity.h"
+#include "ECS/Components/Transform.h"
+#include "ECS/Entity/EntityManager.h"
 
 #undef main
 
-Game *game = nullptr;
 int main(int argc, char **argv)
 {
-	EntityManager * manager=new EntityManager();
-	Entity *e1 = new Entity();
-	manager->addEntity(e1);
-	std::cout << e1->getComponent<Transform>().position << std::endl;
+	Game *game = nullptr;
 	game = new Game();
-	game->Run(); // run game
+	game->Run();//main game loop
 	game->~Game();
+
 	return EXIT_SUCCESS;
 }

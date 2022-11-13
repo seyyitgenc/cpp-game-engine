@@ -1,7 +1,5 @@
-#ifndef TIMER_H
-#define TIMER_H
-#include <SDL2/SDL.h>
-#endif
+#pragma once
+#include "../SDL2/SDL.h"
 class Clock
 {
 public:

@@ -4,19 +4,18 @@
 #include <memory>
 #include "Entity.h"
 
-class EntityManager
+class Manager
 {
 public:
-    EntityManager() = default;
-    ~EntityManager() = default;
+    Manager() = default;
+    ~Manager() = default;
 
     void draw();
     void update();
     void refresh();
 
-    void addEntity(Entity *entity);
+    Entity& addEntity();
     void eraseEntity(Entity *entity);
-    Entity *cloneEntity(Entity *entity);
 
 private:
     std::vector<std::unique_ptr<Entity>> entities;

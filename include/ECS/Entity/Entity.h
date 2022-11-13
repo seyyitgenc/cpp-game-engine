@@ -2,9 +2,9 @@
 #include <vector>
 #include <memory>
 
-#include "ECS.h"
-#include "Component.h"
-#include "Transform.h"
+#include "../ECS.h"
+#include "../Components/Component.h"
+#include "../Components/Transform.h"
 class Entity
 {
 public:
@@ -13,13 +13,14 @@ public:
         this->addComponent<Transform>(0, 0); // sets newly created entity location
     };
     virtual ~Entity() = default;
-
+    // THIS SECTION IS QUIET IMPORTANT
+    // TODO: TRY TO UNDERSTAND THIS SECTION
+    // TODO: UNDERSTAND UNIQUE AND SMART POINTERS
     template <typename T, typename... TArgs>
-    inline T &addComponent(TArgs &&...args)
+    T &addComponent(TArgs &&...args)
     {
-        // TODO: TRY TO UNDERSTAND THIS SECTION
+        // FIXME if entered parameters doesn't correspond any constrcutor relatod to Component this will give error
         T *comp(new T(std::forward<TArgs>(args)...));
-        // TODO: UNDERSTAND UNIQUE AND SMART POINTERS
         std::unique_ptr<Component> uptr(comp);
         components.emplace_back(std::move(uptr));
 
@@ -33,7 +34,7 @@ public:
         return *static_cast<T *>(nullptr); // return null referance
     }
     template <typename T>
-    inline T &getComponent() const
+    T &getComponent() const
     {
         auto ptr(compList[getComponentTypeID<T>()]);
         return *static_cast<T *>(ptr);
@@ -41,27 +42,27 @@ public:
 
     template <typename T>
     // this const expression makes code safer
-    inline bool hasComponent() const
+    bool hasComponent() const
     {
         return compBitset[getComponentTypeID<T>()];
     }
 
-    inline bool isActive() const
+    bool isActive() const
     {
         return active;
     }
-    inline void destro()
+    void destroy()
     {
         active = false;
     }
-    inline void draw()
+    void draw()
     {
         for (auto &comp : components)
         {
             comp->draw();
         }
     }
-    inline void update()
+    void update()
     {
         for (auto &comp : components)
         {

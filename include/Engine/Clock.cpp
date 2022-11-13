@@ -1,4 +1,4 @@
-#include <headers/timer.h>
+#include "Clock.h"
 // constract Clock
 Clock::Clock()
 {

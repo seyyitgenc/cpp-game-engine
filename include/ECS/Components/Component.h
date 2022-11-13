@@ -1,7 +1,7 @@
 #pragma once
 
 // this Entity represents Entity class in Entity.h
-#include "Entity.h"
+#include "../Entity/Entity.h"
 
 class Component
 {
