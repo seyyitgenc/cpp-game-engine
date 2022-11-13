@@ -1,7 +1,7 @@
-#include "Engine.h"
-#include "../Managers/AssetManager.h"
-
-Engine *Engine::m_instance = nullptr;
+#include "../include/Engine/Engine.h"
+#include "../include/Managers/AssetManager.h"
+#include "../include/ECS/Components/Sprite.h"
+Engine *Engine::s_instance = nullptr;
 
 Engine::Engine()
 {
@@ -15,7 +15,7 @@ void Engine::init()
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
         std::cerr << SDL_GetError() << std::endl;
-    auto wflags = (SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI);
+    auto wflags = (SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     m_window = SDL_CreateWindow("Game Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, wflags);
     if (!m_window)
         std::cout << "Window creation error!" << std::endl;
@@ -24,6 +24,15 @@ void Engine::init()
         std::cout << "Renderer creation error!" << std::endl;
     m_clearColor = DARK;
     m_isRunning = true;
+
+    manager = new Manager();
+    auto &e = manager->addEntity();
+    auto &text = manager->addEntity();
+    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 28);
+    AssetManager::get().loadTexture("test", "assets/texture.png");
+    AssetManager::get().loadRenderedText("text", "test");
+    text.addComponent<Sprite>(m_renderer, "text");
+    e.addComponent<Sprite>(m_renderer, "test");
 }
 
 void Engine::render()
@@ -68,23 +77,23 @@ void Engine::quit()
 }
 int Engine::getFrameRate(int countedFrames, Uint32 fpsTimer)
 {
-	float avgFps = countedFrames / (fpsTimer / 1000.f);
-	if (avgFps > 2000000)
-		avgFps = 0;
-	return avgFps;
+    float avgFps = countedFrames / (fpsTimer / 1000.f);
+    if (avgFps > 2000000)
+        avgFps = 0;
+    return avgFps;
 }
 
 void Engine::setScreenFps(int SCREEN_FPS, bool isFrameLimitEnabled)
 {
-	if (isFrameLimitEnabled)
-		SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
-	else
-		SCREEN_TICKS_PER_FRAME = 1000.f / SDL_GetPerformanceCounter();
+    if (isFrameLimitEnabled)
+        SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
+    else
+        SCREEN_TICKS_PER_FRAME = 1000.f / SDL_GetPerformanceCounter();
 }
 void Engine::limitFrameRate()
 {
-	m_capTimer.start();
-	int frameTicks = m_capTimer.getTicks();
-	if (frameTicks < SCREEN_TICKS_PER_FRAME)
-		SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
+    m_capTimer.start();
+    int frameTicks = m_capTimer.getTicks();
+    if (frameTicks < SCREEN_TICKS_PER_FRAME)
+        SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
 }

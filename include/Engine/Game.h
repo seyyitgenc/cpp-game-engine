@@ -19,7 +19,7 @@ public:
 	Clock timer;
 
 private:
-	Engine engine;
+	Engine *engine;
 	// Tilemap Filter
 	TileMap map;
 };

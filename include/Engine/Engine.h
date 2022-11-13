@@ -4,9 +4,10 @@
 #include "../ECS/Entity/EntityManager.h"
 #include "Clock.h"
 
-const int SCREEN_WIDTH = 1366;
-const int SCREEN_HEIGHT = 768;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
 const SDL_Color DARK = {30, 30, 30, 255};
+
 class Engine
 {
 private:
@@ -17,11 +18,12 @@ public:
     // ensures that engine created only once
     static Engine &get()
     {
-        if (m_instance == nullptr)
+        if (s_instance == nullptr)
         {
-            m_instance = new Engine();
+            std::cout << "Engine Created" << std::endl;
+            s_instance = new Engine();
         }
-        return *m_instance;
+        return *s_instance;
     }
 
     void quit();
@@ -40,13 +42,13 @@ public:
     SDL_Renderer *getRenderer() { return m_renderer; };
 
 private:
-    Manager *manager = new Manager();
+    static Engine *s_instance;
+    Manager *manager;
 
     bool m_isRunning;
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;
     SDL_Color m_clearColor;
-    static Engine *m_instance;
 
     // Game Tick and FPS field
     int SCREEN_FPS = 120;

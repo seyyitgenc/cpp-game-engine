@@ -4,17 +4,18 @@ Game::Game()
 }
 Game::~Game()
 {
-	engine.clean();
+	engine->clean();
 }
 void Game::Run()
 {
+	engine = &Engine::get();
 	// TODO : ADD COLLISION (AABB)
-	engine.init();
-	while (engine.isRunning())
+	engine->init();
+	while (engine->isRunning())
 	{
-		// delta time calculation
-		engine.events();
-		engine.render();
+		engine->events();
+		engine->render();
+		engine->update();
 	}
 }
 
@@ -22,7 +23,6 @@ void Game::Update(float elapsedMS)
 {
 	// DO UPDATE
 }
-
 
 // will handle this section later
 /*

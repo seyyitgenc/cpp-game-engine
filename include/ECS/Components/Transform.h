@@ -1,17 +1,17 @@
 #pragma once
-#include "Component.h"
+#include "../Component.h"
 #ifndef vector_h
 #define vector_h
 #include "../../Engine/vector2d.h"
 #endif
-class Transform : public Component
+struct Transform : public Component
 {
-public:
-    Transform() = default;
     Transform(float x, float y)
     {
         position.x = x;
         position.y = y;
+        scale.x = 1;
+        scale.y = 1;
     };
     Transform(float x, float y, float scx, float scy, float rot)
     {
@@ -22,7 +22,7 @@ public:
         rotation = rot;
     };
     ~Transform() = default;
-    vf2d position = vf2d();
-    vf2d scale = vf2d(1, 1);
+    vf2d position;
+    vf2d scale;
     float rotation = 0.0f;
 };

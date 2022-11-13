@@ -30,4 +30,3 @@ inline ComponentTypeID getComponentTypeID() noexcept
 
 using ComponentBitset = std::bitset<MAX_COMPONENTS>;
 using ComponentList = std::array<Component *, MAX_COMPONENTS>;
-

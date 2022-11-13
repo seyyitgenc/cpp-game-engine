@@ -20,13 +20,15 @@ void AssetManager::loadTexture(std::string id, std::string path)
     if (textures.count(id) <= 0) // if same texture is exist don't create new texture
     {
         SDL_Texture *texture = IMG_LoadTexture(Engine::get().getRenderer(), path.c_str());
-        if (texture != NULL)
+        if (texture)
         {
             textures[id] = texture;
             std::cout << "Texture :[" << path << "] loaded" << std::endl;
         }
         else
+        {
             std::cerr << IMG_GetError() << std::endl;
+        }
     }
 }
 void AssetManager::loadFont(std::string id, std::string path, int fontSize)
@@ -46,6 +48,21 @@ TTF_Font *AssetManager::getFont(std::string id)
         return fonts[id];
     return nullptr;
 }
+
+void AssetManager::loadRenderedText(std::string id, std::string text)
+{
+    SDL_Surface *textSurface = TTF_RenderText_Solid(getFont("aerial"), text.c_str(), textColor);
+    if (textSurface != NULL)
+    {
+        SDL_Texture *texture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), textSurface);
+        if (texture != NULL)
+        {
+            textures[id] = texture;
+        }
+        SDL_FreeSurface(textSurface);
+    }
+}
+
 // this cleans everything related to Textures and Fonts
 void AssetManager::clean()
 {

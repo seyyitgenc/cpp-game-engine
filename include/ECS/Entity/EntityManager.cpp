@@ -22,9 +22,9 @@ void Manager::refresh()
                    std::end(entities));
 }
 
-Entity& Manager::addEntity()
+Entity &Manager::addEntity()
 {
-    Entity *entity = new Entity();
+    Entity *entity{new Entity{}};
     std::unique_ptr<Entity> uniquePtr{entity};
     entities.emplace_back(std::move(uniquePtr));
     return *entity;

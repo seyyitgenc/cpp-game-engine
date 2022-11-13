@@ -1,16 +1,17 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <cassert>
 
 #include "../ECS.h"
-#include "../Components/Component.h"
+#include "../Component.h"
 #include "../Components/Transform.h"
 class Entity
 {
 public:
     Entity()
     {
-        this->addComponent<Transform>(0, 0); // sets newly created entity location
+        addComponent<Transform>(0, 0); // sets newly created entity location
     };
     virtual ~Entity() = default;
     // THIS SECTION IS QUIET IMPORTANT
@@ -19,23 +20,28 @@ public:
     template <typename T, typename... TArgs>
     T &addComponent(TArgs &&...args)
     {
+        // assert will check if this component exist. if exist it stops process.
+        assert(!hasComponent<T>());
         // FIXME if entered parameters doesn't correspond any constrcutor relatod to Component this will give error
         T *comp(new T(std::forward<TArgs>(args)...));
+        comp->entity = this; // attach component to it's entity
         std::unique_ptr<Component> uptr(comp);
         components.emplace_back(std::move(uptr));
 
-        if (comp->init())
-        {
-            compList[getComponentTypeID<T>()] = comp;
-            compBitset[getComponentTypeID<T>()] = true;
-            comp->entity = this; // attach component to it's entity
-            return *comp;        // return comp referance
-        }
-        return *static_cast<T *>(nullptr); // return null referance
+        compList[getComponentTypeID<T>()] = comp;
+        compBitset[getComponentTypeID<T>()] = true;
+
+        // if component doesn't have initialize function it will return false and because of that
+        // if you use it in if claus probably your function will fail
+        comp->init();
+        return *comp; // return comp referance
     }
+    // Get specified component
     template <typename T>
     T &getComponent() const
     {
+        // assert will check if this component exist then continue to process
+        assert(hasComponent<T>());
         auto ptr(compList[getComponentTypeID<T>()]);
         return *static_cast<T *>(ptr);
     }
@@ -71,7 +77,7 @@ public:
     }
 
 private:
-    bool active;
+    bool active{true};
     ComponentList compList;
     ComponentBitset compBitset;
     std::vector<std::unique_ptr<Component>> components;

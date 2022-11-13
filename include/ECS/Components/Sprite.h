@@ -3,13 +3,12 @@
 #include <string>
 #include "../../SDL2/SDL.h"
 #include "../Entity/Entity.h"
-#include "../Components/Component.h"
+#include "../Component.h"
 #include "../../Managers/AssetManager.h"
 
 class Sprite : public Component
 {
 public:
-    Sprite() = default;
     ~Sprite() = default;
 
     Sprite(SDL_Renderer *target, std::string textureID) : rTarget(target), textureID(textureID) {}
@@ -29,6 +28,7 @@ public:
         srcRect.y = 0;
         srcRect.w = width;
         srcRect.h = height;
+        return true;
     }
     // TODO : Change rects to float rect
     void draw() override final
@@ -44,15 +44,15 @@ public:
     }
 
 private:
+    SDL_Renderer *rTarget = nullptr;
+    std::string textureID = "";
+    Transform *transform = nullptr;
+    SDL_Texture *texture = nullptr;
+
     int width = 0;
     int height = 0;
     SDL_Rect srcRect = {0, 0, 0, 0};
     SDL_Rect dstRect = {0, 0, 0, 0};
 
-    Transform *transform = nullptr;
-    std::string textureID = "";
-    SDL_Texture *texture = nullptr;
-
-    SDL_Renderer *rTarget = nullptr;
     SDL_RendererFlip flip = SDL_FLIP_NONE;
 };
