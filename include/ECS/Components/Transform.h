@@ -1,5 +1,5 @@
 #pragma once
-#include "../Component.h"
+#include "Component.h"
 #ifndef vector_h
 #define vector_h
 #include "../../Engine/vector2d.h"

@@ -3,9 +3,9 @@
 #include <memory>
 #include <cassert>
 
-#include "../ECS.h"
-#include "../Component.h"
-#include "../Components/Transform.h"
+#include "ECS.h"
+#include "Components/Component.h"
+#include "Components/Transform.h"
 class Entity
 {
 public:

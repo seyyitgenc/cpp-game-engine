@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include "../SDL2/SDL.h"
-#include "../ECS/Entity/EntityManager.h"
+#include "../ECS/EntityManager.h"
 #include "Clock.h"
 
 const int SCREEN_WIDTH = 800;
@@ -15,7 +15,7 @@ public:
     Engine();
     ~Engine();
 
-    // ensures that engine created only once
+    // ensures that engine created only once Singleton
     static Engine &get()
     {
         if (s_instance == nullptr)
@@ -33,6 +33,7 @@ public:
     void setScreenFps(int, bool);  // set screen fps
     int getFrameRate(int, Uint32); // get frame rate
     void limitFrameRate();
+    double getDeltaTime();
 
     void render();
     void update();

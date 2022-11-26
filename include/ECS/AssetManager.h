@@ -21,7 +21,9 @@ public:
     void loadFont(std::string id, std::string path, int fontSize);
 
     void loadRenderedText(std::string id, std::string text);
-    inline static AssetManager &get()
+    void changeText(std::string id, std::string text);
+
+    static AssetManager &get()
     {
         if (s_instance == nullptr)
         {

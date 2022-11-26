@@ -1,7 +1,7 @@
 #include "../include/Engine/Engine.h"
-#include "../include/Managers/AssetManager.h"
-#include "../include/ECS/Components/Sprite.h"
-Engine *Engine::s_instance = nullptr;
+#include "ECS/AssetManager.h"
+#include "ECS/Components/Sprite.h"
+Engine *Engine::s_instance;
 
 Engine::Engine()
 {
@@ -28,18 +28,22 @@ void Engine::init()
     manager = new Manager();
     auto &e = manager->addEntity();
     auto &text = manager->addEntity();
-    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 28);
+
+    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 22);
     AssetManager::get().loadTexture("test", "assets/texture.png");
-    AssetManager::get().loadRenderedText("text", "test");
-    text.addComponent<Sprite>(m_renderer, "text");
-    e.addComponent<Sprite>(m_renderer, "test");
+    AssetManager::get().loadRenderedText("fpscounter", "testt");
+
+    text.addComponent<Sprite>(m_renderer, "fpscounter");
+    e.addComponent<Sprite>(m_renderer,"test");
 }
+
 
 void Engine::render()
 {
     SDL_SetRenderDrawColor(m_renderer, 30, 30, 30, 255);
     SDL_RenderClear(m_renderer);
     manager->draw();
+
     SDL_RenderPresent(m_renderer);
 }
 
@@ -56,6 +60,16 @@ void Engine::clean()
     TTF_Quit();
     IMG_Quit();
 }
+
+double Engine::getDeltaTime()
+{
+    static Uint64 NOW = SDL_GetPerformanceCounter();
+    static Uint64 LAST = 0;
+    LAST = NOW;
+    NOW = SDL_GetPerformanceCounter();
+    return ((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
+}
+
 void Engine::events()
 {
     SDL_Event event;

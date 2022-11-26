@@ -2,9 +2,9 @@
 
 #include <string>
 #include "../../SDL2/SDL.h"
-#include "../Entity/Entity.h"
-#include "../Component.h"
-#include "../../Managers/AssetManager.h"
+#include "../Entity.h"
+#include "Component.h"
+#include "../AssetManager.h"
 
 class Sprite : public Component
 {

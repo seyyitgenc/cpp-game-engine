@@ -1,4 +1,4 @@
-#include "Headers/tilemap.h"
+#include "headers/tilemap.h"
 // FIXME: this tile map is gonna be way bigger find better solution
 int map[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

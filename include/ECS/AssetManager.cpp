@@ -51,15 +51,19 @@ TTF_Font *AssetManager::getFont(std::string id)
 
 void AssetManager::loadRenderedText(std::string id, std::string text)
 {
-    SDL_Surface *textSurface = TTF_RenderText_Solid(getFont("aerial"), text.c_str(), textColor);
-    if (textSurface != NULL)
+    if (textures.count(id) <= 0)
     {
-        SDL_Texture *texture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), textSurface);
-        if (texture != NULL)
+        SDL_Surface *textSurface = TTF_RenderText_Solid(getFont("aerial"), text.c_str(), textColor);
+        if (textSurface != NULL)
         {
-            textures[id] = texture;
+            SDL_Texture *texture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), textSurface);
+            if (texture != NULL)
+            {
+                textures[id] = texture;
+                std::cout << "[" << text << "] loaded!" << std::endl;
+            }
+            SDL_FreeSurface(textSurface);
         }
-        SDL_FreeSurface(textSurface);
     }
 }
 

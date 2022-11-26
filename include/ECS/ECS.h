@@ -18,8 +18,6 @@ inline ComponentTypeID getUniqueComponentID()
     static ComponentTypeID lastID = 0u;
     return lastID++;
 }
-// if this function fails giveS no exception. program will continue to run
-// FIXME : this function can be written better. MAYBE
 template <typename T>
 inline ComponentTypeID getComponentTypeID() noexcept
 {
