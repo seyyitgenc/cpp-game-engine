@@ -1,10 +1,10 @@
 #pragma once
 #include <map>
 #include <string>
-#include "../SDL2/SDL.h"
-#include "../SDL2/SDL_ttf.h"
-#include "../SDL2/SDL_image.h"
-#include "../Engine/Engine.h"
+#include "SDL.h"
+#include "SDL_ttf.h"
+#include "SDL_image.h"
+#include "Engine/Engine.h"
 
 class AssetManager
 {
@@ -21,7 +21,6 @@ public:
     void loadFont(std::string id, std::string path, int fontSize);
 
     void loadRenderedText(std::string id, std::string text);
-    void changeText(std::string id, std::string text);
 
     static AssetManager &get()
     {
@@ -35,7 +34,7 @@ public:
 
 private:
     static AssetManager *s_instance;
-    std::map<std::string, TTF_Font *> fonts;
     std::map<std::string, SDL_Texture *> textures;
+    std::map<std::string, TTF_Font *> fonts;
     SDL_Color textColor = {150, 150, 255, 255};
 };

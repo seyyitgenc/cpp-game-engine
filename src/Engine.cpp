@@ -1,6 +1,9 @@
-#include "../include/Engine/Engine.h"
+#include "Engine/Engine.h"
 #include "ECS/AssetManager.h"
+
 #include "ECS/Components/Sprite.h"
+#include "ECS/Components/RigidBody.h"
+
 Engine *Engine::s_instance;
 
 Engine::Engine()
@@ -11,7 +14,8 @@ Engine::Engine()
 }
 Engine::~Engine() {}
 
-void Engine::init()
+// initialize window and renderer
+void Engine::initApp()
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
         std::cerr << SDL_GetError() << std::endl;
@@ -25,49 +29,20 @@ void Engine::init()
     m_clearColor = DARK;
     m_isRunning = true;
 
+    fpsTimer.start();
+}
+// initialize objects that will be used by game
+void Engine::initEntities()
+{
     manager = new Manager();
+    // TODO : Tile map can be done here
     auto &e = manager->addEntity();
-    auto &text = manager->addEntity();
 
-    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 22);
-    AssetManager::get().loadTexture("test", "assets/texture.png");
-    AssetManager::get().loadRenderedText("fpscounter", "testt");
-
-    text.addComponent<Sprite>(m_renderer, "fpscounter");
-    e.addComponent<Sprite>(m_renderer,"test");
-}
-
-
-void Engine::render()
-{
-    SDL_SetRenderDrawColor(m_renderer, 30, 30, 30, 255);
-    SDL_RenderClear(m_renderer);
-    manager->draw();
-
-    SDL_RenderPresent(m_renderer);
-}
-
-void Engine::update()
-{
-    manager->update();
-}
-void Engine::clean()
-{
-    AssetManager::get().clean();
-    SDL_DestroyRenderer(m_renderer);
-    SDL_DestroyWindow(m_window);
-    SDL_Quit();
-    TTF_Quit();
-    IMG_Quit();
-}
-
-double Engine::getDeltaTime()
-{
-    static Uint64 NOW = SDL_GetPerformanceCounter();
-    static Uint64 LAST = 0;
-    LAST = NOW;
-    NOW = SDL_GetPerformanceCounter();
-    return ((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
+    AssetManager::get().loadTexture("texture", "assets/texture.png");
+    
+    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf",28);
+    e.addComponent<Sprite>(m_renderer, "texture");
+    e.addComponent<RigidBody>();
 }
 
 void Engine::events()
@@ -85,29 +60,32 @@ void Engine::events()
         }
     }
 }
+void Engine::update(float &dt)
+{
+    manager->update(dt);
+}
+
+void Engine::render()
+{
+    static int countedFrames = 0;
+    SDL_SetRenderDrawColor(m_renderer, 30, 30, 30, 255);
+    SDL_RenderClear(m_renderer);
+    manager->draw();
+    SDL_RenderPresent(m_renderer);
+    countedFrames++;
+}
+
+void Engine::clean()
+{
+    AssetManager::get().clean();
+    SDL_DestroyRenderer(m_renderer);
+    SDL_DestroyWindow(m_window);
+    SDL_Quit();
+    TTF_Quit();
+    IMG_Quit();
+}
+
 void Engine::quit()
 {
     m_isRunning = false;
-}
-int Engine::getFrameRate(int countedFrames, Uint32 fpsTimer)
-{
-    float avgFps = countedFrames / (fpsTimer / 1000.f);
-    if (avgFps > 2000000)
-        avgFps = 0;
-    return avgFps;
-}
-
-void Engine::setScreenFps(int SCREEN_FPS, bool isFrameLimitEnabled)
-{
-    if (isFrameLimitEnabled)
-        SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
-    else
-        SCREEN_TICKS_PER_FRAME = 1000.f / SDL_GetPerformanceCounter();
-}
-void Engine::limitFrameRate()
-{
-    m_capTimer.start();
-    int frameTicks = m_capTimer.getTicks();
-    if (frameTicks < SCREEN_TICKS_PER_FRAME)
-        SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
-#include "../SDL2/SDL.h"
-#include "../ECS/EntityManager.h"
+#include "SDL.h"
+#include "ECS/EntityManager.h"
 #include "Clock.h"
 
 const int SCREEN_WIDTH = 800;
@@ -27,20 +27,18 @@ public:
     }
 
     void quit();
-    void init();
     void clean();
-
-    void setScreenFps(int, bool);  // set screen fps
-    int getFrameRate(int, Uint32); // get frame rate
-    void limitFrameRate();
-    double getDeltaTime();
+    void initApp();
+    void initEntities();
 
     void render();
-    void update();
+    void update(float &dt);
     void events();
     bool isRunning() { return m_isRunning; }
 
     SDL_Renderer *getRenderer() { return m_renderer; };
+
+    Clock fpsTimer;
 
 private:
     static Engine *s_instance;
@@ -50,11 +48,4 @@ private:
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;
     SDL_Color m_clearColor;
-
-    // Game Tick and FPS field
-    int SCREEN_FPS = 120;
-    int SCREEN_TICKS_PER_FRAME = 1000.f / SCREEN_FPS;
-    // Timer field
-    Clock m_capTimer;
-    unsigned int m_countedFrames = 0;
 };

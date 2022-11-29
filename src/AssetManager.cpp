@@ -1,6 +1,6 @@
-#include "AssetManager.h"
+#include "ECS/AssetManager.h"
 #include <iostream>
-AssetManager *AssetManager::s_instance = nullptr;
+AssetManager *AssetManager::s_instance;
 AssetManager::AssetManager()
 {
     if (TTF_Init() != 0)
@@ -22,7 +22,7 @@ void AssetManager::loadTexture(std::string id, std::string path)
         SDL_Texture *texture = IMG_LoadTexture(Engine::get().getRenderer(), path.c_str());
         if (texture)
         {
-            textures[id] = texture;
+            textures.emplace(id, texture);
             std::cout << "Texture :[" << path << "] loaded" << std::endl;
         }
         else
@@ -73,7 +73,8 @@ void AssetManager::clean()
     for (auto it = textures.begin(); it != textures.end(); it++)
     {
         SDL_DestroyTexture(it->second);
-        textures.erase(it);
+        // FIXME this line of code is bugged
+        // textures.erase(it); 
     }
     textures.clear();
     std::cout << "Textures Cleared !" << std::endl;

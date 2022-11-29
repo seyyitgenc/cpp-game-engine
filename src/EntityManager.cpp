@@ -1,4 +1,4 @@
-#include "EntityManager.h"
+#include "ECS/EntityManager.h"
 #include <algorithm>
 void Manager::draw()
 {
@@ -7,10 +7,10 @@ void Manager::draw()
         entity->draw();
     }
 }
-void Manager::update()
+void Manager::update(float &dt)
 {
     for (auto &entity : entities)
-        entity->update();
+        entity->update(dt);
 }
 void Manager::refresh()
 {

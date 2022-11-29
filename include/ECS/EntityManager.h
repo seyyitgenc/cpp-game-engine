@@ -11,7 +11,7 @@ public:
     ~Manager() = default;
 
     void draw();
-    void update();
+    void update(float &dt);
     void refresh();
 
     Entity& addEntity();

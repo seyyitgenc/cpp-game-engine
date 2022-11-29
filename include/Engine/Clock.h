@@ -1,5 +1,5 @@
 #pragma once
-#include "../SDL2/SDL.h"
+#include "SDL.h"
 class Clock
 {
 public:
@@ -10,7 +10,7 @@ public:
     void stop();
     void pause();
     void unpause();
-    Uint32 restart();
+    void restart();
     // gets the timer's time
     Uint32 getTicks();
     // checks the status of the timer

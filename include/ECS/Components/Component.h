@@ -1,6 +1,5 @@
 #pragma once
 
-// this Entity represents Entity class in Entity.h
 #include "../Entity.h"
 
 class Component
@@ -11,7 +10,7 @@ public:
 
     virtual bool init() { return true; }
     virtual void draw(){};
-    virtual void update(){};
+    virtual void update(float &dt){};
 
     ~Component() = default;
 };

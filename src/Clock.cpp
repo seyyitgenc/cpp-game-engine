@@ -1,4 +1,4 @@
-#include "../include/Engine/Clock.h"
+#include "Engine/Clock.h"
 // constract Clock
 Clock::Clock()
 {
@@ -62,9 +62,7 @@ void Clock::unpause()
     }
 }
 // reset Clock
-Uint32 Clock::restart()
+void Clock::restart()
 {
-    static float initialTime = SDL_GetTicks();
-    m_elapsedTime = SDL_GetTicks() - initialTime;
-    return m_elapsedTime;
+    m_startTicks = SDL_GetTicks();
 }

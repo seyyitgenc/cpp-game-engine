@@ -2,7 +2,6 @@
 #include <iostream>
 #include <bitset>
 #include <array>
-
 class Entity;
 class Component;
 

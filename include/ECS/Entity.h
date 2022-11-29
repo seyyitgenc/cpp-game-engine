@@ -6,6 +6,7 @@
 #include "ECS.h"
 #include "Components/Component.h"
 #include "Components/Transform.h"
+
 class Entity
 {
 public:
@@ -31,7 +32,7 @@ public:
         compList[getComponentTypeID<T>()] = comp;
         compBitset[getComponentTypeID<T>()] = true;
 
-        // if component doesn't have initialize function it will return false and because of that
+        // if component doesn't have initialize function it will return false
         // if you use it in if claus probably your function will fail
         comp->init();
         return *comp; // return comp referance
@@ -68,11 +69,11 @@ public:
             comp->draw();
         }
     }
-    void update()
+    void update(float &dt)
     {
         for (auto &comp : components)
         {
-            comp->update();
+            comp->update(dt);
         }
     }
 
