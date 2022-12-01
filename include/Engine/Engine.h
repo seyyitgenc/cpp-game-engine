@@ -3,6 +3,7 @@
 #include "SDL.h"
 #include "ECS/EntityManager.h"
 #include "Clock.h"
+#include <map>
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
@@ -41,9 +42,8 @@ public:
     Clock fpsTimer;
 
 private:
-    static Engine *s_instance;
     Manager *manager;
-
+    static Engine *s_instance;
     bool m_isRunning;
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;

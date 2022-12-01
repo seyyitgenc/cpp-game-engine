@@ -1,3 +1,4 @@
+#pragma once
 #include <math.h>
 #include <iostream>
 // this struct can be generated as any type
@@ -47,6 +48,8 @@ struct v2d_generic
         this->y /= rhs;
         return *this;
     }
+  
+
     friend std::ostream &operator<<(std::ostream &stream, const v2d_generic &other)
     {
         stream << other.x << "," << other.y;

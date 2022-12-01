@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Entity.h"
+#include "ECS/Entity.h"
 
 class Component
 {

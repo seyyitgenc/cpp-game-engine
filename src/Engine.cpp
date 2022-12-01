@@ -3,6 +3,8 @@
 
 #include "ECS/Components/Sprite.h"
 #include "ECS/Components/RigidBody.h"
+#include "ECS/Components/CollisionBox.h"
+#include "headers/Player.h"
 
 Engine *Engine::s_instance;
 
@@ -36,13 +38,16 @@ void Engine::initEntities()
 {
     manager = new Manager();
     // TODO : Tile map can be done here
-    auto &e = manager->addEntity();
-
-    AssetManager::get().loadTexture("texture", "assets/texture.png");
+    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 28);
     
-    AssetManager::get().loadFont("aerial", "fonts/aerial.ttf",28);
-    e.addComponent<Sprite>(m_renderer, "texture");
-    e.addComponent<RigidBody>();
+    AssetManager::get().loadTexture("texture", "assets/texture.png");
+    AssetManager::get().loadTexture("player", "assets/tile.png");
+
+    // player
+    auto &p1 = manager->addEntity();
+    p1.addComponent<Sprite>(m_renderer, "player", 64, 64);
+    p1.addComponent<RigidBody>();
+    p1.addComponent<CollisionBox>(m_renderer, 96, 128);
 }
 
 void Engine::events()

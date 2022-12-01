@@ -16,14 +16,13 @@ public:
     };
     virtual ~Entity() = default;
     // THIS SECTION IS QUIET IMPORTANT
-    // TODO: TRY TO UNDERSTAND THIS SECTION
     // TODO: UNDERSTAND UNIQUE AND SMART POINTERS
     template <typename T, typename... TArgs>
     T &addComponent(TArgs &&...args)
     {
-        // assert will check if this component exist. if exist it stops process.
+        // assert will prevent using same component twice or more on single entity
         assert(!hasComponent<T>());
-        // FIXME if entered parameters doesn't correspond any constrcutor relatod to Component this will give error
+        // NOTE:  if parameters doesn't correspond any constrcutor relatod to Component this will give error
         T *comp(new T(std::forward<TArgs>(args)...));
         comp->entity = this; // attach component to it's entity
         std::unique_ptr<Component> uptr(comp);
@@ -41,7 +40,6 @@ public:
     template <typename T>
     T &getComponent() const
     {
-        // assert will check if this component exist then continue to process
         assert(hasComponent<T>());
         auto ptr(compList[getComponentTypeID<T>()]);
         return *static_cast<T *>(ptr);
