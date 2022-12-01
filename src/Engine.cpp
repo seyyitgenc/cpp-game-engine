@@ -1,10 +1,10 @@
 #include "Engine/Engine.h"
 #include "ECS/AssetManager.h"
 
-#include "Engine/Collider.h"
 #include "ECS/Components/Sprite.h"
 #include "ECS/Components/RigidBody.h"
 #include "ECS/Components/CollisionBox.h"
+#include "Engine/Collider.h"
 
 Engine *Engine::s_instance;
 
@@ -53,13 +53,14 @@ void Engine::initEntities()
 
     p1 = &manager->addEntity();
     p1->addComponent<Sprite>(m_renderer, "player", 64, 64);
-    p1->addComponent<RigidBody>();
+    p1->addComponent<RigidBody>(); // for physics calculation
     p1->addComponent<CollisionBox>(m_renderer, 64, 64);
-
     p2 = &manager->addEntity();
     p2->addComponent<Sprite>(m_renderer, "enemy", 64, 64);
     p2->addComponent<CollisionBox>(m_renderer, 100, 100);
     p2->getComponent<Transform>().position = {300, 300};
+
+    p1->addComponent<Collider>();
 }
 
 void Engine::events()
@@ -77,33 +78,9 @@ void Engine::events()
         }
     }
 }
-void resolveCollision()
-{
-    rectA = p1->getComponent<CollisionBox>().getRect();
-    rectB = p2->getComponent<CollisionBox>().getRect();
-    if (Collider::AABB(p1->getComponent<CollisionBox>(), p2->getComponent<CollisionBox>()))
-    {
-        // TODO must find better solition
-        if (rectA.x > rectB.x && rectA.x + rectA.w > rectB.x + rectB.w && rectA.y < rectB.y + rectB.h && rectA.y + rectA.h > rectB.y)
-        {
-            p1->getComponent<Transform>().position.x = rectB.x + rectB.w;
-        }
-        if (rectA.x < rectB.x && rectA.x + rectA.w < rectB.x + rectB.w && rectA.y < rectB.y + rectB.h && rectA.y + rectA.h > rectB.y)
-        {
-            p1->getComponent<Transform>().position.x = rectB.x - rectA.w;
-        }
-        if (rectA.y > rectB.y && rectA.y + rectA.h > rectB.y + rectB.h && rectA.x < rectB.x + rectB.w && rectA.x + rectA.x + rectA.w > rectB.x)
-        {
-            p1->getComponent<Transform>().position.y = rectB.y + rectA.h;
-        }
-        if (rectA.y < rectB.y && rectA.y + rectA.h < rectB.y + rectB.h && rectA.x < rectB.x + rectB.w && rectA.x + rectA.x + rectA.w > rectB.x)
-        {
-        }
-    }
-}
 void Engine::update(float &dt)
 {
-    resolveCollision();
+    p1->getComponent<Collider>().resolveAABB(p1->getComponent<CollisionBox>(), p2->getComponent<CollisionBox>());
     manager->update(dt);
 }
 
