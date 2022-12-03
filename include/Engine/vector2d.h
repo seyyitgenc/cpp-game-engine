@@ -19,17 +19,31 @@ struct v2d_generic
     v2d_generic prep() { return v2d_generic(-y, x); }                               // perpendicular
     T dot(const v2d_generic &rhs) { return (this->x * rhs.x + this->y * rhs.y); }   // dot product
     T cross(const v2d_generic &rhs) { return (this->x * rhs.y - this->y * rhs.y); } // cross product
+
     // operator overloading
     v2d_generic operator+(const v2d_generic &rhs) { return v2d_generic(this->x + rhs.x, this->y + rhs.y); }
+    const v2d_generic operator+(const v2d_generic &rhs) const { return v2d_generic(this->x + rhs.x, this->y + rhs.y); }
+
     v2d_generic operator-(const v2d_generic &rhs) { return v2d_generic(this->x - rhs.x, this->y - rhs.y); }
+    const v2d_generic operator-(const v2d_generic &rhs) const { return v2d_generic(this->x - rhs.x, this->y - rhs.y); }
+
     v2d_generic operator*(const T &rhs) { return v2d_generic(this->x * rhs, this->y * rhs); }
+    const v2d_generic operator*(const T &rhs) const { return v2d_generic(this->x * rhs, this->y * rhs); }
+    v2d_generic operator*(const v2d_generic &rhs) { return v2d_generic(this->x * rhs.x, this->y * rhs.y); }
+    const v2d_generic operator*(const v2d_generic &rhs) const { return v2d_generic(this->x * rhs.x, this->y * rhs.y); }
+
     v2d_generic operator/(const T &rhs) { return v2d_generic(this->x / rhs, this->y / rhs); }
+    const v2d_generic operator/(const T &rhs) const { return v2d_generic(this->x / rhs, this->y / rhs); }
+    v2d_generic operator/(const v2d_generic &rhs) { return v2d_generic(this->x / rhs.x, this->y / rhs.y); }
+    const v2d_generic operator/(const v2d_generic &rhs) const { return v2d_generic(this->x / rhs.x, this->y / rhs.y); }
+    
     v2d_generic operator+=(const v2d_generic &rhs)
     {
         this->x += rhs.x;
         this->y += rhs.y;
         return *this;
     }
+
     v2d_generic operator-=(const v2d_generic &rhs)
     {
         this->x -= rhs.x;
@@ -48,7 +62,6 @@ struct v2d_generic
         this->y /= rhs;
         return *this;
     }
-  
 
     friend std::ostream &operator<<(std::ostream &stream, const v2d_generic &other)
     {

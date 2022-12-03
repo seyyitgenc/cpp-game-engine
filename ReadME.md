@@ -13,8 +13,23 @@
     
 
 
-
 > TODO 
+- [x] ECS
+- [x] vector 2d implementation
+- [x] Asset manager
+- [ ] Dynamic ui label text
+- [x] Transform component
+- [x] Rigid Body component
+- [x] Collision box component
+- [ ] Entity can have multiple collision box
+- [x] Sprite component
+- [x] Collider component
+- [ ] Camera component
+- [ ] Tilemap
 - [ ] Map generator with perlin noise
-- [ ] Rigid Body component
-- [ ] Collider component
+- [x] AABB collision
+- [x] Continious Swept AABB collision
+- [ ] SAT collision
+
+
+

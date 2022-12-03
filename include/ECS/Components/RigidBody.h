@@ -9,21 +9,30 @@ public:
     ~RigidBody() = default;
     void update(float &dt) override final
     {
+        // TODO this part must have physic calculations
+        linearVelocity = {0, 0};
         const Uint8 *state = SDL_GetKeyboardState(NULL);
         if (state[SDL_SCANCODE_W])
         {
-            transform->position.y -= dt * linearVelocity.x;
+            linearVelocity.y -= movementSpeed;
         }
         if (state[SDL_SCANCODE_S])
         {
-            transform->position.y += dt * linearVelocity.y;
+            linearVelocity.y += movementSpeed;
         }
         if (state[SDL_SCANCODE_D])
-            transform->position.x += dt * linearVelocity.y;
+        {
+            linearVelocity.x += movementSpeed;
+        }
 
         if (state[SDL_SCANCODE_A])
-            transform->position.x -= dt * linearVelocity.y;
+        {
+            linearVelocity.x -= movementSpeed;
+        }
+        transform->position += linearVelocity * dt;
     }
+    vf2d getVelocity() { return linearVelocity; }
+    void setVelocity(vf2d velocity) { linearVelocity = velocity; }
     bool init() final
     {
         transform = &entity->getComponent<Transform>();
@@ -31,6 +40,7 @@ public:
     };
 
 private:
-    vf2d linearVelocity = {0.5, 0.5};
+    float movementSpeed = 0.5;
+    vf2d linearVelocity = {0, 0};
     Transform *transform = nullptr;
 };

@@ -13,7 +13,9 @@ public:
         transform = &entity->getComponent<Transform>(); // for pos
         return true;
     }
+    // AABB
     void resolveAABB(CollisionBox &colBoxA, CollisionBox &colBoxB);
+    // SWEPT AABB
 
 private:
     SDL_FRect rectA;
@@ -21,6 +23,7 @@ private:
     Transform *transform;
 };
 
+// AABB colliison
 void Collider::resolveAABB(CollisionBox &colBoxA, CollisionBox &colBoxB)
 {
     rectA = colBoxA.colRect;
