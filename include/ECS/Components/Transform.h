@@ -1,9 +1,6 @@
 #pragma once
 #include "Component.h"
-#ifndef vector_h
-#define vector_h
 #include "Engine/vector2d.h"
-#endif
 struct Transform : public Component
 {
     Transform(float x, float y)
@@ -25,4 +22,13 @@ struct Transform : public Component
     vf2d position;
     vf2d scale;
     float rotation = 0.0f;
+    bool init()override{
+        return true;
+    }
+    void draw()override{
+
+    }
+    void update(float&dt)override{
+
+    }
 };

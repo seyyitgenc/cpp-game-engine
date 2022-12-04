@@ -2,7 +2,6 @@
 #include <vector>
 #include <memory>
 #include <cassert>
-
 #include "ECS.h"
 #include "Components/Component.h"
 #include "Components/Transform.h"
@@ -15,8 +14,6 @@ public:
         addComponent<Transform>(0, 0); // sets newly created entity location
     };
     virtual ~Entity() = default;
-    // THIS SECTION IS QUIET IMPORTANT
-    // TODO: UNDERSTAND UNIQUE AND SMART POINTERS
     template <typename T, typename... TArgs>
     T &addComponent(TArgs &&...args)
     {

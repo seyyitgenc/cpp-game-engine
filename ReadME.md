@@ -2,7 +2,7 @@
 
 - SDL SUPER BUILD THAT INCLUDES SDL2,SDL_image and SDL_ttf. SDL_mixer coming soon.
 
-##### Follow these steps
+## Follow these steps
 
     mkdir build
     cd build
@@ -11,7 +11,8 @@
 
 - Change this -G parameter according to your build preferences
 
-> TODO 
+> TODO
+
 - [x] ECS
 - [x] vector 2d implementation
 - [x] Asset manager
@@ -19,15 +20,12 @@
 - [x] Transform component
 - [x] Rigid Body component
 - [x] Collision box component
+- [ ] Controller Component
 - [ ] Entity can have multiple collision box
 - [x] Sprite component
 - [x] Collider component
 - [ ] Camera component
 - [ ] Tilemap
 - [ ] Map generator with perlin noise
-- [x] AABB collision
 - [x] Continious Swept AABB collision
 - [ ] SAT collision
-
-
-

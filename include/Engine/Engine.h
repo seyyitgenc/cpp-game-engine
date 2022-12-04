@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include "vector2d.h"
 #include "SDL.h"
 #include "ECS/EntityManager.h"
 #include "Clock.h"

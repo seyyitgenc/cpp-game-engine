@@ -2,6 +2,7 @@
 #include <iostream>
 #include <bitset>
 #include <array>
+
 class Entity;
 class Component;
 
@@ -24,6 +25,5 @@ inline ComponentTypeID getComponentTypeID() noexcept
     static const ComponentTypeID typeID = getUniqueComponentID();
     return typeID;
 }
-
 using ComponentBitset = std::bitset<MAX_COMPONENTS>;
 using ComponentList = std::array<Component *, MAX_COMPONENTS>;

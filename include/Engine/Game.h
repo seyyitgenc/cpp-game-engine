@@ -18,6 +18,9 @@ public:
 	int getFrameRate(const int &countedFrames, const Uint32 &fpstimer);
 	void setFrameRate(const int &SCREEN_FPS);
 	void limitFrameRate();
+	void initEntities();
+
+
 
 private:
 	int SCREEN_FPS = 70;

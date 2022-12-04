@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include "SDL.h"
 #include "ECS/Entity.h"
@@ -25,7 +24,6 @@ public:
 
         return true;
     }
-    // TODO : Change rects to float rect
     void draw() override final
     {
         SDL_RenderCopyExF(rTarget, texture, nullptr, &dstRect, transform->rotation, nullptr, flip);

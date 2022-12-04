@@ -1,5 +1,5 @@
-#include "ECS/AssetManager.h"
 #include <iostream>
+#include "ECS/AssetManager.h"
 AssetManager *AssetManager::s_instance;
 AssetManager::AssetManager()
 {
@@ -55,8 +55,6 @@ void AssetManager::clean()
     for (auto it = textures.begin(); it != textures.end(); it++)
     {
         SDL_DestroyTexture(it->second);
-        // FIXME this line of code is bugged
-        // textures.erase(it); 
     }
     textures.clear();
     std::cout << "Textures Cleared !" << std::endl;
@@ -64,7 +62,6 @@ void AssetManager::clean()
     for (auto it = fonts.begin(); it != fonts.end(); it++)
     {
         TTF_CloseFont(it->second);
-        fonts.erase(it);
     }
     fonts.clear();
     std::cout << "Fonts Cleared !" << std::endl;

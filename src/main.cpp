@@ -8,3 +8,4 @@ int main(int argc, char **argv)
 	game->~Game();
 	return EXIT_SUCCESS;
 }
+

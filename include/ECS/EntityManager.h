@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vector>
 #include <memory>
 #include "Entity.h"
@@ -14,7 +13,7 @@ public:
     void update(float &dt);
     void refresh();
 
-    Entity& addEntity();
+    Entity &addEntity();
     void eraseEntity(Entity *entity);
 
 private:

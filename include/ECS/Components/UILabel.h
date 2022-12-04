@@ -1,7 +1,7 @@
 #pragma once
 #include "ECS/AssetManager.h"
 #include "SDL.h"
-
+#include <array>
 class UILabel : public Component
 {
 public:
@@ -14,6 +14,7 @@ public:
     ~UILabel() = default;
     void setLabelText(const std::string &labelText)
     {
+        // NOTE : TTF_RenderText_Blended is loading text into to high res texture.
         SDL_Surface *surface = TTF_RenderText_Blended(AssetManager::get().getFont(m_labelFont), labelText.c_str(), m_textColor);
         SDL_DestroyTexture(m_labelTexture); // prevents memory leak
         m_labelTexture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), surface);

@@ -5,7 +5,7 @@
 #include "ECS/Components/Sprite.h"
 #include "ECS/Components/RigidBody.h"
 #include "ECS/Components/CollisionBox.h"
-#include "ECS/Components/Collider.h"
+#include "Engine/Collider.h"
 #include "ECS/Components/UILabel.h"
 
 #include <sstream>
@@ -39,25 +39,30 @@ void Engine::initApp()
     fpsTimer.start();
 }
 // TODO organize these object
-Entity *p1;
-Entity *p2;
 
 std::vector<Entity *> colRects;
-Entity *label;
+Entity *frametime;
 
-Collider test;
+Collider collisionResolver;
+
+//TODO: Engine must consist of only engine related stuff
+//TODO: FPS UI label
 
 // initialize objects that will be used by game
 void Engine::initEntities()
 {
     // TODO : Tile map can be done here
     manager = new Manager();
+    
     AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 16);
+    AssetManager::get().loadFont("oswald", "fonts/oswald.ttf", 16);
+    AssetManager::get().loadFont("sans", "fonts/sans.ttf", 16);
+
     AssetManager::get().loadTexture("enemy", "assets/texture.png");
     AssetManager::get().loadTexture("player", "assets/tile.png");
     SDL_Color red = {255, 0, 0, 255};
-    label = &manager->addEntity();
-    label->addComponent<UILabel>(0, 0, "my new text", "aerial", red);
+    frametime = &manager->addEntity();
+    frametime->addComponent<UILabel>(0, 0, "", "sans", red);
 
     // player
     colRects.push_back(&manager->addEntity());
@@ -88,18 +93,24 @@ void Engine::events()
 }
 void Engine::update(float &dt)
 {
-    test.resolveSweptAABB(colRects, dt);
+    collisionResolver.resolveSweptAABB(colRects, dt);
     manager->update(dt);
 }
 
 void Engine::render()
 {
+    static Uint64 NOW = SDL_GetPerformanceCounter();
+    static Uint64 LAST = 0;
+    LAST = NOW;
+    NOW = SDL_GetPerformanceCounter();
+    frametime->getComponent<UILabel>().setLabelText("frame time : " + std::to_string((NOW - LAST) / (double)SDL_GetPerformanceFrequency()));
     static int countedFrames = 0;
     SDL_SetRenderDrawColor(m_renderer, 30, 30, 30, 255);
     SDL_RenderClear(m_renderer);
     manager->draw();
     SDL_RenderPresent(m_renderer);
     countedFrames++;
+    
 }
 
 void Engine::clean()
