@@ -5,6 +5,12 @@
 #include "Clock.h"
 #include <map>
 
+struct rect
+{
+    vf2d pos;
+    vf2d size;
+    vf2d vel;
+};
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 const SDL_Color DARK = {30, 30, 30, 255};

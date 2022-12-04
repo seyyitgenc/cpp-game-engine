@@ -49,24 +49,6 @@ TTF_Font *AssetManager::getFont(std::string id)
     return nullptr;
 }
 
-void AssetManager::loadRenderedText(std::string id, std::string text)
-{
-    if (textures.count(id) <= 0)
-    {
-        SDL_Surface *textSurface = TTF_RenderText_Solid(getFont("aerial"), text.c_str(), textColor);
-        if (textSurface != NULL)
-        {
-            SDL_Texture *texture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), textSurface);
-            if (texture != NULL)
-            {
-                textures[id] = texture;
-                std::cout << "[" << text << "] loaded!" << std::endl;
-            }
-            SDL_FreeSurface(textSurface);
-        }
-    }
-}
-
 // this cleans everything related to Textures and Fonts
 void AssetManager::clean()
 {

@@ -2,7 +2,7 @@
 #include "Component.h"
 #ifndef vector_h
 #define vector_h
-#include "../../Engine/vector2d.h"
+#include "Engine/vector2d.h"
 #endif
 struct Transform : public Component
 {

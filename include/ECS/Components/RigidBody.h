@@ -10,26 +10,26 @@ public:
     void update(float &dt) override final
     {
         // TODO this part must have physic calculations
-        linearVelocity = {0, 0};
-        const Uint8 *state = SDL_GetKeyboardState(NULL);
-        if (state[SDL_SCANCODE_W])
-        {
-            linearVelocity.y -= movementSpeed;
-        }
-        if (state[SDL_SCANCODE_S])
-        {
-            linearVelocity.y += movementSpeed;
-        }
-        if (state[SDL_SCANCODE_D])
-        {
-            linearVelocity.x += movementSpeed;
-        }
+        // linearVelocity = {0, 0};
+        // const Uint8 *state = SDL_GetKeyboardState(NULL);
+        // if (state[SDL_SCANCODE_W])
+        // {
+        //     linearVelocity.y -= movementSpeed;
+        // }
+        // if (state[SDL_SCANCODE_S])
+        // {
+        //     linearVelocity.y += movementSpeed;
+        // }
+        // if (state[SDL_SCANCODE_D])
+        // {
+        //     linearVelocity.x += movementSpeed;
+        // }
 
-        if (state[SDL_SCANCODE_A])
-        {
-            linearVelocity.x -= movementSpeed;
-        }
-        transform->position += linearVelocity * dt;
+        // if (state[SDL_SCANCODE_A])
+        // {
+        //     linearVelocity.x -= movementSpeed;
+        // }
+        // transform->position += linearVelocity * dt;
     }
     vf2d getVelocity() { return linearVelocity; }
     void setVelocity(vf2d velocity) { linearVelocity = velocity; }
@@ -38,9 +38,8 @@ public:
         transform = &entity->getComponent<Transform>();
         return true;
     };
-
+    vf2d linearVelocity = {0, 0};
 private:
     float movementSpeed = 0.5;
-    vf2d linearVelocity = {0, 0};
     Transform *transform = nullptr;
 };

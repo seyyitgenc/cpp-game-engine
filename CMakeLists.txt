@@ -14,8 +14,9 @@ file(COPY ${CMAKE_CURRENT_LIST_DIR}/fonts DESTINATION ${CMAKE_CURRENT_BINARY_DIR
 
 #add all executables
 file(GLOB_RECURSE SOURCE src/*.cpp)
+file(GLOB_RECURSE SOURCE2  include/ECS/Components/*.cpp)
 
-add_executable(engine ${SOURCE})
+add_executable(engine ${SOURCE} ${SOURCE2})
 
 include(FetchContent)
 

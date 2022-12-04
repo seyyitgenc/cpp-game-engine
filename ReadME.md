@@ -10,14 +10,12 @@
     make
 
 - Change this -G parameter according to your build preferences
-    
-
 
 > TODO 
 - [x] ECS
 - [x] vector 2d implementation
 - [x] Asset manager
-- [ ] Dynamic ui label text
+- [x] Dynamic UI label text
 - [x] Transform component
 - [x] Rigid Body component
 - [x] Collision box component

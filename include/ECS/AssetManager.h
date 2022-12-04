@@ -20,8 +20,6 @@ public:
     TTF_Font *getFont(std::string id);
     void loadFont(std::string id, std::string path, int fontSize);
 
-    void loadRenderedText(std::string id, std::string text);
-
     static AssetManager &get()
     {
         if (s_instance == nullptr)
