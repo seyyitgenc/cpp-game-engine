@@ -6,14 +6,15 @@
 #include "Clock.h"
 #include <map>
 
-struct rect
-{
-    vf2d pos;
-    vf2d size;
-    vf2d vel;
-};
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
+// TODO merge game and engine headers
+// TODO try to draw collision rect alongside with sprite
+
+const int SCREEN_WIDTH = 1280;
+const int SCREEN_HEIGHT = 960;
+
+const int LEVEL_WIDTH = 1280;
+const int LEVEL_HEIGHT = 960;
+
 const SDL_Color DARK = {30, 30, 30, 255};
 
 class Engine
@@ -38,6 +39,8 @@ public:
     void clean();
     void initApp();
     void initEntities();
+
+    float getFrameRate(const int &countedFrames, const Uint64 &fpsTimer);
 
     void render();
     void update(float &dt);

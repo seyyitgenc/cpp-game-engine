@@ -10,6 +10,7 @@ public:
     ~Collider() = default;
     // SWEPT AABB
     void resolveSweptAABB(std::vector<Entity *> &vrects, float &dt);
+
 private:
     vf2d velocity = {0, 0};
     bool RayVsRect(const vf2d &ray_origin, const vf2d &ray_dir, const SDL_FRect *target, vf2d &contact_point, vf2d &contact_normal, float &t_hit_near);
@@ -107,23 +108,23 @@ bool Collider::ResolveDynamicRectVsRect(CollisionBox *r_dynamic, const float fTi
 void Collider::resolveSweptAABB(std::vector<Entity *> &vrects, float &dt)
 {
     velocity = {0, 0};
-    // vrects[0].vel = {0, 0};
+
     const Uint8 *state = SDL_GetKeyboardState(NULL);
     if (state[SDL_SCANCODE_W])
     {
-        velocity.y -= 0.5f;
+        velocity.y -= 500.0f;
     }
     if (state[SDL_SCANCODE_S])
     {
-        velocity.y += 0.5f;
+        velocity.y += 500.0f;
     }
     if (state[SDL_SCANCODE_D])
     {
-        velocity.x += 0.5f;
+        velocity.x += 500.0f;
     }
     if (state[SDL_SCANCODE_A])
     {
-        velocity.x -= 0.5f;
+        velocity.x -= 500.0f;
     }
     vf2d cp, cn;
     float t = 0;

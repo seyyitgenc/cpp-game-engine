@@ -5,6 +5,8 @@
 #include <string>
 #include <iostream>
 
+
+
 class Game
 {
 public:
@@ -12,15 +14,12 @@ public:
 	~Game();
 	void Run(); // run main loop
 
-	float& getDeltaTime();
+	float &getDeltaTime();
 
 	// Frame Rate Field
-	int getFrameRate(const int &countedFrames, const Uint32 &fpstimer);
 	void setFrameRate(const int &SCREEN_FPS);
 	void limitFrameRate();
 	void initEntities();
-
-
 
 private:
 	int SCREEN_FPS = 70;

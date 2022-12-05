@@ -1,9 +1,10 @@
 #pragma once
 #include <string>
 #include "SDL.h"
-#include "ECS/Entity.h"
 #include "Component.h"
+#include "ECS/Entity.h"
 #include "ECS/AssetManager.h"
+#include "ECS/Components/Camera.h"
 
 class Sprite : public Component
 {
@@ -26,24 +27,30 @@ public:
     }
     void draw() override final
     {
-        SDL_RenderCopyExF(rTarget, texture, nullptr, &dstRect, transform->rotation, nullptr, flip);
+        SDL_RenderCopyExF(rTarget, texture, nullptr, &dstRect, 0.0f, nullptr, flip);
     }
     void update(float &dt) override final
     {
+        // if (entity->hasComponent<Camera>())
+        // {
+        //     srcRect = camera->getCameraRect();
+        // }
         dstRect.x = (transform->position.x);
         dstRect.y = (transform->position.y);
     }
     vi2d getSize() { return {width, height}; }
 
 private:
+    vf2d camPos={0,0};
     SDL_Renderer *rTarget = nullptr;
     std::string textureID = "";
     Transform *transform = nullptr;
+    // Camera *camera = nullptr;
     SDL_Texture *texture = nullptr;
 
     int width = 0;
     int height = 0;
-    SDL_Rect *srcRect = nullptr;
+    SDL_Rect srcRect;
     SDL_FRect dstRect = {0, 0, 0, 0};
 
     SDL_RendererFlip flip = SDL_FLIP_NONE;

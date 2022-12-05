@@ -2,6 +2,7 @@
 #include "Component.h"
 #include "SDL.h"
 #include "ECS/Components/Sprite.h"
+#include "ECS/Components/Camera.h"
 class CollisionBox : public Component
 {
 public:

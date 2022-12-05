@@ -17,20 +17,13 @@ void Game::Run()
 		engine->events();
 		engine->update(getDeltaTime());
 		engine->render();
-		// std::cout << getDeltaTime() << std::endl;
 	}
 }
 
-void Game::initEntities(){
-	
-}
-int Game::getFrameRate(const int &countedFrames, const Uint32 &fpsTimer)
+void Game::initEntities()
 {
-	float avgFps = countedFrames / (fpsTimer / 1000.f);
-	if (avgFps > 2000000)
-		avgFps = 0;
-	return avgFps;
 }
+
 float &Game::getDeltaTime()
 {
 	static Uint64 NOW = SDL_GetPerformanceCounter();
@@ -38,7 +31,7 @@ float &Game::getDeltaTime()
 	static float dt;
 	LAST = NOW;
 	NOW = SDL_GetPerformanceCounter();
-	dt = (NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency();
+	dt = (NOW - LAST) / (double)SDL_GetPerformanceFrequency();
 	return dt;
 }
 void Game::setFrameRate(const int &SCREEN_FPS)
