@@ -4,18 +4,12 @@
 #include "SDL.h"
 #include "ECS/EntityManager.h"
 #include "Clock.h"
+#include "Global.h"
 #include <map>
 
-// TODO merge game and engine headers
 // TODO try to draw collision rect alongside with sprite
 
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 960;
-
-const int LEVEL_WIDTH = 1280;
-const int LEVEL_HEIGHT = 960;
-
-const SDL_Color DARK = {30, 30, 30, 255};
+const SDL_Color rendererColor = {30, 30, 30, 255};
 
 class Engine
 {
@@ -34,14 +28,16 @@ public:
         }
         return *s_instance;
     }
-
+    void run();
     void quit();
     void clean();
     void initApp();
     void initEntities();
 
+    float &getDeltaTime();
     float getFrameRate(const int &countedFrames, const Uint64 &fpsTimer);
-
+    void setFrameRate(const int &SCREEN_FPS);
+    void limitFrameRate();
     void render();
     void update(float &dt);
     void events();
@@ -52,10 +48,16 @@ public:
     Clock fpsTimer;
 
 private:
+    // Engine Field
     Manager *manager;
     static Engine *s_instance;
     bool m_isRunning;
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;
-    SDL_Color m_clearColor;
+
+private:
+    // Game Field
+    int SCREEN_FPS = 70;
+    int SCREEN_TICKS_PER_FRAME = 1000.0f / SCREEN_FPS;
+    Clock m_capTimer;
 };

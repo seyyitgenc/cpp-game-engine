@@ -1,11 +1,11 @@
-#include "Engine/Game.h"
+#include "Engine/Engine.h"
 
 int main(int argc, char **argv)
 {
-	Game *game = nullptr;
-	game = new Game();
-	game->Run(); // main game loop
-	game->~Game();
+	Engine *engine;
+	engine = &Engine::get();
+	engine->run(); // main game loop
+	engine->~Engine();
+
 	return EXIT_SUCCESS;
 }
-

@@ -104,28 +104,10 @@ bool Collider::ResolveDynamicRectVsRect(CollisionBox *r_dynamic, const float fTi
     }
     return false;
 }
-
+// TODO: add window collision
 void Collider::resolveSweptAABB(std::vector<Entity *> &vrects, float &dt)
 {
-    velocity = {0, 0};
-
-    const Uint8 *state = SDL_GetKeyboardState(NULL);
-    if (state[SDL_SCANCODE_W])
-    {
-        velocity.y -= 500.0f;
-    }
-    if (state[SDL_SCANCODE_S])
-    {
-        velocity.y += 500.0f;
-    }
-    if (state[SDL_SCANCODE_D])
-    {
-        velocity.x += 500.0f;
-    }
-    if (state[SDL_SCANCODE_A])
-    {
-        velocity.x -= 500.0f;
-    }
+    velocity = vrects[0]->getComponent<RigidBody>().getVel();
     vf2d cp, cn;
     float t = 0;
     std::vector<std::pair<int, float>> z;
@@ -141,8 +123,7 @@ void Collider::resolveSweptAABB(std::vector<Entity *> &vrects, float &dt)
     // Now resolve the collision in correct order
     for (auto j : z)
     {
-        if (ResolveDynamicRectVsRect(&vrects[0]->getComponent<CollisionBox>(), dt, &vrects[j.first]->getComponent<CollisionBox>()))
-            ;
+        ResolveDynamicRectVsRect(&vrects[0]->getComponent<CollisionBox>(), dt, &vrects[j.first]->getComponent<CollisionBox>());
     }
     vrects[0]->getComponent<Transform>().position += velocity * dt;
 }

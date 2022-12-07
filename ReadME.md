@@ -15,17 +15,20 @@
 
 - [x] ECS
 - [x] vector 2d implementation
-- [x] Asset manager
-- [x] Dynamic UI label text
-- [x] Transform component
-- [x] Rigid Body component
-- [x] Collision box component
-- [ ] Controller Component
+- [x] Asset Manager
+- [x] Dynamic UI Label Component
+- [x] Transform Component
+- [x] Rigid Body Component
+- [x] Collision Box Component
 - [ ] Entity can have multiple collision box
+- [ ] Controller Component
 - [x] Sprite component
 - [x] Collider component
-- [ ] Camera component
-- [ ] Tilemap
-- [ ] Map generator with perlin noise
+- [x] Camera
+- [ ] Tilemap Rendering
+- [ ] TileMap with Perlin Noise
+- [ ] TileMap Atlas with Perlin Noise Generated Data
+- [ ] Minimap
+- [ ] Dialog Box
 - [x] Continious Swept AABB collision
 - [ ] SAT collision
