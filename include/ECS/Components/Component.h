@@ -1,5 +1,6 @@
 #pragma once
 #include "ECS/Entity.h"
+
 class Component
 {
 public:

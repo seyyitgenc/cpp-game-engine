@@ -14,12 +14,13 @@ file(COPY ${CMAKE_CURRENT_LIST_DIR}/fonts DESTINATION ${CMAKE_CURRENT_BINARY_DIR
 
 #add all executables
 file(GLOB_RECURSE SOURCE src/*.cpp)
+file(GLOB_RECURSE SOURCE2 include/Engine/*.cpp)
 
 add_executable(engine ${SOURCE})
 
 include(FetchContent)
 
-# must be on after building the project
+# must be ON after building the project
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 set(FETCHCONTENT_QUIET FALSE)
 # sdl2

@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include "Entity.h"
+#include <algorithm>
 
 class Manager
 {

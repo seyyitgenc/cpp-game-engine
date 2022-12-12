@@ -1,5 +1,4 @@
 #include "ECS/EntityManager.h"
-#include <algorithm>
 void Manager::draw()
 {
     for (auto &entity : entities)

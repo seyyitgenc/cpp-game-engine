@@ -1,5 +1,6 @@
 #include <iostream>
 #include "ECS/AssetManager.h"
+
 AssetManager *AssetManager::s_instance;
 AssetManager::AssetManager()
 {
@@ -9,7 +10,7 @@ AssetManager::AssetManager()
         std::cerr << TTF_GetError() << std::endl;
 }
 
-SDL_Texture *AssetManager::getTexture(std::string id)
+Texture *AssetManager::getTexture(std::string id)
 {
     // if texture is exist then return
     return (textures.count(id) > 0) ? textures[id] : nullptr;
@@ -19,8 +20,8 @@ void AssetManager::loadTexture(std::string id, std::string path)
 {
     if (textures.count(id) <= 0) // if same texture is exist don't create new texture
     {
-        SDL_Texture *texture = IMG_LoadTexture(Engine::get().getRenderer(), path.c_str());
-        if (texture)
+        Texture *texture = new Texture(Engine::get().getRenderer());
+        if (texture->loadFromFile(path))
         {
             textures.emplace(id, texture);
             std::cout << "Texture :[" << path << "] loaded" << std::endl;
@@ -54,7 +55,8 @@ void AssetManager::clean()
 {
     for (auto it = textures.begin(); it != textures.end(); it++)
     {
-        SDL_DestroyTexture(it->second);
+        it->second->free(); // free SDL_Texture
+        delete it->second;  // delete Texture object
     }
     textures.clear();
     std::cout << "Textures Cleared !" << std::endl;

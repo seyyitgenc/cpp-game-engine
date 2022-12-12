@@ -69,5 +69,5 @@ private:
 
     // camera
     vf2d camPos;
-    SDL_Rect cameraRect;
+    SDL_FRect cameraRect;
 };

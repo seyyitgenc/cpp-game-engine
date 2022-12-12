@@ -5,6 +5,9 @@
 #include "SDL_ttf.h"
 #include "SDL_image.h"
 #include "Engine/Engine.h"
+#include "Engine/Texture.h"
+
+// TODO name this as a resource manager
 
 class AssetManager
 {
@@ -14,7 +17,7 @@ public:
 
     void clean();
 
-    SDL_Texture *getTexture(std::string id);
+    Texture *getTexture(std::string id);
     void loadTexture(std::string id, std::string path);
 
     TTF_Font *getFont(std::string id);
@@ -32,7 +35,7 @@ public:
 
 private:
     static AssetManager *s_instance;
-    std::map<std::string, SDL_Texture *> textures;
+    std::map<std::string, Texture *> textures;
     std::map<std::string, TTF_Font *> fonts;
     SDL_Color textColor = {150, 150, 255, 255};
 };

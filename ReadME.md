@@ -30,5 +30,6 @@
 - [ ] TileMap Atlas with Perlin Noise Generated Data
 - [ ] Minimap
 - [ ] Dialog Box
+- [x] SDL_Texture Wrapper
 - [x] Continious Swept AABB collision
 - [ ] SAT collision

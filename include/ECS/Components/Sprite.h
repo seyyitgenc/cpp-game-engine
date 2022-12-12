@@ -10,47 +10,55 @@ class Sprite : public Component
 public:
     ~Sprite() = default;
 
-    Sprite(SDL_Renderer *target, std::string textureID, int width, int height) : rTarget(target), textureID(textureID), width(width), height(height) {}
-
+    Sprite(SDL_Renderer *target, std::string textureID, int width, int height) : rTarget(target), textureID(textureID), width(width), height(height)
+    {
+    }
     bool init() override final
     {
         transform = &entity->getComponent<Transform>();
         texture = AssetManager::get().getTexture(textureID);
 
+        // TODO use scale to scale up the image don't use specific width and height
+        texture->setWidth(width);
+        texture->setHeight(height);
+
+        width = texture->getWidth();
+        height = texture->getHeight();
+
         dstRect.x = transform->position.x;
         dstRect.y = transform->position.y;
         dstRect.w = width * transform->scale.x;
         dstRect.h = height * transform->scale.y;
+        cameraRect = playerCam.getCameraRect();
         return true;
-    }
-    void draw() override final
-    {
-        camPos = playerCam.getPos();
-        camerRect = playerCam.getCameraRect();
-        dstRect.x = transform->position.x - camPos.x;
-        dstRect.y = transform->position.y - camPos.y;
-        bool intersect = camerRect.x < dstRect.x + dstRect.w &&
-                         camerRect.x + camerRect.w > dstRect.x &&
-                         camerRect.y < dstRect.y + dstRect.h &&
-                         camerRect.y + camerRect.h > dstRect.y;
-        if (intersect)
-        {
-
-            SDL_RenderCopyExF(rTarget, texture, nullptr, &dstRect, 0.0f, nullptr, flip);
-        }
     }
     void update(float &dt) override final
     {
+        camPos = playerCam.getPos();
+        dstRect.x = transform->position.x - camPos.x;
+        dstRect.y = transform->position.y - camPos.y;
+    }
+    void draw() override final
+    {
+
+        bool intersect = cameraRect.x < dstRect.x + dstRect.w &&
+                         cameraRect.x + cameraRect.w > dstRect.x &&
+                         cameraRect.y < dstRect.y + dstRect.h &&
+                         cameraRect.y + cameraRect.h > dstRect.y;
+        if (intersect)
+        {
+            texture->render(dstRect.x, dstRect.y);
+        }
     }
     vi2d getSize() { return {width, height}; }
 
 private:
     vf2d camPos = {0, 0};
-    SDL_Rect camerRect = {0, 0, 0, 0};
+    SDL_FRect cameraRect = {0, 0, 0, 0};
     SDL_Renderer *rTarget = nullptr;
     std::string textureID = "";
     Transform *transform = nullptr;
-    SDL_Texture *texture = nullptr;
+    Texture *texture = nullptr;
 
     int width = 0;
     int height = 0;

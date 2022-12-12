@@ -1,5 +1,6 @@
 #pragma once
 #include "SDL.h"
+#include "vector2d.h"
 
 const float SCREEN_WIDTH = 800;
 const float SCREEN_HEIGHT = 600;
@@ -7,10 +8,12 @@ const float SCREEN_HEIGHT = 600;
 const int LEVEL_WIDTH = 1600;
 const int LEVEL_HEIGHT = 1200;
 
+// camera is actually stable
+// everthing except camera is moving
 class Camera
 {
 public:
-    Camera(int xoffset, int yoffset, int width, int height)
+    Camera(float xoffset, float yoffset, float width, float height)
     {
         camera =
             {xoffset,
@@ -37,11 +40,11 @@ public:
     {
         return vf2d(x, y);
     }
-    SDL_Rect &getCameraRect() { return camera; };
+    SDL_FRect &getCameraRect() { return camera; };
 
 private:
     float x, y;
-    SDL_Rect camera;
+    SDL_FRect camera;
 };
 
-static Camera playerCam(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+static Camera playerCam(0.f, 0.f, SCREEN_WIDTH, SCREEN_HEIGHT);
