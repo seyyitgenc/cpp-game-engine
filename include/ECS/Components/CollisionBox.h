@@ -2,7 +2,6 @@
 #include "Component.h"
 #include "SDL.h"
 #include "ECS/Components/Sprite.h"
-#include "ECS/Components/Camera.h"
 
 // TODO add isCentralized,isTop,isBottom for collision box position
 
@@ -30,7 +29,7 @@ public:
     void draw() override final
     {
         // // draw collision box
-        cameraRect = playerCam.getCameraRect();
+        cameraRect = Camera::get().getCameraRect();
         bool intersect = cameraRect.x < colRect.x + colRect.w &&
                          cameraRect.x + cameraRect.w > colRect.x &&
                          cameraRect.y < colRect.y + colRect.h &&
@@ -44,7 +43,7 @@ public:
     void update(float &dt) override final
     {
         // centralize collision box
-        camPos = playerCam.getPos();
+        camPos = Camera::get().getPos();
         colRect.x = transform->position.x - (colRect.w - spriteSize.x) / 2 - camPos.x;
         colRect.y = transform->position.y - (colRect.h - spriteSize.y) / 2 - camPos.y;
         position.x = colRect.x;

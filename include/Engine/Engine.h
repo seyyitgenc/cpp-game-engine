@@ -5,6 +5,7 @@
 #include "ECS/EntityManager.h"
 #include "Clock.h"
 #include "Global.h"
+#include "Camera.h"
 #include <map>
 
 // TODO try to draw collision rect alongside with sprite
@@ -49,7 +50,6 @@ public:
 
 private:
     // Engine Field
-    Manager *manager;
     static Engine *s_instance;
     bool m_isRunning;
     SDL_Renderer *m_renderer;

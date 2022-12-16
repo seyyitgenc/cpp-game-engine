@@ -5,13 +5,12 @@
 #include "ECS.h"
 #include "Components/Component.h"
 #include "Components/Transform.h"
-
 class Entity
 {
 public:
     Entity()
     {
-        addComponent<Transform>(0, 0); // sets newly created entity location
+        // addComponent<Transform>(0, 0); // sets newly created entity location
     };
     virtual ~Entity() = default;
     template <typename T, typename... TArgs>

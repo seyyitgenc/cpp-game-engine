@@ -20,7 +20,7 @@ void AssetManager::loadTexture(std::string id, std::string path)
 {
     if (textures.count(id) <= 0) // if same texture is exist don't create new texture
     {
-        Texture *texture = new Texture(Engine::get().getRenderer());
+        Texture *texture = new Texture();
         if (texture->loadFromFile(path))
         {
             textures.emplace(id, texture);

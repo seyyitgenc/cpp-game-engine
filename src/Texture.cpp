@@ -1,11 +1,13 @@
 #include "Engine/Texture.h"
-
-Texture::Texture(SDL_Renderer *rTarget)
+#include "Engine/Global.h"
+Texture::Texture()
 {
-    this->rTarget = rTarget;
+    this->rTarget = Engine::get().getRenderer();
     m_texture = NULL;
     m_width = 0;
     m_height = 0;
+    m_scalex = 1;
+    m_scaley = 1;
 }
 Texture::~Texture()
 {
@@ -51,6 +53,12 @@ int Texture::getWidth() { return m_width; }
 void Texture::setWidth(int width) { this->m_width = width; };
 int Texture::getHeight() { return m_height; }
 void Texture::setHeight(int height) { this->m_height = height; };
+// set texture scale
+void Texture::setScale(float scalex, float scaley)
+{
+    m_scalex = scalex;
+    m_scaley = scaley;
+}
 // set image alpha
 void Texture::setAlpha(Uint8 alpha) { SDL_SetTextureAlphaMod(m_texture, alpha); }
 // set image color
@@ -59,17 +67,17 @@ void Texture::setColor(Uint8 red, Uint8 green, Uint8 blue) { SDL_SetTextureColor
 void Texture::setBlendMode(SDL_BlendMode blending) { SDL_SetTextureBlendMode(m_texture, blending); }
 
 // render image
-void Texture::render(int x, int y, SDL_Rect *clip, double angle, SDL_Point *center, SDL_RendererFlip flip)
+void Texture::render(float x, float y, SDL_Rect *clip, double angle, SDL_FPoint *center, SDL_RendererFlip flip)
 {
-    SDL_Rect renderQuad = {x, y, m_width, m_height};
+    SDL_FRect renderQuad = {x, y, m_width * m_scalex, m_height * m_scaley};
 
     if (clip != NULL)
     {
-        renderQuad.w = clip->w;
-        renderQuad.h = clip->h;
+        renderQuad.w = clip->w * m_scalex;
+        renderQuad.h = clip->h * m_scaley;
     }
     // draw
-    SDL_RenderCopyEx(rTarget, m_texture, clip, &renderQuad, angle, center, flip);
+    SDL_RenderCopyExF(rTarget, m_texture, clip, &renderQuad, angle, center, flip);
 }
 // free image
 void Texture::free()

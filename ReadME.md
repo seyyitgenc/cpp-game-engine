@@ -25,11 +25,12 @@
 - [x] Sprite component
 - [x] Collider component
 - [x] Camera
-- [ ] Tilemap Rendering
+- [x] Tilemap Rendering
 - [ ] TileMap with Perlin Noise
 - [ ] TileMap Atlas with Perlin Noise Generated Data
 - [ ] Minimap
 - [ ] Dialog Box
-- [x] SDL_Texture Wrapper
+- [x] SDL_Texture Wrapper Class
+- [ ] SDL_Rect Wrapper Class
 - [x] Continious Swept AABB collision
 - [ ] SAT collision

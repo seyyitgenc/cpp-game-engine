@@ -29,12 +29,12 @@ public:
         dstRect.y = transform->position.y;
         dstRect.w = width * transform->scale.x;
         dstRect.h = height * transform->scale.y;
-        cameraRect = playerCam.getCameraRect();
+        cameraRect = Camera::get().getCameraRect();
         return true;
     }
     void update(float &dt) override final
     {
-        camPos = playerCam.getPos();
+        camPos = Camera::get().getPos();
         dstRect.x = transform->position.x - camPos.x;
         dstRect.y = transform->position.y - camPos.y;
     }

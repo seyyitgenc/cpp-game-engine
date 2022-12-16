@@ -1,4 +1,7 @@
 #include "ECS/EntityManager.h"
+
+Manager *Manager::s_instance;
+
 void Manager::draw()
 {
     for (auto &entity : entities)
