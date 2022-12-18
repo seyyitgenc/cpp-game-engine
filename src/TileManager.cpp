@@ -1,4 +1,5 @@
 #include "Engine/TileManager.h"
+#include "ECS/Components/CollisionBox.h"
 #include <fstream>
 
 TileManager *TileManager::s_instance;
@@ -13,10 +14,11 @@ TileManager &TileManager::get()
     return *s_instance;
 }
 
-bool TileManager::setTiles()
+bool TileManager::loadTiles()
 {
     bool tilesLoaded = true;
     int x = 0, y = 0;
+    int tileCountX = 0;
     std::fstream map("./resources/lazy.map");
     if (map.fail())
     {
@@ -40,7 +42,9 @@ bool TileManager::setTiles()
             {
                 auto &entity = Manager::get().addEntity();
                 entity.addComponent<Transform>(0, 0, TileConfiguration::get().getScale().x, TileConfiguration::get().getScale().y, 0);
-                entity.addComponent<Tile>(x, y, tileType);
+                entity.addComponent<Tile>(x * TILE_WIDTH * TileConfiguration::get().getScale().x, y * TILE_HEIGHT * TileConfiguration::get().getScale().x, tileType);
+                if (tileType == 7)
+                    entity.addComponent<CollisionBox>(Engine::get().getRenderer(), TILE_WIDTH, TILE_HEIGHT);
             }
             else
             {
@@ -49,11 +53,11 @@ bool TileManager::setTiles()
                 tilesLoaded = false;
                 break;
             }
-            x += TILE_WIDTH * TileConfiguration::get().getScale().x;
-            if (x >= LEVEL_WIDTH)
+            x++;
+            if (x >= MAXTILEXX)
             {
                 x = 0;
-                y += TILE_HEIGHT * TileConfiguration::get().getScale().y;
+                y++;
             }
         }
         if (tilesLoaded)

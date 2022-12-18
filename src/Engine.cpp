@@ -8,13 +8,11 @@
 #include "ECS/Components/UILabel.h"
 #include "ECS/Components/Transform.h"
 #include "Engine/Collider.hpp"
-#include "Engine/KeybordManager.h"
 #include "Engine/TileManager.h"
 #include "Engine/TileConfiguration.h"
 #include <sstream>
 #include <random>
 
-// TODO : send camera as a parameter to draw function
 Engine *Engine::s_instance;
 
 Engine::Engine()
@@ -47,36 +45,56 @@ void Engine::initApp()
     fpsTimer.start();
 }
 
-// TODO : add tilemap collision
-
 std::vector<Entity *> colRects;
+
 Entity *frametimeLabel;
 Entity *fpsLabel;
 Entity *cameraPos;
 Entity *playerPos;
+
 Collider collisionResolver;
 
 Clock fpsTimer;
+
 // initialize objects that will be used by game
 void Engine::initEntities()
 {
+    // Configure Tile
+    TileConfiguration::get().configure("assets/Tileset-Grass.png", 2.0f, 2.0f);
+
+    if (!TileManager::get().loadTiles())
+        std::cout << "Error occured while loading Tiles" << std::endl;
+
+    // TODO : add tilemap collision
+    // TODO : add tilemap array to use later on for A* pathfinding algorithm
     // TODO: Entity Maanger must be normal class not singleton
     // TODO : use UIManager to store UI data;
-    // TODO : Tile map can be done here
 
     // load fonts
     AssetManager::get().loadFont("aerial", "fonts/aerial.ttf", 16);
     AssetManager::get().loadFont("oswald", "fonts/oswald.ttf", 16);
     AssetManager::get().loadFont("sans", "fonts/sans.ttf", 16);
 
-    // tilemap.initTileMap(32, 32, 1024, 600);
     // load textures
     AssetManager::get().loadTexture("test", "assets/texture.png");
     AssetManager::get().loadTexture("tile", "assets/tile.png");
     AssetManager::get().loadTexture("player", "assets/player.png");
     AssetManager::get().loadTexture("enemy", "assets/enemy.png");
-    // Tilemap Atlas
-    // AssetManager::get().loadTexture("tilemap", "assets/tilemap.png");
+
+    // for (int i = 0; i < 4832; i++)
+    // {
+    //     static float x = 0, y = 0;
+    //     auto &entity = Manager::get().addEntity();
+    //     entity.addComponent<Transform>(0, 0);
+    //     entity.addComponent<Sprite>(m_renderer, "tile", 16, 16);
+    //     entity.getComponent<Transform>().position = vf2d{x, y};
+    //     x += 16;
+    //     if (x > LEVEL_WIDTH)
+    //     {
+    //         x = 0;
+    //         y += 16;
+    //     }
+    // }
 
     // UI Elements
     frametimeLabel = &Manager::get().addEntity();
@@ -87,16 +105,14 @@ void Engine::initEntities()
     cameraPos->addComponent<UILabel>(0, 60, "", "sans");
     playerPos = &Manager::get().addEntity();
     playerPos->addComponent<UILabel>(0, 90, "", "sans");
-    TileConfiguration::get().configure("assets/tilemap1.png", 0.5f, 0.5f);
 
-    TileManager::get().setTiles();
     // player
     colRects.push_back(&Manager::get().addEntity());
-
     colRects[0]->addComponent<Transform>(0, 0);
     colRects[0]->addComponent<Sprite>(m_renderer, "player", 64, 128);
     colRects[0]->addComponent<RigidBody>(); // for physics calculation
     colRects[0]->addComponent<CollisionBox>(m_renderer, 50, 110);
+
     // enemy
     colRects.push_back(&Manager::get().addEntity());
     colRects[1]->addComponent<Transform>(0, 0);
@@ -104,21 +120,7 @@ void Engine::initEntities()
     colRects[1]->addComponent<CollisionBox>(m_renderer, 110, 94);
     colRects[1]->getComponent<Transform>().position = {320, 300};
     fpsTimer.start();
-
-    // Tile map configraution
-
-    //// for testing
-    // std::mt19937 mt1(time(nullptr));
-    // for (int i = 2; i < 4900; i++)
-    // {
-    //     colRects.push_back(&manager->addEntity());
-    //     colRects[i]->addComponent<Sprite>(m_renderer, "enemy", 16, 16);
-    //     colRects[i]->addComponent<RigidBody>(); // for physics calculation
-    //     colRects[i]->addComponent<CollisionBox>(m_renderer, 16, 16);
-    //     colRects[i]->getComponent<Transform>().position = {(float)(mt1() % 900), (float)(mt1() % 900)};
-    // }
 }
-
 // main game loop
 void Engine::run()
 {
@@ -145,6 +147,8 @@ void Engine::events()
         }
         else if (event.type == SDL_KEYDOWN)
         {
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+                m_isRunning = false;
         }
         else if (event.type == SDL_MOUSEBUTTONDOWN)
         {
@@ -171,18 +175,16 @@ void Engine::render()
     cameraPos->getComponent<UILabel>().setLabelText("Cam Pos : " + std::to_string(Camera::get().getPos().x) + " , " + std::to_string(Camera::get().getPos().y));
     playerPos->getComponent<UILabel>().setLabelText("Player Pos : " + std::to_string(colRects[0]->getComponent<Transform>().position.x) + " , " + std::to_string(colRects[0]->getComponent<Transform>().position.y));
 
-    // for camera position
     SDL_SetRenderDrawColor(m_renderer, rendererColor.r, rendererColor.g, rendererColor.b, rendererColor.a);
-    SDL_RenderClear(m_renderer);
+    SDL_RenderClear(m_renderer); // clear screen
+    Manager::get().draw();       // draw all entities
+
+    // for camera position
     Camera::get().setPos(colRects[0]->getComponent<Transform>().position.x, colRects[0]->getComponent<Transform>().position.y);
-    // std::cout << playerCam.getPos() << std::endl;
     // Set Camera Color
     SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
     // Draw Camera Rectangle
     SDL_RenderDrawRectF(m_renderer, &Camera::get().getCameraRect());
-    // tilemap.loadTileMap(m_renderer);
-
-    Manager::get().draw();
     SDL_RenderPresent(m_renderer);
 }
 

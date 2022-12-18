@@ -1,4 +1,6 @@
 #pragma once
+#include <chrono>
+
 #include "SDL.h"
 class Clock
 {

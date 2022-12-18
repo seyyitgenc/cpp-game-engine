@@ -22,13 +22,4 @@ struct Transform : public Component
     vf2d position;
     vf2d scale;
     float rotation = 0.0f;
-    bool init()override{
-        return true;
-    }
-    void draw()override{
-
-    }
-    void update(float&dt)override{
-
-    }
 };

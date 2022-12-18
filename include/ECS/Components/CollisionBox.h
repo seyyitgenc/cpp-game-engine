@@ -2,6 +2,7 @@
 #include "Component.h"
 #include "SDL.h"
 #include "ECS/Components/Sprite.h"
+#include "ECS/Components/Tile.h"
 
 // TODO add isCentralized,isTop,isBottom for collision box position
 
@@ -21,14 +22,23 @@ public:
     {
         // bound collision rect to it's entity
         transform = &entity->getComponent<Transform>();
-        colRect = {transform->position.x, transform->position.y, width, height};
-        sprite = &entity->getComponent<Sprite>();
-        spriteSize = sprite->getSize();
+        colRect = {transform->position.x, transform->position.y, width * transform->scale.x, height * transform->scale.y};
+        if (entity->hasComponent<Sprite>())
+        {
+            sprite = &entity->getComponent<Sprite>();
+            spriteSize = sprite->getSize();
+        }
+        if (entity->hasComponent<Tile>())
+        {
+            // TODO : check if it's tile get tileWidth and tileHeight
+            spriteSize = {width * transform->scale.x,
+                          height * transform->scale.y};
+        }
         return true;
     }
     void draw() override final
     {
-        // // draw collision box
+        // draw collision box
         cameraRect = Camera::get().getCameraRect();
         bool intersect = cameraRect.x < colRect.x + colRect.w &&
                          cameraRect.x + cameraRect.w > colRect.x &&
@@ -53,19 +63,23 @@ public:
     ~CollisionBox() = default;
 
 private:
+    // collisin box
     friend class Collider; // collider can use this class
     SDL_Renderer *rTarget = nullptr;
     Transform *transform = nullptr; // for position
     Sprite *sprite = nullptr;       // for sprite size
     float width = 32.0f;
     float height = 32.0f;
-    vi2d spriteSize = {32, 32};
+    vf2d spriteSize = {32, 32};
+    bool isCentralized = false;
 
+private:
     // for collision detection
     SDL_FRect colRect{0, 0, 0, 0};
     vf2d position = {0, 0};
     vf2d size = {32, 32};
 
+private:
     // camera
     vf2d camPos;
     SDL_FRect cameraRect;

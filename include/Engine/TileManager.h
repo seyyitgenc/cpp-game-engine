@@ -13,7 +13,7 @@ public:
     TileManager() = default;   // this can be default
     ~TileManager() = default;  // thic can be default
     static TileManager &get(); // tilemanager singleton
-    bool setTiles();
+    bool loadTiles();
 
 private:
     static TileManager *s_instance;

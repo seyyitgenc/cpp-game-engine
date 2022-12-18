@@ -40,7 +40,6 @@ public:
         dstRect.y = transform->position.y - camPos.y;
     }
 
-    vf2d getTilePos() { return vf2d(dstRect.x, dstRect.y); }
     int getTileType() { return mType; }
 
 private:

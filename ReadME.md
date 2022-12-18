@@ -25,9 +25,10 @@
 - [x] Sprite component
 - [x] Collider component
 - [x] Camera
+- [ ] Menu
+- [ ] UI
 - [x] Tilemap Rendering
 - [ ] TileMap with Perlin Noise
-- [ ] TileMap Atlas with Perlin Noise Generated Data
 - [ ] Minimap
 - [ ] Dialog Box
 - [x] SDL_Texture Wrapper Class

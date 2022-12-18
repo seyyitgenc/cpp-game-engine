@@ -10,7 +10,7 @@ class Sprite : public Component
 public:
     ~Sprite() = default;
 
-    Sprite(SDL_Renderer *target, std::string textureID, int width, int height) : rTarget(target), textureID(textureID), width(width), height(height)
+    Sprite(SDL_Renderer *target, std::string textureID, float width, float height) : rTarget(target), textureID(textureID), width(width), height(height)
     {
     }
     bool init() override final
@@ -50,7 +50,7 @@ public:
             texture->render(dstRect.x, dstRect.y);
         }
     }
-    vi2d getSize() { return {width, height}; }
+    vf2d getSize() { return vf2d(width, height); }
 
 private:
     vf2d camPos = {0, 0};
@@ -60,8 +60,8 @@ private:
     Transform *transform = nullptr;
     Texture *texture = nullptr;
 
-    int width = 0;
-    int height = 0;
+    float width = 0;
+    float height = 0;
     SDL_FRect dstRect = {0, 0, 0, 0};
 
     SDL_RendererFlip flip = SDL_FLIP_NONE;

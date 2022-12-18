@@ -10,6 +10,8 @@ public:
     ~Collider() = default;
     // SWEPT AABB
     void resolveSweptAABB(std::vector<Entity *> &vrects, float &dt);
+    // Normal AABB
+    bool AABB(const SDL_FRect &rectA, const SDL_FRect &rectB);
 
 private:
     vf2d velocity = {0, 0};
@@ -17,6 +19,15 @@ private:
     bool DynamicRectVsRect(const CollisionBox *r_dynamic, const float fTimeStep, const CollisionBox &r_static, vf2d &contact_point, vf2d &contact_normal, float &contact_time);
     bool ResolveDynamicRectVsRect(CollisionBox *r_dynamic, const float fTimeStep, CollisionBox *r_static);
 };
+
+bool Collider::AABB(const SDL_FRect &rectA, const SDL_FRect &rectB)
+{
+    return rectA.x < rectB.x + rectB.w &&
+           rectA.x + rectA.w > rectB.x &&
+           rectA.y < rectB.y + rectB.h &&
+           rectA.y + rectA.h > rectB.y;
+}
+
 // SWEPT AABB CODE BY OLC
 bool Collider::RayVsRect(const vf2d &ray_origin, const vf2d &ray_dir, const SDL_FRect *target, vf2d &contact_point, vf2d &contact_normal, float &t_hit_near)
 {
@@ -125,5 +136,13 @@ void Collider::resolveSweptAABB(std::vector<Entity *> &vrects, float &dt)
     {
         ResolveDynamicRectVsRect(&vrects[0]->getComponent<CollisionBox>(), dt, &vrects[j.first]->getComponent<CollisionBox>());
     }
+    // if (vrects[0]->getComponent<Transform>().position.x < 0)
+    //     vrects[0]->getComponent<Transform>().position.x = 0;
+    // if (vrects[0]->getComponent<Transform>().position.y < 0)
+    //     vrects[0]->getComponent<Transform>().position.y = 0;
+    // if (vrects[0]->getComponent<Transform>().position.x + 64 > LEVEL_WIDTH)
+    //     vrects[0]->getComponent<Transform>().position.x = LEVEL_WIDTH - 64;
+    // if (vrects[0]->getComponent<Transform>().position.y + 128 > LEVEL_HEIGHT)
+    //     vrects[0]->getComponent<Transform>().position.y = LEVEL_HEIGHT - 128;
     vrects[0]->getComponent<Transform>().position += velocity * dt;
 }
