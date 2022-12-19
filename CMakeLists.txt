@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-project(engine)
+project(engine CXX)
 
 #include directories
 set (INC_DIRECTORIES
-    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/source
 )
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -14,10 +14,12 @@ file(COPY ${CMAKE_CURRENT_LIST_DIR}/fonts DESTINATION ${CMAKE_CURRENT_BINARY_DIR
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/resources DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 #add all executables
-file(GLOB_RECURSE SOURCE src/*.cpp)
-file(GLOB_RECURSE SOURCE2 include/Engine/*.cpp)
+file(GLOB_RECURSE SOURCE 
+    Source/Engine/*.cpp
+    Source/ECS/*.cpp)
 
-add_executable(engine ${SOURCE})
+
+add_executable(engine Source/main.cpp ${SOURCE})
 
 include(FetchContent)
 
