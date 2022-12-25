@@ -27,6 +27,7 @@
 - [x] Camera
 - [ ] Menu
 - [ ] UI
+- [ ] Sound Manager
 - [x] Tilemap Rendering
 - [ ] TileMap with Perlin Noise
 - [ ] Minimap

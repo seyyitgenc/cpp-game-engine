@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include "engine.h"
-#include "SDL_image.h"
+#include <SDL_image.h>
 
 // Texture wrapper for SDL_Texture
 class Texture

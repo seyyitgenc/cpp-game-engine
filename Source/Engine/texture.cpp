@@ -2,7 +2,7 @@
 
 Texture::Texture()
 {
-    this->rTarget = Engine::get().getRenderer();
+    this->rTarget = gRenderer;
     m_texture = NULL;
     m_width = 0;
     m_height = 0;
@@ -50,7 +50,7 @@ bool Texture::loadFromFile(std::string path)
     return m_texture != NULL;
 }
 int Texture::getWidth() { return m_width; }
-void Texture::setWidth(int width) { this->m_width = width; };
+void Texture::setWidth(int width) { m_width = width; };
 int Texture::getHeight() { return m_height; }
 void Texture::setHeight(int height) { this->m_height = height; };
 // set texture scale

@@ -1,7 +1,5 @@
 #include "ECS/entitymanager.h"
 
-Manager *Manager::s_instance;
-
 void Manager::draw()
 {
     for (auto &entity : entities)
@@ -33,4 +31,5 @@ Entity &Manager::addEntity()
 }
 void Manager::eraseEntity(Entity *entity)
 {
+    entity->destroy();
 }

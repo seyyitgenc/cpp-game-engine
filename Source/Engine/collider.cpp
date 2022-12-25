@@ -75,7 +75,8 @@ bool Collider::DynamicRectVsRect(const CollisionBox *r_dynamic, const float fTim
             r_static.size.x + r_dynamic->size.x,
             r_static.size.y + r_dynamic->size.y,
         };
-
+    SDL_SetRenderDrawColor(gRenderer, 255, 255, 0, 255);
+    SDL_RenderDrawRectF(gRenderer, &expanded_target);
     if (RayVsRect(r_dynamic->position + r_dynamic->size / 2, velocity * fTimeStep, &expanded_target, contact_point, contact_normal, contact_time))
     {
         return (contact_time >= 0.0f && contact_time < 1.0f);
@@ -116,13 +117,13 @@ void Collider::resolveSweptAABB(std::vector<Entity *> &vrects, float &dt)
     {
         ResolveDynamicRectVsRect(&vrects[0]->getComponent<CollisionBox>(), dt, &vrects[j.first]->getComponent<CollisionBox>());
     }
-    // if (vrects[0]->getComponent<Transform>().position.x < 0)
-    //     vrects[0]->getComponent<Transform>().position.x = 0;
-    // if (vrects[0]->getComponent<Transform>().position.y < 0)
-    //     vrects[0]->getComponent<Transform>().position.y = 0;
-    // if (vrects[0]->getComponent<Transform>().position.x + 64 > LEVEL_WIDTH)
-    //     vrects[0]->getComponent<Transform>().position.x = LEVEL_WIDTH - 64;
-    // if (vrects[0]->getComponent<Transform>().position.y + 128 > LEVEL_HEIGHT)
-    //     vrects[0]->getComponent<Transform>().position.y = LEVEL_HEIGHT - 128;
+    if (vrects[0]->getComponent<Transform>().position.x < 0)
+        vrects[0]->getComponent<Transform>().position.x = 0;
+    if (vrects[0]->getComponent<Transform>().position.y < 0)
+        vrects[0]->getComponent<Transform>().position.y = 0;
+    if (vrects[0]->getComponent<Transform>().position.x + vrects[0]->getComponent<Sprite>().getSize().x > LEVEL_WIDTH)
+        vrects[0]->getComponent<Transform>().position.x = LEVEL_WIDTH - vrects[0]->getComponent<Sprite>().getSize().x;
+    if (vrects[0]->getComponent<Transform>().position.y + vrects[0]->getComponent<Sprite>().getSize().y > LEVEL_HEIGHT)
+        vrects[0]->getComponent<Transform>().position.y = LEVEL_HEIGHT - vrects[0]->getComponent<Sprite>().getSize().y;
     vrects[0]->getComponent<Transform>().position += velocity * dt;
 }

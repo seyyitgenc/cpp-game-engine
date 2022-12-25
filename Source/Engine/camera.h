@@ -1,6 +1,6 @@
 #pragma once
 #include "vector2d.h"
-#include "SDL.h"
+#include <SDL.h>
 
 // camera is actually stable
 // everthing except camera is moving

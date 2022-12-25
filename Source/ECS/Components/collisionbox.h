@@ -1,5 +1,5 @@
 #pragma once
-#include "SDL.h"
+#include <SDL.h>
 #include "../component.h"
 #include "transform.h"
 #include "sprite.h"

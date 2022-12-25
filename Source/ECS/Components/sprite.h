@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "SDL.h"
+#include <SDL.h>
 #include "transform.h"
 #include "../component.h"
 #include "../assetmanager.h"
@@ -12,6 +12,7 @@ public:
 
     Sprite(SDL_Renderer *target, std::string textureID, float width, float height) : rTarget(target), textureID(textureID), width(width), height(height)
     {
+       
     }
     bool init() override final
     {
@@ -24,7 +25,6 @@ public:
 
         width = texture->getWidth();
         height = texture->getHeight();
-
         dstRect.x = transform->position.x;
         dstRect.y = transform->position.y;
         dstRect.w = width * transform->scale.x;

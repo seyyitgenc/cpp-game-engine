@@ -1,8 +1,7 @@
 #pragma once
 #include <iostream>
-#include "ECS/entitymanager.h"
-
 #include "globals.h"
+#include "utils.h"
 #include "clock.h"
 #include "camera.h"
 
@@ -32,19 +31,12 @@ public:
     void run();
     void quit();
     void clean();
-    void initApp();
     void initEntities();
 
-    float &getDeltaTime();
-    float getFrameRate(const int &countedFrames, const Uint64 &fpsTimer);
-    void setFrameRate(const int &SCREEN_FPS);
-    void limitFrameRate();
     void render();
     void update(float &dt);
     void events();
     bool isRunning() { return m_isRunning; }
-
-    SDL_Renderer *getRenderer() { return m_renderer; };
 
     Clock fpsTimer;
 
@@ -52,12 +44,7 @@ private:
     // Engine Field
     static Engine *s_instance;
     bool m_isRunning;
-    SDL_Renderer *m_renderer;
-    SDL_Window *m_window;
-
 private:
-    // Game Field
-    int SCREEN_FPS = 70;
-    int SCREEN_TICKS_PER_FRAME = 1000.0f / SCREEN_FPS;
+    
     Clock m_capTimer;
 };

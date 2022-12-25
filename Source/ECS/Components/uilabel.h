@@ -24,14 +24,14 @@ public:
         // NOTE : TTF_RenderText_Blended is loading text into to high res texture.
         SDL_Surface *surface = TTF_RenderText_Blended(AssetManager::get().getFont(m_labelFont), labelText.c_str(), m_textColor);
         SDL_DestroyTexture(m_labelTexture); // prevents memory leak
-        m_labelTexture = SDL_CreateTextureFromSurface(Engine::get().getRenderer(), surface);
+        m_labelTexture = SDL_CreateTextureFromSurface(gRenderer, surface);
         SDL_FreeSurface(surface);
         SDL_QueryTexture(m_labelTexture, nullptr, nullptr, &m_labelRect.w, &m_labelRect.h);
     }
 
     void draw() override final
     {
-        SDL_RenderCopy(Engine::get().getRenderer(), m_labelTexture, nullptr, &m_labelRect);
+        SDL_RenderCopy(gRenderer, m_labelTexture, nullptr, &m_labelRect);
     }
 
 private:

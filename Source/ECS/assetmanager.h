@@ -1,9 +1,9 @@
 #pragma once
 #include <map>
 #include <string>
-#include "SDL.h"
-#include "SDL_ttf.h"
-#include "SDL_image.h"
+#include <SDL.h>
+#include <SDL_ttf.h>
+#include <SDL_image.h>
 #include "Engine/engine.h"
 #include "Engine/texture.h"
 

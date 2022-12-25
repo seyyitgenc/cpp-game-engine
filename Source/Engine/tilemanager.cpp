@@ -2,7 +2,7 @@
 #include "ECS/Components/collisionbox.h"
 #include "ECS/Components/tile.h"
 #include "tileconfiguration.h"
-
+#include "globals.h"
 #include <fstream>
 
 TileManager *TileManager::s_instance;
@@ -20,11 +20,11 @@ TileManager &TileManager::get()
 bool TileManager::loadTiles(std::string path, float scalex, float scaley)
 {
     TileConfiguration::get().configure(path, scalex, scaley);
-
+    int test[MAXTILEX * MAXTILEY];
     bool tilesLoaded = true;
     int x = 0, y = 0;
     int tileCountX = 0;
-    std::fstream map("./resources/lazy.map");
+    std::fstream map("./resources/ground.map");
     if (map.fail())
     {
         std::cout << "Unable to load map file" << std::endl;
@@ -45,11 +45,12 @@ bool TileManager::loadTiles(std::string path, float scalex, float scaley)
             }
             if ((tileType >= 0) && (tileType < 12))
             {
-                auto &entity = Manager::get().addEntity();
+                auto &entity = gGroundTiles->addEntity();
                 entity.addComponent<Transform>(0, 0, TileConfiguration::get().getScale().x, TileConfiguration::get().getScale().y, 0);
                 entity.addComponent<Tile>(x * TILE_WIDTH * TileConfiguration::get().getScale().x, y * TILE_HEIGHT * TileConfiguration::get().getScale().x, tileType);
+                test[i] = tileType;
                 if (tileType == 7)
-                    entity.addComponent<CollisionBox>(Engine::get().getRenderer(), TILE_WIDTH, TILE_HEIGHT);
+                    entity.addComponent<CollisionBox>(gRenderer, TILE_WIDTH, TILE_HEIGHT);
             }
             else
             {
@@ -67,6 +68,11 @@ bool TileManager::loadTiles(std::string path, float scalex, float scaley)
         }
         if (tilesLoaded)
         {
+            // for (size_t i = 0; i < MAXTILEX * MAXTILEY; i++)
+            // {
+            //     std::cout << i << ". " << test[i] << std::endl;
+            // }
+
             TileConfiguration::get().initTileClips();
         }
     }

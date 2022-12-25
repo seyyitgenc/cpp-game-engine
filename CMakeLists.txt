@@ -4,7 +4,7 @@ project(engine CXX)
 
 #include directories
 set (INC_DIRECTORIES
-    ${PROJECT_SOURCE_DIR}/source
+    ${PROJECT_SOURCE_DIR}/Source
 )
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -19,7 +19,7 @@ file(GLOB_RECURSE SOURCE
     Source/ECS/*.cpp)
 
 
-add_executable(engine Source/main.cpp ${SOURCE})
+add_executable(${PROJECT_NAME} Source/main.cpp ${SOURCE}) 
 
 include(FetchContent)
 
@@ -49,9 +49,17 @@ FetchContent_Declare(
     GIT_PROGRESS    TRUE
 )
 
-FetchContent_MakeAvailable(SDL2 SDL2_IMAGE SDL2_TTF)
+# sdl2_ttf
+FetchContent_Declare(
+    SDL2_MIXER
+    GIT_REPOSITORY  https://github.com/libsdl-org/SDL_mixer.git
+    GIT_TAG         main
+    GIT_PROGRESS    TRUE
+)
 
-set(SDL_LIBRARIES ${SDL_LIBRARIES} SDL2 SDL2main SDL2_image SDL2_ttf)
+FetchContent_MakeAvailable(SDL2 SDL2_IMAGE SDL2_TTF SDL2_MIXER)
+
+set(SDL_LIBRARIES ${SDL_LIBRARIES} SDL2 SDL2main SDL2_image SDL2_ttf SDL2_mixer)
 
 target_include_directories("${PROJECT_NAME}" PRIVATE ${INC_DIRECTORIES})
 target_link_libraries("${PROJECT_NAME}" PRIVATE ${SDL_LIBRARIES})
