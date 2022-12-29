@@ -1,8 +1,7 @@
 #pragma once
 #include <SDL.h>
-class Clock
-{
-public:
+class Clock {
+   public:
     Clock();
     ~Clock();
     // various clock actions
@@ -17,7 +16,7 @@ public:
     bool isStarted() { return m_started; }
     bool isPaused() { return m_paused && m_started; }
 
-private:
+   private:
     Uint32 m_elapsedTime = 0;
     Uint32 m_startTicks = 0;
     Uint32 m_pausedTicks = 0;

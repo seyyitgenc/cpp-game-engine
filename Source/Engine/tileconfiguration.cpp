@@ -2,23 +2,20 @@
 
 TileConfiguration *TileConfiguration::s_instance;
 
-TileConfiguration::TileConfiguration()
-{
+TileConfiguration::TileConfiguration() {
     m_scalex = 1;
     m_scaley = 1;
 }
 // TileConfiguration singleton
-TileConfiguration &TileConfiguration::get()
-{
-    if (s_instance == nullptr)
-    {
+TileConfiguration &TileConfiguration::get() {
+    if (s_instance == nullptr) {
         std::cout << "Tile Texture Initialized" << std::endl;
         s_instance = new TileConfiguration();
     }
     return *s_instance;
 }
-void TileConfiguration::configure(std::string path, float scalex, float scaley)
-{
+void TileConfiguration::configure(std::string path, float scalex,
+                                  float scaley) {
     tileTexture = new Texture();
     tileTexture->loadFromFile(path);
     tileTexture->setScale(scalex, scaley);
@@ -29,8 +26,7 @@ void TileConfiguration::configure(std::string path, float scalex, float scaley)
 vf2d TileConfiguration::getScale() { return vf2d(m_scalex, m_scaley); }
 
 // Initialize tile clips here
-void TileConfiguration::initTileClips()
-{
+void TileConfiguration::initTileClips() {
     // clang-format off
     //----------------------------------GRASS TILES---------------------------------------//
     // Grass tile 1                                 //Grass tile 2

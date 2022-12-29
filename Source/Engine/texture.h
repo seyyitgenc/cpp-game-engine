@@ -1,12 +1,13 @@
 #pragma once
-#include <string>
-#include "engine.h"
 #include <SDL_image.h>
 
+#include <string>
+
+#include "engine.h"
+
 // Texture wrapper for SDL_Texture
-class Texture
-{
-public:
+class Texture {
+   public:
     Texture();
     ~Texture();
     bool loadFromFile(std::string path);
@@ -15,13 +16,15 @@ public:
     void setBlendMode(SDL_BlendMode blending);
     void setScale(float scalex, float scaley);
     void setAlpha(Uint8 alpha);
-    void render(float x, float y, SDL_Rect *clip = NULL, double angle = 0.0, SDL_FPoint *center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
+    void render(float x, float y, SDL_Rect *clip = NULL, double angle = 0.0,
+                SDL_FPoint *center = NULL,
+                SDL_RendererFlip flip = SDL_FLIP_NONE);
     int getWidth();
     int getHeight();
     void setWidth(int width);
     void setHeight(int height);
 
-private:
+   private:
     float m_scalex;
     float m_scaley;
     SDL_Texture *m_texture = NULL;

@@ -11,5 +11,5 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ib/
-
+.clang-format
 .vscode

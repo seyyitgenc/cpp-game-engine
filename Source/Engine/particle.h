@@ -1,7 +1,7 @@
+#include "circle.h"
 #include "texture.h"
 
-class Particle
-{
+class Particle {
 public:
     Particle(int x, int y);
     void render();
@@ -11,5 +11,5 @@ public:
 private:
     int m_posX, m_posY;
     int m_frame;
-    SDL_FRect m_particle;
+    Circle m_particle;
 };

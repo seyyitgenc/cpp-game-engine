@@ -1,7 +1,7 @@
 #pragma once
-#include <iostream>
-#include <bitset>
 #include <array>
+#include <bitset>
+#include <iostream>
 
 class Entity;
 class Component;
@@ -13,15 +13,14 @@ const std::size_t MAX_COMPONENTS = 32;
 using ComponentTypeID = std::size_t;
 
 // define uid only once and increment it whenever function called
-inline ComponentTypeID getUniqueComponentID()
-{
+inline ComponentTypeID getUniqueComponentID() {
     static ComponentTypeID lastID = 0u;
     return lastID++;
 }
 template <typename T>
-inline ComponentTypeID getComponentTypeID() noexcept
-{
-    static_assert(std::is_base_of<Component, T>::value, "Type not base on component!");
+inline ComponentTypeID getComponentTypeID() noexcept {
+    static_assert(std::is_base_of<Component, T>::value,
+                  "Type not base on component!");
     static const ComponentTypeID typeID = getUniqueComponentID();
     return typeID;
 }

@@ -2,17 +2,14 @@
 #include "../component.h"
 #include "Engine/vector2d.h"
 
-struct Transform : public Component
-{
-    Transform(float x, float y)
-    {
+struct Transform : public Component {
+    Transform(float x, float y) {
         position.x = x;
         position.y = y;
         scale.x = 1;
         scale.y = 1;
     };
-    Transform(float x, float y, float scx, float scy, float rot)
-    {
+    Transform(float x, float y, float scx, float scy, float rot) {
         position.x = x;
         position.y = y;
         scale.x = scx;

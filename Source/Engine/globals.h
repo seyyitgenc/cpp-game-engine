@@ -1,7 +1,9 @@
 #pragma once
-#include <iostream>
 #include <SDL.h>
 #include <SDL_mixer.h>
+
+#include <iostream>
+
 #include "ECS/entitymanager.h"
 
 // TODO : later can this two can change
@@ -34,8 +36,8 @@ extern Manager *gPropsTiles;
 // UI Manager
 extern Manager *gUIManager;
 
-extern SDL_Window *gWindow;     // renderer
-extern SDL_Renderer *gRenderer; // window
+extern SDL_Window *gWindow;      // renderer
+extern SDL_Renderer *gRenderer;  // window
 
 // Music
 

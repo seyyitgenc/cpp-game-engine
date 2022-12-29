@@ -1,15 +1,15 @@
 #pragma once
-#include <vector>
-#include <memory>
 #include <algorithm>
+#include <memory>
+#include <vector>
+
 #include "entity.h"
 
-class Manager
-{
+class Manager {
 public:
     Manager() = default;
     void draw();
-    void update(float &dt);
+    void update(const float &dt);
     void refresh();
 
     Entity &addEntity();

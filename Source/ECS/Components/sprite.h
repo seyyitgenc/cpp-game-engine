@@ -1,25 +1,21 @@
 #pragma once
-#include <string>
-#include <SDL.h>
-#include "transform.h"
-#include "../component.h"
 #include "../assetmanager.h"
+#include "../component.h"
+#include "transform.h"
 
-class Sprite : public Component
-{
+class Sprite : public Component {
 public:
     ~Sprite() = default;
 
-    Sprite(SDL_Renderer *target, std::string textureID, float width, float height) : rTarget(target), textureID(textureID), width(width), height(height)
-    {
-       
-    }
-    bool init() override final
-    {
+    Sprite(SDL_Renderer *target, std::string textureID, float width,
+           float height)
+        : rTarget(target), textureID(textureID), width(width), height(height) {}
+    bool init() override final {
         transform = &entity->getComponent<Transform>();
         texture = AssetManager::get().getTexture(textureID);
 
-        // TODO use scale to scale up the image don't use specific width and height
+        // TODO use scale to scale up the image don't use specific width and
+        // height
         texture->setWidth(width);
         texture->setHeight(height);
 
@@ -32,21 +28,17 @@ public:
         cameraRect = Camera::get().getCameraRect();
         return true;
     }
-    void update(float &dt) override final
-    {
+    void update(const float &dt) override final {
         camPos = Camera::get().getPos();
         dstRect.x = transform->position.x - camPos.x;
         dstRect.y = transform->position.y - camPos.y;
     }
-    void draw() override final
-    {
-
+    void draw() override final {
         bool intersect = cameraRect.x < dstRect.x + dstRect.w &&
                          cameraRect.x + cameraRect.w > dstRect.x &&
                          cameraRect.y < dstRect.y + dstRect.h &&
                          cameraRect.y + cameraRect.h > dstRect.y;
-        if (intersect)
-        {
+        if (intersect) {
             texture->render(dstRect.x, dstRect.y);
         }
     }

@@ -1,19 +1,18 @@
 #pragma once
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <memory>
+#include <vector>
+
 #include "globals.h"
 #include "texture.h"
 
-class TileManager
-{
-public:
-    static TileManager &get(); // tilemanager singleton
+class TileManager {
+   public:
+    static TileManager &get();  // tilemanager singleton
     bool loadTiles(std::string path, float scalex, float scaley);
 
-private:
-    
+   private:
     ~TileManager() = default;
     TileManager() = default;
     static TileManager *s_instance;

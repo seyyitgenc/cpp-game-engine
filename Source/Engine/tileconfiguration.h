@@ -1,9 +1,9 @@
 #pragma once
 #include <iostream>
+
 #include "texture.h"
 
-enum TileType
-{
+enum TileType {
     TILE_GRASS1,
     TILE_GRASS2,
     TILE_GRASS3,
@@ -20,9 +20,8 @@ enum TileType
     TILE_NONE = -1
 };
 
-class TileConfiguration
-{
-public:
+class TileConfiguration {
+   public:
     TileConfiguration();
     ~TileConfiguration() = default;
     static TileConfiguration &get();
@@ -30,11 +29,11 @@ public:
     void initTileClips();
     vf2d getScale();
 
-public:
+   public:
     float m_scalex, m_scaley;
     Texture *tileTexture;
     SDL_Rect tileClips[TOTAL_TILE_SPRITES];
 
-private:
+   private:
     static TileConfiguration *s_instance;
 };
