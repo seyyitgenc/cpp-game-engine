@@ -18,7 +18,7 @@ float getDeltaTime() {
     static float dt = 0;
     LAST = NOW;
     NOW = SDL_GetPerformanceCounter();
-    dt = (NOW - LAST) / (double)SDL_GetPerformanceFrequency();
+    dt = (NOW - LAST)*1000 / (double)SDL_GetPerformanceFrequency();
     return dt;
 }
 

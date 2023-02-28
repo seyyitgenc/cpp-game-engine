@@ -1,4 +1,4 @@
-#include "Engine/Engine.h"
+#include "Engine/engine.h"
 
 int main(int argc, char **argv) {
     Engine *engine;

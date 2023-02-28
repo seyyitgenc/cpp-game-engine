@@ -13,7 +13,6 @@ Engine::Engine() { m_isRunning = false; }
 Engine::~Engine() { this->clean(); }
 
 std::vector<Entity*> colRects;
-
 Entity* frametimeLabel;
 Entity* fpsLabel;
 Entity* cameraPos;
@@ -25,6 +24,7 @@ Clock fpsTimer;
 
 std::vector<std::unique_ptr<Particle>> particles;
 std::vector<std::unique_ptr<Circle>> circles;
+SDL_FRect sword;
 
 // initialize objects that will be used by game
 void Engine::initEntities() {
@@ -42,7 +42,7 @@ void Engine::initEntities() {
     AssetManager::get().loadTexture("player", "assets/player.png");
     AssetManager::get().loadTexture("enemy", "assets/enemy.png");
     AssetManager::get().loadTexture("playerset", "assets/player-set.png");
-
+    // ParticleManager test;
     // UI Elements
     frametimeLabel = &gEntityManager->addEntity();
     frametimeLabel->addComponent<UILabel>(0, 0, "", "sans");
@@ -54,11 +54,12 @@ void Engine::initEntities() {
     playerPos->addComponent<UILabel>(0, 90, "", "sans");
 
     // player
-    colRects.push_back(&gEntityManager->addEntity());
-    colRects[0]->addComponent<Transform>(0, 0);
-    colRects[0]->addComponent<Sprite>(gRenderer, "player", 64, 128);
-    colRects[0]->addComponent<RigidBody>();  // for physics calculation
-    colRects[0]->addComponent<CollisionBox>(gRenderer, 64, 128);
+    Entity* player = &gEntityManager->addEntity();
+    colRects.push_back(player);
+    player->addComponent<Transform>(0, 0);
+    player->addComponent<Sprite>(gRenderer, "player", 64, 128);
+    player->addComponent<RigidBody>();  // for physics calculation
+    player->addComponent<CollisionBox>(gRenderer, 64, 128);
 
     // enemy
     colRects.push_back(&gEntityManager->addEntity());
@@ -66,25 +67,30 @@ void Engine::initEntities() {
     colRects[1]->addComponent<Sprite>(gRenderer, "enemy", 128, 128);
     colRects[1]->addComponent<CollisionBox>(gRenderer, 10, 100);
     colRects[1]->getComponent<Transform>().position = {900, 600};
-    for (int i = 0; i < 100; i++) {
-        Circle* circle{new Circle(20, 30)};
-        circle->setPos(400 + rand() % 1200, rand() % 900);
-        // circle->setColor({255, (Uint8)rand() % 255, (Uint8)rand() % 255, 255});
-        std::unique_ptr<Circle> uniquePtr{circle};
-        circles.emplace_back(std::move(uniquePtr));
-    }
+
+    sword = {player->getComponent<Transform>().position.x, player->getComponent<Transform>().position.y, 5, 20};
+
     for (int i = 0; i < 12; i++) {
-        Particle* particle = {new Particle(0, 0)};
+        Particle* particle{new Particle(0, 0)};
         std::unique_ptr<Particle> uniquePtr{particle};
         particles.emplace_back(std::move(uniquePtr));
     }
+
+    // for (int i = 0; i < 100; i++) {
+    //     Circle* circle{new Circle(30, 80)};
+    //     circle->setPos(400 + rand() % 1200, rand() % 900);
+    //     // circle->setColor({255, (Uint8)rand() % 255, (Uint8)rand() % 255, 255});
+    //     std::unique_ptr<Circle> uniquePtr{circle};
+    //     circles.emplace_back(std::move(uniquePtr));
+    // }
+
     fpsTimer.start();
 }
 // main game loop
 void Engine::run() {
     m_isRunning = initGlobals();
     this->initEntities();
-    // Mix_PlayMusic(gMusic, -1);
+    Mix_PlayMusic(gMusic, -1);
     fpsTimer.start();
     while (this->isRunning()) {
         // limitFrameRate();
@@ -93,23 +99,27 @@ void Engine::run() {
         this->render();
     }
 }
-void renderParticles() {
+void renderParticles(std::vector<std::unique_ptr<Particle>>&& container) {
     int x, y;
     SDL_GetMouseState(&x, &y);
-    // * if particle/particles isDead() flag that and erase them from container
-    // * erasing them from container will not cause problem because we used smart pointer
-    // note: this auto represents this ---> std::vector<std::unique_ptr<Particle>>::iterator
-    auto object = find_if(particles.begin(), particles.end(), [&](std::unique_ptr<Particle>& obj) { return obj->isDead(); });
-    particles.erase(std::remove(particles.begin(), particles.end(), *object));
-
-    // create new particle here
-    std::unique_ptr<Particle> uniquePtr{new Particle(x, y)};
-    particles.emplace_back(std::move(uniquePtr));
-    // draw particles here
-    std::cout << particles.size() << std::endl;
-    for (auto& item : particles) {
-        item->render();
+    static Uint32 NOW = SDL_GetTicks();
+    static Uint32 LAST = NOW;
+    // this if will make particles frame independent
+    if ((NOW - LAST) > SCREEN_TICKS_PER_FRAME) {
+        LAST = NOW;
+        // * if particle isDead() flag that and erase afterwards. If there is no dead particle it will erase last element due to
+        // * return value of find_if function.(it will return last in this case)
+        // * erasing it from container will not cause problem because we used smart pointer
+        // note: this auto represents this ---> std::vector<std::unique_ptr<Particle>>::iterator
+        auto object =
+            std::find_if(container.begin(), container.end(), [&](std::unique_ptr<Particle>& obj) { return obj->isDead(); });
+        container.erase(std::remove(container.begin(), container.end(), *object));
+        // new particle
+        std::unique_ptr<Particle> uniquePtr{new Particle(x, y)};
+        container.emplace_back(std::move(uniquePtr));
     }
+    for (auto& item : particles) item->render();
+    NOW = SDL_GetTicks();
 }
 void Engine::events() {
     SDL_Event event;
@@ -127,12 +137,16 @@ void Engine::events() {
 
 void Engine::update(const float& dt) {
     collisionResolver.resolveSweptAABB(colRects, dt);
+    // gGroundTiles->refresh();
     gGroundTiles->update(dt);
     gEntityManager->update(dt);
     gUIManager->update(dt);
 }
 int x, y;
 Circle test(200, 50);
+// fps independent animation variables
+float frameTime = 0.5;
+float passedTime = 0;
 void Engine::render() {
     static int countedFrames = 0;
     countedFrames++;
@@ -153,11 +167,11 @@ void Engine::render() {
     Camera::get().setPos(colRects[0]->getComponent<Transform>().position.x, colRects[0]->getComponent<Transform>().position.y);
 
     SDL_SetRenderDrawColor(gRenderer, rendererColor.r, rendererColor.g, rendererColor.b, rendererColor.a);
-
     SDL_RenderClear(gRenderer);  // clear screen
-    gGroundTiles->draw();        // draw tilemap
-    gEntityManager->draw();      // draw all entities
-    gUIManager->draw();          // draw UI Elements
+
+    gGroundTiles->draw();    // draw tilemap
+    gEntityManager->draw();  // draw all entities
+    gUIManager->draw();      // draw UI Elements
 
     // test.setPos(x, y);
     // test.filledCircle();
@@ -165,11 +179,36 @@ void Engine::render() {
     //     items->filledCircle();
     // }
 
-    SDL_SetRenderDrawColor(gRenderer, 0, 255, 0, 255);
     // camera color
-    SDL_RenderDrawRectF(gRenderer,
-                        &Camera::get().getCameraRect());  // camera rectangle
-    renderParticles();
+    // SDL_SetRenderDrawColor(gRenderer, 0, 255, 0, 255);
+    // SDL_RenderDrawRectF(gRenderer,
+    //                     &Camera::get().getCameraRect());  // camera rectangle
+
+    SDL_SetRenderDrawColor(gRenderer, 200, 200, 200, 255);
+    sword.x = colRects[0]->getComponent<Transform>().position.x + 100;
+    sword.y = colRects[0]->getComponent<Transform>().position.y;
+
+    SDL_RenderDrawRectF(gRenderer, &sword);
+    renderParticles(std::move(particles));
+    // frame independent particle rendering
+
+    passedTime += getTimeStep();
+    if (passedTime < frameTime) {
+        std::cout << passedTime << std::endl;
+        sword.w += 1;
+    } else {
+        passedTime = 0;
+        sword.w = 5;
+    }
+
+    // if (framePassed < frameCount) {
+    //     sword.w += 1;
+    // } else {
+    //     framePassed = 0;
+    //     sword.w = 5;
+    // }
+    // framePassed++;
+
     SDL_RenderPresent(gRenderer);
 }
 

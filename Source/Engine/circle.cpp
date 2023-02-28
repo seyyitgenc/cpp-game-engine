@@ -55,7 +55,6 @@ void Circle::filledCircle() {
 
         vert[1].position = {new_x, new_y};
         vert[2].position = {old_x, old_y};
-
         SDL_RenderDrawLine(gRenderer, old_x, old_y, new_x, new_y);
         SDL_RenderGeometry(gRenderer, nullptr, vert.data(), vert.size(), nullptr, 0);
         old_x = new_x;

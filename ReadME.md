@@ -27,8 +27,11 @@
 - [x] Camera
 - [ ] Menu
 - [ ] UI
+- [x] Particle Engine
+- [x] Circles
 - [ ] Sound Manager
 - [x] Tilemap Rendering
+- [ ] Tilemap Editor
 - [ ] TileMap with Perlin Noise
 - [ ] Minimap
 - [ ] Dialog Box
