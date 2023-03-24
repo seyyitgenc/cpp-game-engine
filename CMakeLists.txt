@@ -16,8 +16,10 @@ file(COPY ${CMAKE_CURRENT_LIST_DIR}/resources DESTINATION ${CMAKE_CURRENT_BINARY
 #add all executables
 file(GLOB_RECURSE SOURCE 
     Source/Engine/*.cpp
-    Source/ECS/*.cpp)
-
+    Source/ECS/*.cpp
+    Source/ImGui/*.cpp
+    Source/ImGui/*.h
+    )
 
 add_executable(${PROJECT_NAME} Source/main.cpp ${SOURCE}) 
 
