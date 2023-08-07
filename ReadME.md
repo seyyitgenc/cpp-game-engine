@@ -1,6 +1,13 @@
 # this project is all about SDL based c++ game engine
 
-- SDL SUPER BUILD THAT INCLUDES SDL2,SDL_image and SDL_ttf. SDL_mixer coming soon.
+> REQUIRED LIBS FOR OpenGL branch
+
+- OpenGL, GLFW, GLM, Assimp, GLEW  
+
+> REQUIRED LIBS FOR SDL2 branch .
+
+- SDL2, SDL2_image, SDL2_mixer, SDL2_ttf
+
 
 ## Follow these steps
 
