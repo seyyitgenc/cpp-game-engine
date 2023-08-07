@@ -4,11 +4,6 @@
 
 - OpenGL, GLFW, GLM, Assimp, GLEW  
 
-> REQUIRED LIBS FOR SDL2 branch .
-
-- SDL2, SDL2_image, SDL2_mixer, SDL2_ttf
-
-
 ## Follow these steps
 
     mkdir build
