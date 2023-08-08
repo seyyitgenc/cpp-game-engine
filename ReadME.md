@@ -1,21 +1,31 @@
-# this project is all about SDL based c++ game engine
+# This project is all about SDL based C++ game engine
+
+- **_NOTE:_**  For now, this project works on only windows.
 
 > REQUIRED LIBS FOR OpenGL branch
 
 - OpenGL, GLFW, GLM, Assimp, GLEW  
 
-## Follow these steps
+## Follow these steps after environment setup
 
     mkdir build
     cd build
-    cmake .. -G "Unix Makefiles"
+    cmake .. -G "Ninja"
     make
 
 - Change this -G parameter according to your build preferences
 
 > TODO
 
-- [x] ECS
+- [] Shaders
+- [] Camera
+- [] Model loading
+- [] Directional Lighting
+- [] Birectional Lighting
+- [] Multiple Point Lights
+- [] Simple Shadows
+
+<!-- - [x] ECS
 - [x] vector 2d implementation
 - [x] Asset Manager
 - [x] Dynamic UI Label Component
@@ -40,4 +50,4 @@
 - [x] SDL_Texture Wrapper Class
 - [ ] SDL_Rect Wrapper Class
 - [x] Continious Swept AABB collision
-- [ ] SAT collision
+- [ ] SAT collision -->
