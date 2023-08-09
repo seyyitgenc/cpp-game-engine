@@ -17,13 +17,14 @@
 
 > TODO
 
-- [] Shaders
-- [] Camera
-- [] Model loading
-- [] Directional Lighting
-- [] Birectional Lighting
-- [] Multiple Point Lights
-- [] Simple Shadows
+- [x] Shaders
+- [ ] Instanced Rendering
+- [ ] Camera
+- [ ] Model loading
+- [ ] Directional Lighting
+- [ ] Birectional Lighting
+- [ ] Multiple Point Lights
+- [ ] Simple Shadows
 
 <!-- - [x] ECS
 - [x] vector 2d implementation

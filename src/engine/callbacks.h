@@ -1,7 +1,18 @@
-#pragma once
+#ifndef CALLBACKS_H
+#define CALLBACKS_H
 #include <GLFW/glfw3.h>
+#include "camera.h"
 
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
+    glViewport(0,0,width,height);
+}
 
-void mouse_callback(GLFWwindow *window, double xpos, double ypos);
-void scroll_callback(GLFWwindow *window, double xpos, double ypos);
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void scroll_callback(GLFWwindow *window, double xpos, double ypos)
+{
+    
+}
+void mouse_callback(GLFWwindow *window, double xpos, double ypos)
+{
+}
+#endif
