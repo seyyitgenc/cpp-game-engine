@@ -1,6 +1,4 @@
-#ifndef FILESYSTEM_H
-#define FILESYSTEM_H
-
+#pragma once
 // This code obtained from : https://github.com/JoeyDeVries/LearnOpenGL/blob/master/includes/learnopengl/filesystem.h
 
 #include <string>
@@ -36,4 +34,3 @@ private:
         return "../../../" + path;
     }
 };
-#endif

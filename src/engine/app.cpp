@@ -1,6 +1,7 @@
 #include "app.h"
 
 #include "shader.h"
+#include "filesystem.h"
 
 App* App::s_instance;
 
@@ -42,10 +43,15 @@ void App::run() {
 
     // glBindBuffer(GL_ARRAY_BUFFER, 0); 
     // glBindVertexArray(0); 
+
     Object openglTriangle;
     std::vector<Object> myObjects;
     myObjects.push_back(openglTriangle);
-    Shader test("../shaders/triangle.vs","../shaders/triangle.fs");
+
+    Shader test(
+        FileSystem::getPath("bin/shaders/triangle.vs").c_str(),
+        FileSystem::getPath("bin/shaders/triangle.fs").c_str());
+        
     while (!glfwWindowShouldClose(gWindow))
     {
         processInput();

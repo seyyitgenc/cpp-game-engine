@@ -58,7 +58,7 @@ set (INC_DIRECTORIES
     ${PROJECT_SOURCE_DIR}/src/external
 )
 
-add_executable(${PROJECT_NAME} src/main.cpp ${SOURCE})
+add_executable(${PROJECT_NAME} ${SOURCE})
 include_directories(${PROJECT_NAME}  ${INC_DIRECTORIES})
 target_link_libraries(${PROJECT_NAME} ${LIBS}) 
 

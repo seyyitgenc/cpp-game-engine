@@ -1,9 +1,9 @@
 #define GLFW_INCLUDE_NONE
-#include "Engine/engine.h"
+#include "engine/app.h"
 #include <iostream>
 
 int main() {
-    Engine engine = Engine::get();
+    App engine = App::get();
     engine.run();
     engine.clean();
     return 0;

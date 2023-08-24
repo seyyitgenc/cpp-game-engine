@@ -1,5 +1,4 @@
-#ifndef ENGINE_H
-#define ENGINE_H
+#pragma once
 
 #include <iostream>
 #include <map>
@@ -9,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 
 #include "camera.h"
 
@@ -41,4 +41,3 @@ private:
 };
 
 // TODO : this class can contain opengl objects container. Later on, this container will contain opengl objects that have several functions like : draw , update etc..
-#endif
