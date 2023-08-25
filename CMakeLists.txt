@@ -40,16 +40,21 @@ set(LIBS ${LIBS} STB_IMAGE)
 add_library(GLAD "src/external/glad/glad.c")
 set(LIBS ${LIBS} GLAD)
 
+# ImGui
+add_library(IMGUI "src/external/imgui/imgui.cpp")
+set(LIBS ${LIBS} IMGUI)
+
+
 # copy resources file
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/resources DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 # copy shaders file
 file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
-
 #add all executables
 file(GLOB_RECURSE SOURCE 
     src/engine/*.cpp
     src/ECS/*.cpp
+    src/external/ImGui/*.cpp
     )
 
 #include directories

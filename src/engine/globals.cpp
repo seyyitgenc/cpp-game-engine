@@ -23,6 +23,7 @@ bool initGlobals() {
         glfwTerminate();
         return false;
     }
+    
     glfwMakeContextCurrent(gWindow);
     glfwSetFramebufferSizeCallback(gWindow,framebuffer_size_callback);
     glfwSetCursorPosCallback(gWindow,mouse_callback);

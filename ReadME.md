@@ -17,38 +17,12 @@
 
 > TODO
 
+- [ ] ImGui
 - [x] Shaders
 - [ ] Instanced Rendering
-- [ ] Camera
+- [x] Camera
 - [ ] Model loading
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
 - [ ] Multiple Point Lights
 - [ ] Simple Shadows
-
-<!-- - [x] ECS
-- [x] vector 2d implementation
-- [x] Asset Manager
-- [x] Dynamic UI Label Component
-- [x] Transform Component
-- [x] Rigid Body Component
-- [x] Collision Box Component
-- [ ] Entity can have multiple collision box
-- [ ] Controller Component
-- [x] Sprite component
-- [x] Collider component
-- [x] Camera
-- [ ] Menu
-- [ ] UI
-- [x] Particle Engine
-- [x] Circles
-- [ ] Sound Manager
-- [x] Tilemap Rendering
-- [ ] Tilemap Editor
-- [ ] TileMap with Perlin Noise
-- [ ] Minimap
-- [ ] Dialog Box
-- [x] SDL_Texture Wrapper Class
-- [ ] SDL_Rect Wrapper Class
-- [x] Continious Swept AABB collision
-- [ ] SAT collision -->
