@@ -2,6 +2,8 @@
 
 #include "shader.h"
 #include "filesystem.h"
+#include "model.h"
+#include "camera.h"
 
 App* App::s_instance;
 
@@ -13,85 +15,160 @@ App::~App() { this->clean(); }
 void App::initEntities() {
 }
 
-// main loop
-// --------------
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+
+std::vector<float> planeVertices = {
+     // positions
+      5.0f, -0.5f,  5.0f,
+     -5.0f, -0.5f,  5.0f,
+     -5.0f, -0.5f, -5.0f,
+     5.0f, -0.5f,  5.0f,
+    -5.0f, -0.5f, -5.0f,
+     5.0f, -0.5f, -5.0f,
+};
+
+std::vector<float> cubeVertices = {
+      // positions
+      -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
+      1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
+
+      -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
+      -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
+
+      1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
+
+      -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+
+      -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f,
+
+      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
+      1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
+
 void App::run() {
-    
     initGlobals();
 
-    // float vertices[] = {
-    //     // first triangle
-    //     -0.9f, -0.5f, 0.0f,  // left 
-    //     -0.0f, -0.5f, 0.0f,  // right
-    //     -0.45f, 0.5f, 0.0f,  // top 
-    //     // second triangle
-    //     0.0f, -0.5f, 0.0f,  // left
-    //     0.9f, -0.5f, 0.0f,  // right
-    //     0.45f, 0.5f, 0.0f   // top 
-    // }; 
+    Model plane(planeVertices);
+    Model cube(cubeVertices);
+    Model cyborg(FileSystem::getPath("bin/resources/objects/cyborg/cyborg.obj"));
+ 
+    Shader modelShader(
+        FileSystem::getPath("bin/shaders/basic_model.vs").c_str(),
+        FileSystem::getPath("bin/shaders/basic_model.fs").c_str());
 
-    // unsigned int VBO, VAO;
-    // glGenVertexArrays(1, &VAO);
-    // glGenBuffers(1, &VBO);
-    // glBindVertexArray(VAO);
+    Shader lightCubeShader(
+        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
+        FileSystem::getPath("bin/shaders/light_cube.fs").c_str());
 
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // glBindBuffer(GL_ARRAY_BUFFER, 0); 
-    // glBindVertexArray(0); 
-
-    Object openglTriangle;
-    std::vector<Object> myObjects;
-    myObjects.push_back(openglTriangle);
-
-    Shader test(
-        FileSystem::getPath("bin/shaders/triangle.vs").c_str(),
-        FileSystem::getPath("bin/shaders/triangle.fs").c_str());
-        
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    glEnable(GL_DEPTH_TEST);
     while (!glfwWindowShouldClose(gWindow))
     {
-        processInput();
+        processInput(gWindow);
+        // per-frame time logic
+        // --------------------
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // glBindVertexArray(VAO);
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
-        for (auto i = 0; i < myObjects.size(); i++)
+        // start dear ImGui frame 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
-            myObjects[i].draw(test);
+            static float f = 0.0f;
+            static int counter = 0;
+            ImGui::Begin("Debug Window");                           // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
         }
-        
+
+        // Rendering
+        ImGui::Render();
+        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            modelShader.use();
+            // view/projection transformations
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+            modelShader.setMat4("projection", projection);
+            modelShader.setMat4("view", camera.GetViewMatrix());
+
+            // render the loaded model
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+            modelShader.setMat4("model", model);
+            cyborg.Draw(modelShader);
+
+            lightCubeShader.use();
+            lightCubeShader.setMat4("projection", projection);
+            lightCubeShader.setMat4("view", camera.GetViewMatrix());
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(-1.0f, 4.0f, -5.0));
+            model = glm::scale(model, glm::vec3(0.2f));
+            lightCubeShader.setMat4("model", model);
+            cube.Draw(lightCubeShader);
+
+            lightCubeShader.use();
+            lightCubeShader.setMat4("projection", projection);
+            lightCubeShader.setMat4("view", camera.GetViewMatrix());
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
+            model = glm::scale(model, glm::vec3(2.0f));
+            lightCubeShader.setMat4("model", model);
+            plane.Draw(lightCubeShader);
+
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);
-        glfwPollEvents();;
-        // update(dt);
-        // render();
+        glfwPollEvents();
     }
 }
 
 // event loop
 // ----------
-void App::processInput() {
-    if (glfwGetKey(gWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+void App::processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(gWindow,true);
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.processKeyboard(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.processKeyboard(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.processKeyboard(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.processKeyboard(RIGHT, deltaTime);
 }
 
 void App::update(const float& dt) {
 }
 
 void App::render() {
-   glClearColor(0.1f,0.1f,0.1f,1.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.1f,0.1f,0.1f,1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-   // render stuff here
+    // render stuff here
 
-   glfwSwapBuffers(gWindow);
-   glfwPollEvents();
+    glfwSwapBuffers(gWindow);
+    glfwPollEvents();
 }
 
 void App::clean() {
-   glfwTerminate();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(gWindow);
+    glfwTerminate();
 }

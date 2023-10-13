@@ -1,16 +1,12 @@
 #pragma once
 
 #include <iostream>
-#include <map>
 #include "object.h"
 #include "globals.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-
-#include "camera.h"
 
 class App {
 private:
@@ -32,12 +28,14 @@ public:
 
     void render();
     void update(const float &dt);
-    void processInput();
+    void processInput(GLFWwindow* window);
 
 private:
     // App Field
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f,0.60f, 1.00f);
+    
     static App *s_instance;
 private:
 };
-
-// TODO : this class can contain opengl objects container. Later on, this container will contain opengl objects that have several functions like : draw , update etc..

@@ -12,12 +12,11 @@ public:
     virtual ~Entity() = default;
     template <typename T, typename... TArgs>
     T &addComponent(TArgs &&...args) {
-        // * assert will prevent using same component twice or more on
-        // single entity
+        // * assert will prevent using same component twice or more on single entity
         assert(!hasComponent<T>());
-        // * NOTE:  if parameters doesn't correspond any constrcutor relatod
-        // to
-        // * Component this will give error
+        
+        // NOTE: if parameters doesn't correspond any constrcutor related to component this will give error
+
         T *comp(new T(std::forward<TArgs>(args)...));
         comp->entity = this;  // attach component to it's entity
         std::unique_ptr<Component> uptr(comp);
@@ -26,8 +25,10 @@ public:
         compList[getComponentTypeID<T>()] = comp;
         compBitset[getComponentTypeID<T>()] = true;
 
-        // if component doesn't have initialize function it will return
-        // false if you use it in if claus probably your function will fail
+        /*
+            if component doesn't have initialize function it will return
+            false if you use it in if claus probably your function will fail
+        */
         comp->init();
         return *comp;  // return comp referance
     }

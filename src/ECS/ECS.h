@@ -8,6 +8,7 @@ class Component;
 
 const std::size_t MAX_ENTITIES = 5000;
 const std::size_t MAX_COMPONENTS = 32;
+
 // ComponentTypeID alias replace this expression as std::size_t
 // Increases code readability
 using ComponentTypeID = std::size_t;

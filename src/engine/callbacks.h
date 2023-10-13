@@ -1,16 +1,21 @@
 #pragma once
-#include <GLFW/glfw3.h>
 #include "camera.h"
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+inline void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0,0,width,height);
 }
 
-void scroll_callback(GLFWwindow *window, double xpos, double ypos)
+inline void scroll_callback(GLFWwindow *window, double xpos, double ypos)
 {
-    
+  camera.processMouseScroll(xpos, ypos);
 }
-void mouse_callback(GLFWwindow *window, double xpos, double ypos)
+inline void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
+  camera.processMouseMovement(xpos, ypos);
+}
+
+inline  void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }

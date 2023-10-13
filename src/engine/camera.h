@@ -1,4 +1,5 @@
 #pragma once
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,7 +23,24 @@ const float ZOOM         =   45.0f;
 class Camera
 {
 public:
+    glm::vec3 Position;
+    glm::vec3 Front;
+    glm::vec3 Up;
+    glm::vec3 Right;
+    glm::vec3 WorldUp;
 
+    float Yaw;
+    float Pitch;
+
+    float MovementSpeed;
+    float MouseSensitivity;
+    float Zoom;
+
+private:    
+    bool m_firstMouse = true;
+    float lastX, lastY;
+
+public:
     Camera(glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH ) : Front(glm::vec3(0.0f,0.0f,-1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
         Position =  position;
         WorldUp  =  up;
@@ -43,18 +61,19 @@ public:
         return glm::lookAt(Position, Position + Front, Up);
     }
 
-    void ProcessKeyboard(Camera_Movement direction, float deltaTime){
+    void processKeyboard(Camera_Movement direction, float deltaTime){
         float velocity = MovementSpeed * deltaTime;
         if(direction == FORWARD)
             Position += Front * velocity;
         if(direction == BACKWARD)
             Position -= Front * velocity;
-        if(direction == LEFT)
+        if(direction == RIGHT)
             Position += Right * velocity;
         if(direction == LEFT)
             Position -= Right * velocity;
     }
-    void ProcessMouseMovement(double xpos, double ypos, GLboolean constrainPitch = true){
+
+    void processMouseMovement(double xpos, double ypos){
         if (m_firstMouse)
         {
             lastX = xpos;
@@ -62,48 +81,31 @@ public:
             m_firstMouse = false;
         }
         float xoffset = xpos - lastX;
-        float yoffset = ypos - lastY;
+        float yoffset = lastY - ypos;
+
+        lastX = xpos;
+        lastY = ypos;
 
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
-
-        Yaw += xoffset;
+        Yaw   += xoffset;
         Pitch += yoffset;
 
-        if (Pitch > 89.0f) Pitch  = 89.0f;
+        if (Pitch > 89.0f)  Pitch =  89.0f;
         if (Pitch < -89.0f) Pitch = -89.0f;
         updateCameraVectors();
     }
+
     void processMouseScroll(double xoffset, double yoffset){
         Zoom -= (float)yoffset;
         if(Zoom < 1.0f) Zoom = 1.0f;
         if(Zoom > 45.0f) Zoom = 45.0f;
     }
 
-public:
-
-    glm::vec3 Position;
-    glm::vec3 Front;
-    glm::vec3 Up;
-    glm::vec3 Right;
-    glm::vec3 WorldUp;
-
-    float Yaw;
-    float Pitch;
-
-    float MovementSpeed;
-    float MouseSensitivity;
-    float Zoom;
-
-private:
-    
-    bool m_firstMouse = true;
-    float lastX, lastY;
-
 private:
     void updateCameraVectors(){
         glm::vec3 front;
-        front.x = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+        front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
         front.y = sin(glm::radians(Pitch));
         front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
 
@@ -112,3 +114,8 @@ private:
         Up    = glm::normalize(glm::cross(Right, Front));
     }
 };
+
+// ! NOTE TO MYSELF : DON'T DECLERA THIS VARIABLE AS STATIC BECAUSE EVERY TIME I INCLUDED THIS CAMERA.H 
+// ! IT WILL CREATE SEPERATE OBJECT FOR THE INCLUDED FILE
+// ! INSTEAD USE INLINE TO PREVENT THAT OR YOU MAY USE EXTERN TO DECLERA AS A GLOBAL VARIABLE
+inline Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
