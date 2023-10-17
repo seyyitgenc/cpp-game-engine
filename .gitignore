@@ -13,3 +13,4 @@ bld/
 [Ll]ib/
 .clang-format
 .vscode
+resources/objects/room

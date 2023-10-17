@@ -1,7 +1,7 @@
 #include "globals.h"
 #include "callbacks.h"
 #include <glad/glad.h>
-
+#include <stb_image.h>
 GLFWwindow *gWindow;
 
 
@@ -14,6 +14,8 @@ bool initGlobals() {
         std::cout << "Failed to init glfw" << std::endl;
         return false;
     }
+    
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -27,6 +29,7 @@ bool initGlobals() {
         return false;
     }
     glfwMakeContextCurrent(gWindow);
+    glfwSwapInterval(0);
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
     glfwSetCursorPosCallback      (gWindow, mouse_callback);
     glfwSetScrollCallback         (gWindow, scroll_callback);

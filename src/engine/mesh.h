@@ -66,7 +66,7 @@ public:
         if (hasIndices)
             glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
         else
-            glDrawArrays(GL_TRIANGLES,0,36);
+            glDrawArrays(GL_TRIANGLES,0,verticies.size());
             
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);

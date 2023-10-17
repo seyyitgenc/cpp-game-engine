@@ -1,4 +1,4 @@
-# This project is all about SDL based C++ game engine
+# This project is all about OpenGL based C++ game engine
 
 - **_NOTE:_**  For now, this project works on only windows.
 
@@ -21,7 +21,8 @@
 - [x] Shaders
 - [ ] Instanced Rendering
 - [x] Camera
-- [ ] Model loading
+- [x] Model loading
+- [x] Custom Model Loading
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
 - [ ] Multiple Point Lights

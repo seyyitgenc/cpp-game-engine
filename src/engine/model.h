@@ -2,6 +2,7 @@
 // This implementatin is based on the tutorial from learnopengl.com
 // https://learnopengl.com/Model-Loading/Model
 // custom model loading is WIP 
+
 #pragma once
 #include "mesh.h"
 
@@ -11,7 +12,6 @@
 
 #include <assimp/Importer.hpp>
 #include <string>
-
 
 unsigned int TextureFromFile(const char* path, const std::string& directory);
 
@@ -32,13 +32,13 @@ public:
         loadModel(v);
     };
     // model constructor for custom models if normal mapping is not required
-    Model(float* vertices, float *indices, float *textures = nullptr){
+    Model(std::vector<float> verticies, std::vector<unsigned int> indices, std::vector<std::pair<std::string,std::string>> textures = {}){
         
-        loadModel(vertices, indices, textures);
+        loadModel(verticies, indices, textures);
     };
     // model constructor for custom model if normal mapping is required
-    Model(float* vertices, float *indices, float *textures, const float *normals){
-        loadModel(vertices, indices, textures, normals);
+    Model(std::vector<float> verticies, std::vector<unsigned int> indices, std::vector<std::pair<std::string,std::string>> textures,  std::vector<float> normals){
+        // loadModel(vertices, indices, textures, normals);
     };
     ~Model() = default;
     
@@ -62,28 +62,57 @@ private:
             vertex.Position = glm::vec3(v[i], v[i + 1], v[i + 2]);
             verticies.push_back(vertex);
         }
-
-        //! FIXME : this is a temporary solution  
+        // FIXME : this is a temporary solution  
         std::vector<unsigned int> indices;
         std::vector<Texture> textures;
+
         Mesh myMesh(verticies, indices, textures);
-        myMesh.hasIndices = false;
-        myMesh.hasNormals = false;
-        myMesh.hasTexCoords = false;
         meshes.push_back(myMesh);
     }
 
     // ----------------------------------------------------------------------
     // this will load custom models with indices/texture but no normal mapping
+    // our model will always have
+    // note : incoming texture files is structured like this : {{"texture.jpg","diffuse_texture"},{"texture_normal","normal_texture"}}
     // ----------------------------------------------------------------------
-    void loadModel(float* vertices, float *indices, float *textures){
+    void loadModel(std::vector<float>& vert, std::vector<unsigned int>& ind, std::vector<std::pair<std::string,std::string>>& tex){
+        std::vector<Vertex> vertices;
+        std::vector<Texture> textures;
 
+        // FIXME:  this is temporary solution
+        // note: this will not handle theh different path textures
+        directory = FileSystem::getPath("bin/resources/textures");
+
+        // we assume that incoming vertices array contains texcoords
+        for (int i = 0; i < vert.size(); i+=5)
+        {
+            Vertex vertex;
+            vertex.Position = glm::vec3(vert[i], vert[i + 1], vert[i + 2]);
+            vertex.TexCoords = glm::vec2(vert[i + 3], vert[i + 4]);
+            vertices.push_back(vertex);
+        }
+
+        for (int i = 0; i < tex.size(); i++)
+        {
+            Texture texture;
+            texture.id = TextureFromFile("bricks2.jpg", directory);
+            texture.path = tex[i].first;
+            texture.type = tex[i].second;
+            textures.push_back(texture);
+        }
+        
+        for (unsigned int i = 0; i < textures.size(); i++)
+            std::cout << "Texture loaded >>> " << textures[i].path << std::endl;
+
+        Mesh myMesh(vertices, ind, textures, true,false, true);
+        
+        meshes.push_back(myMesh);
     }
     // ----------------------------------------------------------------------
     // this will load custom models with indices/textures/normal mapping
     // ----------------------------------------------------------------------
-    void loadModel(float* vertices, float *indices, float *textures, const float *normals){
-    }
+    // void loadModel(std::vector<float>&v, std::vector<float>&i, std::vector<float>&t, const std::vector<float>&normals){
+    // }
 
     // ----------------------------------------------------------------
     // loads a model with supported ASSIMP extensions from file
@@ -159,7 +188,7 @@ private:
             for (unsigned int j = 0; j < face.mNumIndices; j++)
                 indices.push_back(face.mIndices[j]);
         }
-        
+            
         // process material
         if (mesh->mMaterialIndex >= 0)
         {
@@ -168,11 +197,12 @@ private:
             textures.insert(textures.end(),diffuseMaps.begin(),diffuseMaps.end());
             std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+            std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+            textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+            std::vector<Texture> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+            textures.insert(textures.end(), heightMap.begin(), heightMap.end());    
         }
         Mesh lastMesh(vertices, indices, textures, true, hasNormals, hasTexCoords);
-        lastMesh.hasIndices = true;
-        lastMesh.hasNormals = hasNormals;
-        lastMesh.hasTexCoords = hasTexCoords;
         return lastMesh;
     }
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName){
@@ -199,11 +229,8 @@ private:
                 texture.path = str.C_Str();
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);
+                std::cout << "Texture loaded >>> " << str.C_Str() << std::endl;
             }
-        }
-        for (unsigned int i = 0; i < textures.size(); i++)
-        {
-            std::cout << "Texture loaded >>> " << textures[i].path << std::endl;
         }
         return textures;
     }
@@ -213,7 +240,6 @@ private:
 unsigned int TextureFromFile(const char* path, const std::string& directory){
     std::string filename = std::string(path);
     filename = directory + '/' + filename; // complete path to image
-
     unsigned int textureID;
     glGenTextures(1, &textureID);
     int width, height, nrComponents;

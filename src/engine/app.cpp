@@ -18,15 +18,28 @@ void App::initEntities() {
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// give me some plane vertices to draw with indices
 
 std::vector<float> planeVertices = {
-     // positions
-      5.0f, -0.5f,  5.0f,
-     -5.0f, -0.5f,  5.0f,
-     -5.0f, -0.5f, -5.0f,
-     5.0f, -0.5f,  5.0f,
-    -5.0f, -0.5f, -5.0f,
-     5.0f, -0.5f, -5.0f,
+    // positions         // texcoords
+    5.0f, -0.5f, 5.0f,    1.0f, 0.0f,
+    -5.0f, -0.5f, 5.0f,   0.0f, 0.0f,
+    -5.0f, -0.5f, -5.0f,  0.0f, 1.0f,
+    5.0f, -0.5f, -5.0f,   1.0f, 1.0f
+};
+
+// std::vector<float> planeVertices = {
+//     // positions          // normals         // texcoords
+//     5.0f, -0.5f, 5.0f,    0.0f, 1.0f, 0.0f,   5.0f, 0.0f,
+//     -5.0f, -0.5f, 5.0f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,
+//     -5.0f, -0.5f, -5.0f,  0.0f, 1.0f, 0.0f,   0.0f, 5.0f,
+//     5.0f, -0.5f, -5.0f,   0.0f, 1.0f, 0.0f,   5.0f, 5.0f
+// };
+
+
+std::vector<unsigned int> planeIndices = {
+    0, 1, 2,
+    0, 2, 3
 };
 
 std::vector<float> cubeVertices = {
@@ -52,13 +65,21 @@ std::vector<float> cubeVertices = {
 void App::run() {
     initGlobals();
 
-    Model plane(planeVertices);
+
+    std::vector<std::pair<std::string,std::string>> planeTextures;
+    planeTextures.push_back(std::pair("bricks2.png","texture_diffuse"));
+    planeTextures.push_back(std::pair("brickwall_normal.jpg","texture_normal"));
+    Model plane(planeVertices,planeIndices,planeTextures);
     Model cube(cubeVertices);
     Model cyborg(FileSystem::getPath("bin/resources/objects/cyborg/cyborg.obj"));
- 
+
     Shader modelShader(
         FileSystem::getPath("bin/shaders/basic_model.vs").c_str(),
         FileSystem::getPath("bin/shaders/basic_model.fs").c_str());
+    
+    Shader planeShader(
+        FileSystem::getPath("bin/shaders/basic_texture.vs").c_str(),
+        FileSystem::getPath("bin/shaders/basic_texture.fs").c_str());
 
     Shader lightCubeShader(
         FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
@@ -84,7 +105,7 @@ void App::run() {
         {
             static float f = 0.0f;
             static int counter = 0;
-            ImGui::Begin("Debug Window");                           // Create a window called "Hello, world!" and append into it.
+            ImGui::Begin("Debug Window");                           // Create a window called "Debug Window" and append into it.
 
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
 
@@ -105,30 +126,30 @@ void App::run() {
             modelShader.setMat4("projection", projection);
             modelShader.setMat4("view", camera.GetViewMatrix());
 
-            // render the loaded model
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-            modelShader.setMat4("model", model);
-            cyborg.Draw(modelShader);
+                // // render the loaded model
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+                model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+                modelShader.setMat4("model", model);
+                cyborg.Draw(modelShader);
 
-            lightCubeShader.use();
-            lightCubeShader.setMat4("projection", projection);
-            lightCubeShader.setMat4("view", camera.GetViewMatrix());
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(-1.0f, 4.0f, -5.0));
-            model = glm::scale(model, glm::vec3(0.2f));
-            lightCubeShader.setMat4("model", model);
-            cube.Draw(lightCubeShader);
+                lightCubeShader.use();
+                lightCubeShader.setMat4("projection", projection);
+                lightCubeShader.setMat4("view", camera.GetViewMatrix());
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-1.0f, 4.0f, -5.0));
+                model = glm::scale(model, glm::vec3(0.2f));
+                lightCubeShader.setMat4("model", model);
+                cube.Draw(lightCubeShader);
 
-            lightCubeShader.use();
-            lightCubeShader.setMat4("projection", projection);
-            lightCubeShader.setMat4("view", camera.GetViewMatrix());
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
-            model = glm::scale(model, glm::vec3(2.0f));
-            lightCubeShader.setMat4("model", model);
-            plane.Draw(lightCubeShader);
+                planeShader.use();
+                planeShader.setMat4("projection", projection);
+                planeShader.setMat4("view", camera.GetViewMatrix());
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
+                model = glm::scale(model, glm::vec3(2.0f));
+                planeShader.setMat4("model", model);
+                plane.Draw(planeShader);
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);

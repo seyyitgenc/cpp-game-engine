@@ -16,17 +16,22 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # OpenGL
 find_package(OpenGL REQUIRED)
-# GLM
-find_package(GLM REQUIRED)
-message(STATUS "Found GLM in ${GLM_INCLUDE_DIRS}")
 
+# GLM
+find_package(glm REQUIRED)
+message(STATUS "Found GLM in ${glm_INCLUDE_DIRS}")
+
+#assimp
 find_package(assimp REQUIRED)
 message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
-# GLFW3
-find_package(GLFW3 REQUIRED)
-message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIRS}")
 
-set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
+# GLFW3
+find_package(glfw3 REQUIRED)
+message(STATUS "Found GLFW3 in ${glfw3_INCLUDE_DIRS}")
+
+# set(LIBS ${GLFW3_LIBRARY} GL pthread freetype ${ASSIMP_LIBRARY})
+# set me a LIBS for linux
+set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
 
 # configure file to get root directory
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
@@ -41,7 +46,7 @@ add_library(GLAD "src/external/glad/glad.c")
 set(LIBS ${LIBS} GLAD)
 
 # ImGui
-add_library(IMGUI "src/external/imgui/imgui.cpp")
+add_library(IMGUI "src/external/ImGui/imgui.cpp")
 set(LIBS ${LIBS} IMGUI)
 
 
