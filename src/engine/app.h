@@ -31,6 +31,8 @@ public:
     void processInput(GLFWwindow* window);
 
 private:
+    //fixme: temporary class
+    bool is_j_pressed = false;
     // App Field
     bool show_demo_window = true;
     bool show_another_window = false;

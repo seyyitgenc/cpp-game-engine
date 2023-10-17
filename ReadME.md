@@ -1,6 +1,6 @@
 # This project is all about OpenGL based C++ game engine
 
-- **_NOTE:_**  For now, this project works on only windows.
+- **_NOTE:_**  For now, this project works on only linux.
 
 > REQUIRED LIBS FOR OpenGL branch
 
@@ -17,7 +17,7 @@
 
 > TODO
 
-- [ ] ImGui
+- [x] ImGui
 - [x] Shaders
 - [ ] Instanced Rendering
 - [x] Camera

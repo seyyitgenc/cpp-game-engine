@@ -4,7 +4,7 @@
 #include "filesystem.h"
 #include "model.h"
 #include "camera.h"
-
+#include "callbacks.h"
 App* App::s_instance;
 
 App::App() { }
@@ -44,23 +44,49 @@ std::vector<unsigned int> planeIndices = {
 
 std::vector<float> cubeVertices = {
       // positions
-      -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
-      1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
+    -1.0f, 1.0f,  -1.0f, 
+    -1.0f, -1.0f, -1.0f,
+    1.0f,  -1.0f, -1.0f,
+    1.0f,  -1.0f, -1.0f,
+    1.0f,  1.0f,  -1.0f,
+    -1.0f, 1.0f,  -1.0f,
 
-      -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
-      -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, 1.0f,  -1.0f,
+    -1.0f, 1.0f,  -1.0f,
+    -1.0f, 1.0f,  1.0f,
+    -1.0f, -1.0f, 1.0f,
+    
+    1.0f,  -1.0f, -1.0f,
+    1.0f,  -1.0f, 1.0f,
+    1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  -1.0f,
+    1.0f,  -1.0f, -1.0f,
 
-      1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
-      1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
-
-      -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
-      1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
-
-      -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,
-      1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f,
-
-      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
-      1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
+    -1.0f, -1.0f, 1.0f,
+    -1.0f, 1.0f,  1.0f,  
+    1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,
+    1.0f,  -1.0f, 1.0f,
+    -1.0f, -1.0f, 1.0f,
+    
+    
+    -1.0f, 1.0f,  -1.0f,
+     1.0f,  1.0f,  -1.0f,
+    1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,
+    -1.0f, 1.0f,  1.0f, 
+    -1.0f, 1.0f,  -1.0f,
+    
+    
+    -1.0f, -1.0f, -1.0f, 
+    -1.0f, -1.0f, 1.0f, 
+    1.0f,  -1.0f, -1.0f,
+    1.0f,  -1.0f, -1.0f, 
+    -1.0f, -1.0f, 1.0f, 
+    1.0f,  -1.0f, 1.0f};
 
 void App::run() {
     initGlobals();
@@ -81,6 +107,14 @@ void App::run() {
         FileSystem::getPath("bin/shaders/basic_texture.vs").c_str(),
         FileSystem::getPath("bin/shaders/basic_texture.fs").c_str());
 
+    Shader collisionBox(
+        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
+        FileSystem::getPath("bin/shaders/light_cube.fs").c_str());
+
+    Shader redBox(
+        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
+        FileSystem::getPath("bin/shaders/red.fs").c_str());
+
     Shader lightCubeShader(
         FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
         FileSystem::getPath("bin/shaders/light_cube.fs").c_str());
@@ -100,19 +134,39 @@ void App::run() {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        
+        // show demo window
+        // ImGui::ShowDemoWindow();
+        static float f0 = 0,f1 = 0,f2 = 0;
+        static float colboxSizex = 0,colboxSizey = 0,colboxSizez = 0;
+        static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
+        if (gEditModeEnabled)
         {
-            static float f = 0.0f;
-            static int counter = 0;
-            ImGui::Begin("Debug Window");                           // Create a window called "Debug Window" and append into it.
+            // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+            {
+                static float f = 0.0f;
+                static int counter = 0;
+                ImGui::Begin("Debug Window");                           // Create a window called "Debug Window" and append into it.
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+                ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
 
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+                ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+                ImGui::Text("Object Location");               // for now this represents the cyborgs location
+                ImGui::PushItemWidth(120);
+                // note: imagine you have lots of objects you must list all of them
+                // note: and can edit their location in the world.
+                ImGui::SliderFloat("X", &colbox0, -10.0f, 10.0f); ImGui::SameLine();
+                ImGui::SliderFloat("Y", &colbox1, -10.0f, 10.0f); ImGui::SameLine();
+                ImGui::SliderFloat("Z", &colbox2, -10.0f, 10.0f);
+                
+                ImGui::Text("Object Size");
+                ImGui::SliderFloat("w", &colboxSizex, -10.0f, 10.0f); ImGui::SameLine();
+                ImGui::SliderFloat("h", &colboxSizey, -10.0f, 10.0f); ImGui::SameLine();
+                ImGui::SliderFloat("d", &colboxSizez, -10.0f, 10.0f);
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
+                ImGui::End();
+            }
         }
 
         // Rendering
@@ -128,7 +182,7 @@ void App::run() {
 
                 // // render the loaded model
                 glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+                model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
                 model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
                 modelShader.setMat4("model", model);
                 cyborg.Draw(modelShader);
@@ -151,6 +205,27 @@ void App::run() {
                 planeShader.setMat4("model", model);
                 plane.Draw(planeShader);
 
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                collisionBox.use();
+                collisionBox.setMat4("projection", projection);
+                collisionBox.setMat4("view", camera.GetViewMatrix());
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f,1.0f,0.0f));
+                model = glm::scale(model, glm::vec3(1.0f,1.0f,1.0f));
+                collisionBox.setMat4("model", model);
+                cube.Draw(collisionBox);
+
+                redBox.use();
+                redBox.setMat4("projection", projection);
+                redBox.setMat4("view", camera.GetViewMatrix());
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(-1.0f,2.0f,1.0f));
+                model = glm::scale(model, glm::vec3(0.1f));
+                redBox.setMat4("model", model);
+                cube.Draw(redBox);
+
+
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);
         glfwPollEvents();
@@ -170,6 +245,25 @@ void App::processInput(GLFWwindow* window) {
         camera.processKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.processKeyboard(RIGHT, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !is_j_pressed)
+    {
+        gEditModeEnabled = !gEditModeEnabled;
+        is_j_pressed = true;
+        if (gEditModeEnabled)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+        else
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+
+    }
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_RELEASE)
+    {
+        is_j_pressed = false;
+    }
 }
 
 void App::update(const float& dt) {

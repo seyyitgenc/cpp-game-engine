@@ -2,8 +2,9 @@
 #include "callbacks.h"
 #include <glad/glad.h>
 #include <stb_image.h>
-GLFWwindow *gWindow;
 
+GLFWwindow *gWindow;
+bool gEditModeEnabled;
 
 // Global variable initalization and backend setup
 bool initGlobals() {
@@ -29,12 +30,14 @@ bool initGlobals() {
         return false;
     }
     glfwMakeContextCurrent(gWindow);
-    glfwSwapInterval(0);
+    glfwSwapInterval(1); // on/off vscync
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
     glfwSetCursorPosCallback      (gWindow, mouse_callback);
     glfwSetScrollCallback         (gWindow, scroll_callback);
+    
     // tell GLFW to capture our mouse
     glfwSetInputMode              (gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    gEditModeEnabled = false;
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {

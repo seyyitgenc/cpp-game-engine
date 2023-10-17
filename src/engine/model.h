@@ -23,6 +23,7 @@ public:
     std::vector<Texture> textures_loaded;
 
 public:
+    Model() = default;
     // model constructor for pre-defined models
     Model(const std::string path){
         loadModel(path);

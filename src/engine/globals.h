@@ -14,5 +14,7 @@
 #define TILE_HEIGHT 32.0f
 
 extern GLFWwindow *gWindow;
+extern bool gEditModeEnabled;
+
 
 bool initGlobals();

@@ -6,13 +6,26 @@ inline void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     glViewport(0,0,width,height);
 }
 
+// scroll callback for edit mode
+inline void scroll_callback_edit(GLFWwindow *window, double xpos, double ypos)
+{
+}
+
+// mouse position callback for edit mode
+inline void mouse_callback_edit(GLFWwindow *window, double xpos, double ypos)
+{
+}
+
 inline void scroll_callback(GLFWwindow *window, double xpos, double ypos)
 {
-  camera.processMouseScroll(xpos, ypos);
+	if (!gEditModeEnabled)
+		camera.processMouseScroll(xpos, ypos);
+  
 }
 inline void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
-  camera.processMouseMovement(xpos, ypos);
+	if (!gEditModeEnabled)
+		camera.processMouseMovement(xpos, ypos);
 }
 
 inline  void glfw_error_callback(int error, const char* description)
