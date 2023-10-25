@@ -8,11 +8,11 @@
 #include <sstream>
 #include <string>
 
-
 class Shader
 {
 public:
-    Shader(const char *vertexPath, const char *geometryPath, const char *fragmentPath = nullptr);
+    Shader(const char *vertexPath, const char *fragmentPath);
+    Shader(const char *vertexPath, const char *geometrypath, const char *fragmentPath);
     // utiliy uniforrm functions
     void setBool(const std::string &name, bool value) const;
    
@@ -30,7 +30,11 @@ private:
     std::string readFile(const char *path);
     void compileShader(const char * code, GLenum type);
     void checkCompileErrors(GLuint shader, std::string type);
+
 public:
-    void use();
+
+    // FIXME : later on i need to fix this access modifier i don't want user to access these
+    void bind();
+    void unbind();
     unsigned int ID;
 };

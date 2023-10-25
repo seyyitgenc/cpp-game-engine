@@ -5,6 +5,7 @@
 
 GLFWwindow *gWindow;
 bool gEditModeEnabled;
+// ShaderManager *gShaderManager;
 
 // Global variable initalization and backend setup
 bool initGlobals() {
@@ -60,6 +61,8 @@ bool initGlobals() {
     const char* glsl_version = "#version 460 core";
     ImGui_ImplGlfw_InitForOpenGL(gWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // gShaderManager->getInstance();
 
     return true;
 }

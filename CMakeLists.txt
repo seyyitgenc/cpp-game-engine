@@ -29,9 +29,9 @@ message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
 find_package(glfw3 REQUIRED)
 message(STATUS "Found GLFW3 in ${glfw3_INCLUDE_DIRS}")
 
-# set(LIBS ${GLFW3_LIBRARY} GL pthread freetype ${ASSIMP_LIBRARY})
+set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
 # set me a LIBS for linux
-set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
+# set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
 
 # configure file to get root directory
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)

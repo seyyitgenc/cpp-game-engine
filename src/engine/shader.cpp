@@ -1,6 +1,10 @@
 #include "shader.h"
 
-Shader::Shader(const char *vertexPath,  const char *fragmentPath, const char* geometryPath)
+//! input is like tihs vertex shader, fragment shader
+Shader::Shader(const char *vertexPath, const char *fragmentPath) : Shader(vertexPath, nullptr, fragmentPath){}
+
+//! input is like tihs : vertex shader, geometry shader, fragemnt shader
+Shader::Shader(const char *vertexPath,  const char *geometryPath , const char *fragmentPath )
 {
     std::string vertexCode = readFile(vertexPath);
     std::string fragmentCode = readFile(fragmentPath);
@@ -44,6 +48,7 @@ void Shader::compileShader(const char *code, GLenum type)
     checkCompileErrors(shader,"COMPUTE");
     glAttachShader(ID, shader);
     glLinkProgram(ID);
+    
     checkCompileErrors(ID, "PROGRAM");
     glDeleteShader(shader);
 }
@@ -108,7 +113,11 @@ void Shader::setMat4(const std::string &name, glm::mat4 value) const
     glUniformMatrix4fv(glGetUniformLocation(ID,name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::use()
+void Shader::bind()
 {
     glUseProgram(ID);
+}
+void Shader::unbind()
+{
+    glUseProgram(0);
 }

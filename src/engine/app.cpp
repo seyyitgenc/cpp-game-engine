@@ -5,122 +5,82 @@
 #include "model.h"
 #include "camera.h"
 #include "callbacks.h"
+#include "object_vertices.h"
+#include "shader_manager.h"
 App* App::s_instance;
 
 App::App() { }
 App::~App() { this->clean(); }
+ 
+// AABB point vs box
+// -----------------
+bool pointvsbox(glm::vec3 point, glm::vec3 box){
+    return (
+        point.x >= box.x - 0.5f &&
+        point.x <= box.x + 0.5f &&
+        point.y >= box.y - 0.5f &&
+        point.y <= box.y + 0.5f && 
+        point.z >= box.z - 0.5 &&
+        point.z <= box.z + 0.5
 
-// initialize objects that will be used by game
-// --------------------------------------------
-void App::initEntities() {
+    );
 }
 
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-
-// give me some plane vertices to draw with indices
-
-std::vector<float> planeVertices = {
-    // positions         // texcoords
-    5.0f, -0.5f, 5.0f,    1.0f, 0.0f,
-    -5.0f, -0.5f, 5.0f,   0.0f, 0.0f,
-    -5.0f, -0.5f, -5.0f,  0.0f, 1.0f,
-    5.0f, -0.5f, -5.0f,   1.0f, 1.0f
-};
-
-// std::vector<float> planeVertices = {
-//     // positions          // normals         // texcoords
-//     5.0f, -0.5f, 5.0f,    0.0f, 1.0f, 0.0f,   5.0f, 0.0f,
-//     -5.0f, -0.5f, 5.0f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,
-//     -5.0f, -0.5f, -5.0f,  0.0f, 1.0f, 0.0f,   0.0f, 5.0f,
-//     5.0f, -0.5f, -5.0f,   0.0f, 1.0f, 0.0f,   5.0f, 5.0f
-// };
-
-
-std::vector<unsigned int> planeIndices = {
-    0, 1, 2,
-    0, 2, 3
-};
-
-std::vector<float> cubeVertices = {
-      // positions
-    -1.0f, 1.0f,  -1.0f, 
-    -1.0f, -1.0f, -1.0f,
-    1.0f,  -1.0f, -1.0f,
-    1.0f,  -1.0f, -1.0f,
-    1.0f,  1.0f,  -1.0f,
-    -1.0f, 1.0f,  -1.0f,
-
-    -1.0f, -1.0f, 1.0f,
-    -1.0f, -1.0f, -1.0f,
-    -1.0f, 1.0f,  -1.0f,
-    -1.0f, 1.0f,  -1.0f,
-    -1.0f, 1.0f,  1.0f,
-    -1.0f, -1.0f, 1.0f,
+void init_shaders(){
+    ShaderManager *manager = ShaderManager::getInstance();
+    manager->add_shader(
+        "shader_model",
+        FileSystem::getPath("bin/shaders/basic_model.vs").c_str(),
+        FileSystem::getPath("bin/shaders/basic_model.fs").c_str());
     
-    1.0f,  -1.0f, -1.0f,
-    1.0f,  -1.0f, 1.0f,
-    1.0f,  1.0f,  1.0f,
-    1.0f,  1.0f,  1.0f,
-    1.0f,  1.0f,  -1.0f,
-    1.0f,  -1.0f, -1.0f,
+    manager->add_shader(
+        "shader_texture",
+        FileSystem::getPath("bin/shaders/basic_texture.vs").c_str(),
+        FileSystem::getPath("bin/shaders/basic_texture.fs").c_str());
+    
+    manager->add_shader(
+        "shader_ray",
+        FileSystem::getPath("bin/shaders/ray.vs").c_str(),
+        FileSystem::getPath("bin/shaders/ray.gs").c_str(),
+        FileSystem::getPath("bin/shaders/ray.fs").c_str());
+    
+    manager->add_shader(
+        "shader_white_box",
+        FileSystem::getPath("bin/shaders/basic_mesh.vs").c_str(),
+        FileSystem::getPath("bin/shaders/white.fs").c_str());
+    
+    manager->add_shader(
+        "shader_red_box",
+        FileSystem::getPath("bin/shaders/basic_mesh.vs").c_str(),
+        FileSystem::getPath("bin/shaders/red.fs").c_str());
+}
 
-    -1.0f, -1.0f, 1.0f,
-    -1.0f, 1.0f,  1.0f,  
-    1.0f,  1.0f,  1.0f,
-    1.0f,  1.0f,  1.0f,
-    1.0f,  -1.0f, 1.0f,
-    -1.0f, -1.0f, 1.0f,
-    
-    
-    -1.0f, 1.0f,  -1.0f,
-     1.0f,  1.0f,  -1.0f,
-    1.0f,  1.0f,  1.0f,
-    1.0f,  1.0f,  1.0f,
-    -1.0f, 1.0f,  1.0f, 
-    -1.0f, 1.0f,  -1.0f,
-    
-    
-    -1.0f, -1.0f, -1.0f, 
-    -1.0f, -1.0f, 1.0f, 
-    1.0f,  -1.0f, -1.0f,
-    1.0f,  -1.0f, -1.0f, 
-    -1.0f, -1.0f, 1.0f, 
-    1.0f,  -1.0f, 1.0f};
+void init_shader_values(const std::string &name){
+    Shader shader = ShaderManager::getInstance()->get_shader(name);
+    shader.bind();
+    // shader.setMat4("projection", projection);
+    shader.setMat4("view", camera.GetViewMatrix());
+    // render the loaded model
+    // model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
+    // model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+    // shader.setMat4("model", model);
+    shader.unbind();
+}
 
+// TODO :: implement model manager
 void App::run() {
     initGlobals();
-
-
+    init_shaders();
     std::vector<std::pair<std::string,std::string>> planeTextures;
     planeTextures.push_back(std::pair("bricks2.png","texture_diffuse"));
     planeTextures.push_back(std::pair("brickwall_normal.jpg","texture_normal"));
     Model plane(planeVertices,planeIndices,planeTextures);
-    Model cube(cubeVertices);
+    // Model cube(cubeVertices);
     Model cyborg(FileSystem::getPath("bin/resources/objects/cyborg/cyborg.obj"));
-
-    Shader modelShader(
-        FileSystem::getPath("bin/shaders/basic_model.vs").c_str(),
-        FileSystem::getPath("bin/shaders/basic_model.fs").c_str());
-    
-    Shader planeShader(
-        FileSystem::getPath("bin/shaders/basic_texture.vs").c_str(),
-        FileSystem::getPath("bin/shaders/basic_texture.fs").c_str());
-
-    Shader collisionBox(
-        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
-        FileSystem::getPath("bin/shaders/light_cube.fs").c_str());
-
-    Shader redBox(
-        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
-        FileSystem::getPath("bin/shaders/red.fs").c_str());
-
-    Shader lightCubeShader(
-        FileSystem::getPath("bin/shaders/light_cube.vs").c_str(),
-        FileSystem::getPath("bin/shaders/light_cube.fs").c_str());
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
+    glm::vec3 picking_pos = glm::vec3(0);
     while (!glfwWindowShouldClose(gWindow))
     {
         processInput(gWindow);
@@ -165,6 +125,7 @@ void App::run() {
                 ImGui::SliderFloat("h", &colboxSizey, -10.0f, 10.0f); ImGui::SameLine();
                 ImGui::SliderFloat("d", &colboxSizez, -10.0f, 10.0f);
 
+                ImGui::Text("Point Pos x: %.6f y: %.6f z: %.6f",picking_pos.x, picking_pos.y, picking_pos.z);
                 ImGui::End();
             }
         }
@@ -174,58 +135,76 @@ void App::run() {
         glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            modelShader.use();
             // view/projection transformations
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
-            modelShader.setMat4("projection", projection);
-            modelShader.setMat4("view", camera.GetViewMatrix());
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 model = glm::mat4(1.0f);
+            auto manager = ShaderManager::getInstance();
 
-                // // render the loaded model
-                glm::mat4 model = glm::mat4(1.0f);
+                Shader shader1 = manager->get_shader("shader_model");
+                shader1.bind();
+                shader1.setMat4("projection", projection);
+                shader1.setMat4("view", camera.GetViewMatrix());
+                // render the loaded model
                 model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
                 model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-                modelShader.setMat4("model", model);
-                cyborg.Draw(modelShader);
+                shader1.setMat4("model", model);
+                cyborg.Draw(shader1);
 
-                lightCubeShader.use();
-                lightCubeShader.setMat4("projection", projection);
-                lightCubeShader.setMat4("view", camera.GetViewMatrix());
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(-1.0f, 4.0f, -5.0));
-                model = glm::scale(model, glm::vec3(0.2f));
-                lightCubeShader.setMat4("model", model);
-                cube.Draw(lightCubeShader);
-
-                planeShader.use();
-                planeShader.setMat4("projection", projection);
-                planeShader.setMat4("view", camera.GetViewMatrix());
+                // lightCubeShader.use();
+                // lightCubeShader.setMat4("projection", projection);
+                // lightCubeShader.setMat4("view", camera.GetViewMatrix());
+                // model = glm::mat4(1.0f);
+                // model = glm::translate(model, glm::vec3(-1.0f, 4.0f, -5.0));
+                // model = glm::scale(model, glm::vec3(0.2f));
+                // lightCubeShader.setMat4("model", model);
+                // cube.Draw(lightCubeShader);
+                Shader shader = manager->get_shader("shader_red_box");
+                
+                shader.bind();
+                shader.setMat4("projection", projection);
+                shader.setMat4("view", camera.GetViewMatrix());
                 model = glm::mat4(1.0f);
                 model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
                 model = glm::scale(model, glm::vec3(2.0f));
-                planeShader.setMat4("model", model);
-                plane.Draw(planeShader);
+                shader.setMat4("model", model);
 
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                collisionBox.use();
-                collisionBox.setMat4("projection", projection);
-                collisionBox.setMat4("view", camera.GetViewMatrix());
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f,1.0f,0.0f));
-                model = glm::scale(model, glm::vec3(1.0f,1.0f,1.0f));
-                collisionBox.setMat4("model", model);
-                cube.Draw(collisionBox);
+                plane.Draw(shader);
 
-                redBox.use();
-                redBox.setMat4("projection", projection);
-                redBox.setMat4("view", camera.GetViewMatrix());
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(-1.0f,2.0f,1.0f));
-                model = glm::scale(model, glm::vec3(0.1f));
-                redBox.setMat4("model", model);
-                cube.Draw(redBox);
+                // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                // collisionBox.use();
+                // collisionBox.setMat4("projection", projection);
+                // collisionBox.setMat4("view", camera.GetViewMatrix());
+                // model = glm::mat4(1.0f);
+                // model = glm::translate(model, glm::vec3(colbox0,colbox1,colbox2));
+                // model = glm::scale(model, glm::vec3(1.0f,1.0f,1.0f));
+                // collisionBox.setMat4("model", model);
+                // cube.Draw(collisionBox);
+                // double x,y;
+                // glfwGetCursorPos(gWindow,&x,&y);
+                // glm::vec2 screen_pos(x,y);
+                // screen_pos.y = SCREEN_HEIGHT - screen_pos.y;
+                
+                // glm::vec3 a(screen_pos.x,screen_pos.y,0);
+                // glm::vec3 b(screen_pos.x,screen_pos.y,100);
 
+                // glm::vec3 result = glm::unProject(a,camera.GetViewMatrix(),projection,glm::vec4(0,0,SCREEN_WIDTH,SCREEN_HEIGHT));
+                // glm::vec3 result2 = glm::unProject(b,camera.GetViewMatrix(),projection,glm::vec4(0,0,SCREEN_WIDTH,SCREEN_HEIGHT));
 
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                // picking_pos = result;
+                // glm::vec3 picking_ray = result2 - result;
+
+                // if (pointvsbox(picking_pos,glm::vec3(colbox0,colbox1,colbox2)))
+                //     std::cout << "collided" << std::endl;
+                // redBox.use();
+                // redBox.setMat4("projection", projection);
+                // redBox.setMat4("view", camera.GetViewMatrix());
+                // model = glm::mat4(1.0f);
+                // model = glm::translate(model, glm::vec3(-1.0f,2.0f,1.0f));
+                // model = glm::scale(model, glm::vec3(0.1f));
+                // redBox.setMat4("model", model);
+                // cube.Draw(redBox);
+
+                // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);
         glfwPollEvents();

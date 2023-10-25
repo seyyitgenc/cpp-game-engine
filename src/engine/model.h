@@ -5,11 +5,11 @@
 
 #pragma once
 #include "mesh.h"
+#include "filesystem.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image.h>
-
 #include <assimp/Importer.hpp>
 #include <string>
 
@@ -238,7 +238,7 @@ private:
 
 };
 
-unsigned int TextureFromFile(const char* path, const std::string& directory){
+inline unsigned int TextureFromFile(const char* path, const std::string& directory){
     std::string filename = std::string(path);
     filename = directory + '/' + filename; // complete path to image
     unsigned int textureID;

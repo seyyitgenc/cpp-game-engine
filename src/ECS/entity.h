@@ -32,8 +32,8 @@ public:
         comp->init();
         return *comp;  // return comp referance
     }
-    // Get specified component
     template <typename T>
+    // Get specified component
     T &getComponent() const {
         assert(hasComponent<T>());
         auto ptr(compList[getComponentTypeID<T>()]);

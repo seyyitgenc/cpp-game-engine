@@ -3,15 +3,13 @@
 #include "shader.h"
 #include "model.h"
 
-class OpenglObject
+class Object
 {
 public:
-    // TODO:
-    // note: or i can call model loading function here and can accept indices paths etc...
-    // this will accept incoming model
-    OpenglObject(Model  m) {
-        _m = m;
-    }
+    // void translate
 private:
-    Model _m;
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 projection;
+
 };
