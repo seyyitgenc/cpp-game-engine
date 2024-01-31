@@ -1,82 +1,42 @@
 #include "app.h"
-
+#include "util/log.h"
 #include "shader.h"
-#include "filesystem.h"
 #include "model.h"
 #include "camera.h"
 #include "callbacks.h"
 #include "object_vertices.h"
 #include "shader_manager.h"
+
 App* App::s_instance;
 
 App::App() { }
 App::~App() { this->clean(); }
  
-// AABB point vs box
-// -----------------
-bool pointvsbox(glm::vec3 point, glm::vec3 box){
-    return (
-        point.x >= box.x - 0.5f &&
-        point.x <= box.x + 0.5f &&
-        point.y >= box.y - 0.5f &&
-        point.y <= box.y + 0.5f && 
-        point.z >= box.z - 0.5 &&
-        point.z <= box.z + 0.5
+// void init_shader_values(const std::string &name){
+//     Shader shader = ShaderManager::getInstance()->get_shader(name);
+//     shader.bind();
+//     // shader.setMat4("projection", projection);
+//     shader.setMat4("view", camera.GetViewMatrix());
+//     // render the loaded model
+//     // model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
+//     // model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+//     // shader.setMat4("model", model);
+//     shader.unbind();
+// }
 
-    );
+// TODO :: implement model gshader
+
+void Triad_3D(){
 }
 
-void init_shaders(){
-    ShaderManager *manager = ShaderManager::getInstance();
-    manager->add_shader(
-        "shader_model",
-        FileSystem::getPath("bin/shaders/basic_model.vs").c_str(),
-        FileSystem::getPath("bin/shaders/basic_model.fs").c_str());
-    
-    manager->add_shader(
-        "shader_texture",
-        FileSystem::getPath("bin/shaders/basic_texture.vs").c_str(),
-        FileSystem::getPath("bin/shaders/basic_texture.fs").c_str());
-    
-    manager->add_shader(
-        "shader_ray",
-        FileSystem::getPath("bin/shaders/ray.vs").c_str(),
-        FileSystem::getPath("bin/shaders/ray.gs").c_str(),
-        FileSystem::getPath("bin/shaders/ray.fs").c_str());
-    
-    manager->add_shader(
-        "shader_white_box",
-        FileSystem::getPath("bin/shaders/basic_mesh.vs").c_str(),
-        FileSystem::getPath("bin/shaders/white.fs").c_str());
-    
-    manager->add_shader(
-        "shader_red_box",
-        FileSystem::getPath("bin/shaders/basic_mesh.vs").c_str(),
-        FileSystem::getPath("bin/shaders/red.fs").c_str());
-}
-
-void init_shader_values(const std::string &name){
-    Shader shader = ShaderManager::getInstance()->get_shader(name);
-    shader.bind();
-    // shader.setMat4("projection", projection);
-    shader.setMat4("view", camera.GetViewMatrix());
-    // render the loaded model
-    // model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
-    // model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-    // shader.setMat4("model", model);
-    shader.unbind();
-}
-
-// TODO :: implement model manager
 void App::run() {
-    initGlobals();
-    init_shaders();
+    gInitGlobals();
     std::vector<std::pair<std::string,std::string>> planeTextures;
     planeTextures.push_back(std::pair("bricks2.png","texture_diffuse"));
     planeTextures.push_back(std::pair("brickwall_normal.jpg","texture_normal"));
     Model plane(planeVertices,planeIndices,planeTextures);
     // Model cube(cubeVertices);
-    Model cyborg(FileSystem::getPath("bin/resources/objects/cyborg/cyborg.obj"));
+    Model cyborg(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
@@ -132,23 +92,25 @@ void App::run() {
 
         // Rendering
         ImGui::Render();
-        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // view/projection transformations
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 model = glm::mat4(1.0f);
-            auto manager = ShaderManager::getInstance();
-
-                Shader shader1 = manager->get_shader("shader_model");
-                shader1.bind();
-                shader1.setMat4("projection", projection);
-                shader1.setMat4("view", camera.GetViewMatrix());
+                glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f);
+                glm::mat4 model = glm::mat4(1.0f);
+                Shader shader = gShaderManager->get_shader("shader_model");
+                // gshader->bind_shader("shader_model");
+                shader.bind();
+                // todo : create function that sets these variables
+                shader.setMat4("projection", projection);
+                shader.setMat4("view", camera.GetViewMatrix());
                 // render the loaded model
                 model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
                 model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-                shader1.setMat4("model", model);
-                cyborg.Draw(shader1);
+                shader.setMat4("model", model);
+                cyborg.Draw(shader);
+                shader.unbind();
+                // gshader->bind_shader("shader_model");
 
                 // lightCubeShader.use();
                 // lightCubeShader.setMat4("projection", projection);
@@ -158,8 +120,9 @@ void App::run() {
                 // model = glm::scale(model, glm::vec3(0.2f));
                 // lightCubeShader.setMat4("model", model);
                 // cube.Draw(lightCubeShader);
-                Shader shader = manager->get_shader("shader_red_box");
-                
+                shader = gShaderManager->get_shader("shader_red_box");
+                // note : i can use it like this aswell
+                // gshader->bind_shader("shader_red_box");
                 shader.bind();
                 shader.setMat4("projection", projection);
                 shader.setMat4("view", camera.GetViewMatrix());
@@ -169,7 +132,9 @@ void App::run() {
                 shader.setMat4("model", model);
 
                 plane.Draw(shader);
-
+                shader.unbind();
+                // gshader->unbind_shader("shader_red_box");
+                
                 // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 // collisionBox.use();
                 // collisionBox.setMat4("projection", projection);
@@ -224,7 +189,11 @@ void App::processInput(GLFWwindow* window) {
         camera.processKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.processKeyboard(RIGHT, deltaTime);
-
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    {
+        gShaderManager->reload_shaders();
+    }
+    
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !is_j_pressed)
     {
         gEditModeEnabled = !gEditModeEnabled;

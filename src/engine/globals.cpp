@@ -2,13 +2,18 @@
 #include "callbacks.h"
 #include <glad/glad.h>
 #include <stb_image.h>
+#include "util/log.h"
 
 GLFWwindow *gWindow;
 bool gEditModeEnabled;
-// ShaderManager *gShaderManager;
+void gInitShaders();
+bool gInitGlobals();
+ShaderManager *gShaderManager;
 
 // Global variable initalization and backend setup
-bool initGlobals() {
+
+bool gInitGlobals() {
+    CLog::setLevel(CLog::Debug);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
@@ -26,7 +31,7 @@ bool initGlobals() {
     // --------------------
     gWindow = glfwCreateWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Engine", NULL, NULL);
     if (gWindow == NULL) {
-        std::cout << "Failed to create GLFW window" << std::endl;
+        CLog::write(CLog::Fatal,"Failed to create GLFW window\n");
         glfwTerminate();
         return false;
     }
@@ -62,8 +67,31 @@ bool initGlobals() {
     ImGui_ImplGlfw_InitForOpenGL(gWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    // gShaderManager->getInstance();
-
+    gInitShaders();
     return true;
 }
 
+void gInitShaders(){
+    gShaderManager = ShaderManager::getInstance();
+    gShaderManager->add_shader(
+        "shader_model",
+        FileSystem::getPath("shaders/basic_model.vs"),
+        FileSystem::getPath("shaders/basic_model.fs"));
+    gShaderManager->add_shader(
+        "shader_texture",
+        FileSystem::getPath("shaders/basic_texture.vs"),
+        FileSystem::getPath("shaders/basic_texture.fs"));
+    gShaderManager->add_shader(
+        "shader_ray",
+        FileSystem::getPath("shaders/ray.vs"),
+        FileSystem::getPath("shaders/ray.gs"),
+        FileSystem::getPath("shaders/ray.fs"));
+    gShaderManager->add_shader(
+        "shader_white_box",
+        FileSystem::getPath("shaders/basic_mesh.vs"),
+        FileSystem::getPath("shaders/white.fs"));
+    gShaderManager->add_shader(
+        "shader_red_box",
+        FileSystem::getPath("shaders/basic_mesh.vs"),
+        FileSystem::getPath("shaders/red.fs"));
+}

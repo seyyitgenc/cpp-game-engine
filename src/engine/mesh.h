@@ -2,6 +2,8 @@
 #include <vector>
 #include "shader.h"
 
+// todo: write down implementation of this clas into .cpp file
+
 struct Vertex
 {
     glm::vec3 Position;

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
-
+# todo: set binary directory
 project(engine)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build (Debug or Release)")
@@ -34,8 +34,8 @@ set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
 # set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
 
 # configure file to get root directory
-configure_file(configuration/root_directory.h.in configuration/root_directory.h)
-include_directories(${CMAKE_BINARY_DIR}/configuration)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/configuration/config.h)
+include_directories(${CMAKE_SOURCE_DIR}/configuration)
 
 # stb_image
 add_library(STB_IMAGE "src/external/stb_image.cpp")
@@ -49,17 +49,16 @@ set(LIBS ${LIBS} GLAD)
 add_library(IMGUI "src/external/ImGui/imgui.cpp")
 set(LIBS ${LIBS} IMGUI)
 
-
-# copy resources file
-file(COPY ${CMAKE_CURRENT_LIST_DIR}/resources DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-# copy shaders file
-file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
 #add all executables
 file(GLOB_RECURSE SOURCE 
     src/engine/*.cpp
+    src/engine/*.h
     src/ECS/*.cpp
+    src/ECS/*.h
     src/external/ImGui/*.cpp
+    src/external/ImGui/*.h
+    src/util/*.cpp
+    src/util/*.h
     )
 
 #include directories

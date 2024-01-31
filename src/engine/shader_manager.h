@@ -23,11 +23,12 @@ public:
         return _instance;
     }
 
-    // void bind_shader(const std::string& name);
-    // void unbind_shader(const std::string& name);
-    // void reload_shader(const std::string& name);
-    void add_shader(const std::string &name, const char* vertex_path, const char* fragment_path);
-    void add_shader(const std::string &name, const char* vertex_path, const char* geometry_path,const char* fragment_path);
+    void bind_shader(const std::string &name);
+    void unbind_shader(const std::string &name);
+    void reload_shader(const std::string &name);
+    void reload_shaders();
+    void add_shader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path);
+    void add_shader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path);
     Shader& get_shader(const std::string& name);
 
 protected:

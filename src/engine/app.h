@@ -14,7 +14,7 @@ public:
     App();
     ~App();
 
-    // ensures that engine created only once Singleton
+    // ensures that app created only once a.k.a : Singleton
     static App &get() {
         if (s_instance == nullptr) {
             std::cout << "App Created" << std::endl;

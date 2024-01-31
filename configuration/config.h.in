@@ -1,0 +1,4 @@
+#pragma once
+
+inline const char* logl_root = "${CMAKE_SOURCE_DIR}";
+inline const char* build_spec = "${CMAKE_BUILD_TYPE}";

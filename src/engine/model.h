@@ -3,9 +3,12 @@
 // https://learnopengl.com/Model-Loading/Model
 // custom model loading is WIP 
 
+// todo: write down implementation of this class into .cpp file
+
 #pragma once
 #include "mesh.h"
-#include "filesystem.h"
+#include "util/filesystem.h"
+#include "util/log.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -33,12 +36,14 @@ public:
         loadModel(v);
     };
     // model constructor for custom models if normal mapping is not required
-    Model(std::vector<float> verticies, std::vector<unsigned int> indices, std::vector<std::pair<std::string,std::string>> textures = {}){
+    Model(std::vector<float> verticies, std::vector<unsigned int> 
+    indices, std::vector<std::pair<std::string,std::string>> textures = {}){
         
         loadModel(verticies, indices, textures);
     };
     // model constructor for custom model if normal mapping is required
-    Model(std::vector<float> verticies, std::vector<unsigned int> indices, std::vector<std::pair<std::string,std::string>> textures,  std::vector<float> normals){
+    Model(std::vector<float> verticies, std::vector<unsigned int> 
+    indices, std::vector<std::pair<std::string,std::string>> textures,  std::vector<float> normals){
         // loadModel(vertices, indices, textures, normals);
     };
     ~Model() = default;
@@ -46,6 +51,7 @@ public:
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
@@ -73,8 +79,7 @@ private:
 
     // ----------------------------------------------------------------------
     // this will load custom models with indices/texture but no normal mapping
-    // our model will always have
-    // note : incoming texture files is structured like this : {{"texture.jpg","diffuse_texture"},{"texture_normal","normal_texture"}}
+    // note : incoming texture files is structured like this :  {{"texture_diffuse.jpg","diffuse_texture"},{"texture_normal.jpg","normal_texture"}}
     // ----------------------------------------------------------------------
     void loadModel(std::vector<float>& vert, std::vector<unsigned int>& ind, std::vector<std::pair<std::string,std::string>>& tex){
         std::vector<Vertex> vertices;
@@ -82,7 +87,7 @@ private:
 
         // FIXME:  this is temporary solution
         // note: this will not handle theh different path textures
-        directory = FileSystem::getPath("bin/resources/textures");
+        directory = FileSystem::getPath("resources/textures");
 
         // we assume that incoming vertices array contains texcoords
         for (int i = 0; i < vert.size(); i+=5)
@@ -103,7 +108,7 @@ private:
         }
         
         for (unsigned int i = 0; i < textures.size(); i++)
-            std::cout << "Texture loaded >>> " << textures[i].path << std::endl;
+            CLog::write(CLog::Debug,"Texture loaded -> %s\n", textures[i].path.c_str());
 
         Mesh myMesh(vertices, ind, textures, true,false, true);
         
@@ -122,7 +127,7 @@ private:
         Assimp::Importer import;
         const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode){
-            std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+            CLog::write(CLog::Fatal,"ERROR::ASSIMP::%s\n", import.GetErrorString());
             return;
         }
         directory = path.substr(0, path.find_last_of('/'));
@@ -230,7 +235,7 @@ private:
                 texture.path = str.C_Str();
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);
-                std::cout << "Texture loaded >>> " << str.C_Str() << std::endl;
+                CLog::write(CLog::Debug,"Texture loaded -> %s\n", textures[i].path.c_str());
             }
         }
         return textures;
@@ -267,7 +272,7 @@ inline unsigned int TextureFromFile(const char* path, const std::string& directo
         stbi_image_free(data);
     }
     else{
-        std::cout << "Texture failed to load at path : " << path << std::endl;
+        CLog::write(CLog::Fatal, "Texture failed to load at path : %s\n",path);
         stbi_image_free(data);
     }
 

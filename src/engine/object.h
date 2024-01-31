@@ -6,6 +6,8 @@
 class Object
 {
 public:
+    void draw();
+    void update();
     // void translate
 private:
     glm::mat4 model;
