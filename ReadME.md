@@ -18,14 +18,13 @@
 > TODO
 
 - [x] ImGui
-![Shaders](/screenshots/imgui.png)
+- ![Shaders](/screenshots/imgui.png)
 - [x] Shaders
 - [x] Hot Reloading Shaders
-![Shaders](/screenshots/hot_reloading_shaders.png)
+- ![Shaders](/screenshots/hot_reloading_shaders.png)
 - [x] Camera
 - [x] Model loading
-![Shaders](/screenshots/model_loading.png)
-
+- ![Shaders](/screenshots/model_loading.png)
 - [x] Custom Model Loading
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
