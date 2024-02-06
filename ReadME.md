@@ -18,11 +18,21 @@
 > TODO
 
 - [x] ImGui
+![Shaders](/screenshots/imgui.png)
 - [x] Shaders
-- [ ] Instanced Rendering
+- [x] Hot Reloading Shaders
+![Shaders](/screenshots/hot_reloading_shaders.png)
 - [x] Camera
 - [x] Model loading
+![Shaders](/screenshots/model_loading.png)
+
 - [x] Custom Model Loading
+- [ ] Editor / Engine hierarchy
+- [ ] ECS
+- [ ] Scene Hierarchy
+- [ ] Scene Editor Tool
+- [ ] Gizmos (translate/scale/rotate)
+- [ ] Instanced Rendering
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
 - [ ] Multiple Point Lights
