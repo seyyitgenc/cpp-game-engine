@@ -9,6 +9,7 @@
 #include "mesh.h"
 #include "util/filesystem.h"
 #include "util/log.h"
+#include "util/util.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -51,7 +52,6 @@ public:
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
@@ -240,9 +240,9 @@ private:
         }
         return textures;
     }
-
 };
 
+// Loads texture from specified path
 inline unsigned int TextureFromFile(const char* path, const std::string& directory){
     std::string filename = std::string(path);
     filename = directory + '/' + filename; // complete path to image

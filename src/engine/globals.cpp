@@ -13,7 +13,7 @@ ShaderManager *gShaderManager;
 // Global variable initalization and backend setup
 
 bool gInitGlobals() {
-    CLog::setLevel(CLog::Debug);
+    CLog::setLevel(CLog::Fatal);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
@@ -82,7 +82,7 @@ void gInitShaders(){
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
     gShaderManager->add_shader(
-        "shader_ray",
+        "shader_raythisshaderhasextremelylongname",
         FileSystem::getPath("shaders/ray.vs"),
         FileSystem::getPath("shaders/ray.gs"),
         FileSystem::getPath("shaders/ray.fs"));

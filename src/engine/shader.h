@@ -11,7 +11,6 @@
 class Shader
 {
 public:
-    Shader() = default;
     Shader(const std::string &vertexPath, const std::string &fragmentPath);
     Shader(const std::string &vertexPath, const std::string &geometrypath, const std::string &fragmentPath);
     // utiliy uniforrm functions
@@ -31,10 +30,12 @@ private:
     void compileShader(const char*  code, GLenum type);
     void buildShader();
 public:
+    // TODO: add descripton
+    // std::string _description;
+    // FIXME : later on i need to fix this access modifier i don't want user to access these
     std::string _vertexPath;
     std::string _fragmentPath;
     std::string _geometryPath;
-    // FIXME : later on i need to fix this access modifier i don't want user to access these
     void bind();
     void unbind();
     unsigned int ID;

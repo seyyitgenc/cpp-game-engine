@@ -41,6 +41,11 @@ void App::run() {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
     glm::vec3 picking_pos = glm::vec3(0);
+    // note: must be refactored
+    int my_img_width = 0;
+    int my_img_height = 0;
+    GLuint my_img_texture = 0;
+    loadTextureFromFile(FileSystem::getPath("resources/textures/file-icon.png").c_str(), &my_img_texture, &my_img_width, &my_img_height);
     while (!glfwWindowShouldClose(gWindow))
     {
         processInput(gWindow);
@@ -50,18 +55,107 @@ void App::run() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // todo : implement imgui::layer kind of thingy
         // start dear ImGui frame 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
         // show demo window
-        // ImGui::ShowDemoWindow();
         static float f0 = 0,f1 = 0,f2 = 0;
         static float colboxSizex = 0,colboxSizey = 0,colboxSizez = 0;
         static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
         if (gEditModeEnabled)
         {
+            // ImGui::ShowDemoWindow();
+            {
+                ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
+                if (ImGui::Begin("Shaders"))
+                {
+                    // Left
+                    static int selected = 0;
+                    static Shader *selectedShader = nullptr; // note: don't forget to free this pointer
+                    static std::string shaderName;
+                    {
+                        float windowWidth = ImGui::GetContentRegionAvail().x;
+                        ImGui::BeginChild("left pane", ImVec2(windowWidth / 2, 0), true);
+                        
+                        float tblWidth = ImGui::GetContentRegionAvail().x;
+                        float thumbnailSize = 128;
+                        float padding = 5;
+                        float cellSize = thumbnailSize + padding;
+                        int columnCount = tblWidth / cellSize;
+                        if(tblWidth < cellSize)
+                            columnCount = 1;
+                        
+                        if (ImGui::BeginTable("tbl_shaders", columnCount))
+                        {
+                            for (int index = 0; auto &&it : gShaderManager->get_shader_list())
+                            {
+                                ImVec2 pos = ImGui::GetCursorPos();
+                                std::string itemid = "##" + it.first;
+                                // ImGui::PushID(itemid.c_str());
+                                ImGui::SetCursorPos({pos.x,pos.y});
+                                if (ImGui::Selectable(itemid.c_str(), index == selected,0 ,{cellSize,cellSize}))
+                                {
+                                    selected = index;
+                                    selectedShader = it.second.get();
+                                    shaderName = it.first;
+                                }
+                                // note: temporary solution
+                                ImGui::SetCursorPos({pos.x + padding / 2,pos.y + padding / 2});
+
+                                ImGui::Image((void*)(intptr_t)my_img_texture,{thumbnailSize, thumbnailSize});
+
+                                ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
+                                ImGui::TextWrapped(it.first.c_str());
+                                index++;
+                                ImGui::TableNextColumn();
+                            }
+                            ImGui::EndTable();
+                        }
+                        ImGui::EndChild();
+                    }
+                    ImGui::SameLine();
+                    // Right
+                    {
+                        ImGui::BeginGroup();
+                        ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
+                        ImGui::Separator();
+                            if (ImGui::BeginTabBar("##Tabs", ImGuiTabBarFlags_None))
+                            {
+                                // todo: enable this after adding description property to the shader
+                                // if (ImGui::BeginTabItem("Description"))
+                                // {
+                                //     ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ");
+                                //     ImGui::EndTabItem();
+                                // }
+                                if(selectedShader != nullptr){
+                                    if (ImGui::BeginTabItem("Details"))
+                                    {
+                                        ImGui::Text("Shader ID : %d", selectedShader->ID);
+                                        ImGui::Text("Shader Vertex Path   : %s", selectedShader->_vertexPath.c_str());
+                                        ImGui::Text("Shader Fragment Path : %s", selectedShader->_fragmentPath.c_str());
+                                        ImGui::Text("Shader Geometry Path : %s", selectedShader->_geometryPath.c_str());
+                                        ImGui::EndTabItem();
+                                    }
+                                }
+                                ImGui::EndTabBar();
+                            }
+                        ImGui::EndChild();
+                        if (ImGui::Button("Reload")) {
+                            gShaderManager->reload_shader(shaderName);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reload All Shaders")) {
+                            gShaderManager->reload_shaders();
+                        }
+                        
+                        ImGui::EndGroup();
+                    }
+                }
+                ImGui::End();
+            }
             // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
             {
                 static float f = 0.0f;
@@ -95,7 +189,7 @@ void App::run() {
             glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // view/projection transformations
+                // view/projection transformations
                 glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f);
                 glm::mat4 model = glm::mat4(1.0f);
                 Shader shader = gShaderManager->get_shader("shader_model");
