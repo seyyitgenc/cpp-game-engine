@@ -11,6 +11,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ib/
+[Cc]onfiguration/config.h
 .clang-format
 .vscode
 resources/objects/room
