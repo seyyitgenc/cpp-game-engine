@@ -26,6 +26,7 @@
 - [x] Model loading
 - ![Shaders](/screenshots/model_loading.png)
 - [x] Custom Model Loading
+- [x] Stopwatch
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
 - [ ] Scene Hierarchy

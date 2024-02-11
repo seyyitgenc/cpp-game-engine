@@ -3,14 +3,21 @@
 #include <stb_image.h>
 #include <string>
 
+// todo: implement this
+// // some general utilities
+// float getTimeStep();
+// float getFrameRate(const int &countedFrames, const Uint64 &fpsTimer);
+// constexpr void setFrameRate(const int &SCREEN_FPS);
+// void limitFrameRate();
+// float getDeltaTime();
+
 // todo: refactor this
 // general usage utility functions defined here
 // Loads texture from specified path
 inline bool loadTextureFromFile(const char* path, GLuint *out_texture, int *out_width, int *out_height){
-    std::string filename = std::string(path);
     unsigned int textureID;
     int width, height, nrComponents;
-    unsigned char* data = stbi_load(filename.c_str(),  &width, &height, &nrComponents, 0);
+    unsigned char* data = stbi_load(path,  &width, &height, &nrComponents, 0);
     if (data == NULL){
         CLog::write(CLog::Fatal, "Texture failed to load at path : %s\n",path);
         stbi_image_free(data);
@@ -39,5 +46,6 @@ inline bool loadTextureFromFile(const char* path, GLuint *out_texture, int *out_
     *out_width = width;
     *out_height = height;
 
+    CLog::write(CLog::Debug, "loaded texture from file with path -> %s and with ID : %d\n", path, textureID);
     return true;
 }
