@@ -3,7 +3,6 @@
 #include "shader.h"
 #include <memory>
 
-
 // FIXME : this solutuion is not memory friendly maybe ???
 class ShaderManager
 {
@@ -23,13 +22,13 @@ public:
         return _instance;
     }
 
-    void bind_shader(const std::string &name);
-    void unbind_shader(const std::string &name);
-    void reload_shader(const std::string &name);
-    void reload_shaders();
-    void add_shader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path);
-    void add_shader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path);
-    Shader& get_shader(const std::string& name);
+    void bindShader(const std::string &name);
+    void unbindShader(const std::string &name);
+    void reloadShader(const std::string &name);
+    void reloadAllShaders();
+    void addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path);
+    void addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path);
+    Shader& getShader(const std::string& name);
     std::unordered_map<std::string, std::unique_ptr<Shader>> &get_shader_list(){return _shaders;}
 protected:
     ShaderManager() = default;

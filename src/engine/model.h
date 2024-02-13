@@ -21,13 +21,7 @@ unsigned int TextureFromFile(const char* path, const std::string& directory);
 
 class Model
 {
-
 public:
-    std::vector<Mesh> meshes;
-    std::vector<Texture> textures_loaded;
-
-public:
-    Model() = default;
     // model constructor for pre-defined models
     Model(const std::string path){
         loadModel(path);
@@ -47,7 +41,6 @@ public:
     indices, std::vector<std::pair<std::string,std::string>> textures,  std::vector<float> normals){
         // loadModel(vertices, indices, textures, normals);
     };
-    ~Model() = default;
     
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
@@ -55,6 +48,9 @@ public:
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
+private:
+    std::vector<Mesh> meshes;
+
 private:
     std::string directory;
     // ----------------------------------------------------------------
@@ -65,7 +61,7 @@ private:
         
         for (int i = 0; i < v.size(); i += 3)
         {
-            Vertex vertex;
+            Vertex vertex{};
             vertex.Position = glm::vec3(v[i], v[i + 1], v[i + 2]);
             verticies.push_back(vertex);
         }
@@ -88,11 +84,11 @@ private:
         // FIXME:  this is temporary solution
         // note: this will not handle theh different path textures
         directory = FileSystem::getPath("resources/textures");
-
+        int stepSize = 5;
         // we assume that incoming vertices array contains texcoords
-        for (int i = 0; i < vert.size(); i+=5)
+        for (int i = 0; i < vert.size(); i+=stepSize)
         {
-            Vertex vertex;
+            Vertex vertex{};
             vertex.Position = glm::vec3(vert[i], vert[i + 1], vert[i + 2]);
             vertex.TexCoords = glm::vec2(vert[i + 3], vert[i + 4]);
             vertices.push_back(vertex);
@@ -153,11 +149,11 @@ private:
         std::vector<unsigned int> indices;
         std::vector<Texture> textures;
 
-        bool hasIndices = false, hasTexCoords = false, hasNormals = false;
+        bool hasTexCoords = false, hasNormals = false;
         // process vertices
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
-            Vertex vertex;
+            Vertex vertex{};
             glm::vec3 vector;
             if (mesh->HasPositions())
             {
@@ -186,8 +182,8 @@ private:
                 vertex.TexCoords = glm::vec2(0.0f, 0.0f);
             vertices.push_back(vertex); 
         }
-        // process indices
 
+        // process indices
         for (unsigned int i = 0; i < mesh->mNumFaces; i++)
         {
             aiFace face = mesh->mFaces[i];
@@ -213,6 +209,7 @@ private:
     }
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName){
         std::vector<Texture> textures;
+        std::vector<Texture> textures_loaded;
         for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
         {
             aiString str;
@@ -246,13 +243,13 @@ private:
 inline unsigned int TextureFromFile(const char* path, const std::string& directory){
     std::string filename = std::string(path);
     filename = directory + '/' + filename; // complete path to image
-    unsigned int textureID;
+    unsigned int textureID = 0;
     glGenTextures(1, &textureID);
-    int width, height, nrComponents;
+    int width = 0, height = 0, nrComponents = 0;
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {
-        GLenum format;
+        GLenum format = 0;
         if (nrComponents == 1)
             format = GL_RED;
         else if(nrComponents == 3)

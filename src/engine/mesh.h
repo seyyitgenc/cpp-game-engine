@@ -20,7 +20,7 @@ struct Texture
 };
 
 
-class Mesh
+class Mesh // NOLINT
 {    
 public:
     std::vector<Vertex> verticies;
@@ -30,17 +30,14 @@ public:
     // bool hasTextures;
     bool hasNormals;
     bool hasTexCoords;
-    unsigned int VAO, VBO, EBO;
-public:
-    Mesh(std::vector<Vertex> verticies , std::vector<unsigned int> indices, std::vector<Texture> textures,
-    bool hasIndices = false, bool hasNormals = false, bool hasTexCoords = false) 
-    : hasIndices(hasIndices), hasNormals(hasNormals), hasTexCoords(hasTexCoords){
-        this->verticies = verticies;
-        this->indices = indices;
-        this->textures = textures;
-        setupMesh();
-    }
-    ~Mesh() = default;
+        unsigned int VAO, VBO, EBO;
+    public:
+        Mesh(std::vector<Vertex> verticies , std::vector<unsigned int> indices, std::vector<Texture> textures,
+        bool hasIndices = false, bool hasNormals = false, bool hasTexCoords = false) 
+        : verticies(verticies), indices(indices), textures(textures), hasIndices(hasIndices), hasNormals(hasNormals), hasTexCoords(hasTexCoords) {
+            setupMesh();
+        }
+        ~Mesh() = default;
 
     void Draw(Shader& shader){
         if (hasTexCoords)
@@ -49,7 +46,7 @@ public:
             unsigned int specularNr = 1;
             unsigned int normalNr = 1;
             unsigned int depthNr = 1;
-            for (unsigned int i = 0; i < textures.size(); i++)
+            for (int i = 0; i < textures.size(); i++)
             {
                 glActiveTexture(GL_TEXTURE0 + i);
                 std::string number;
@@ -58,7 +55,11 @@ public:
                     number = std::to_string(diffuseNr++);
                 else if(name == "texture_specular")
                     number = std::to_string(specularNr++);
-                shader.setInt(name + number,i);
+                else if(name == "texture_normal")
+                    number = std::to_string(normalNr++);
+                else if(name == "texture_depth")
+                    number = std::to_string(depthNr++);
+                shader.setInt(name + number, i);
                 glBindTexture(GL_TEXTURE_2D, textures[i].id);
             }
         }
@@ -66,9 +67,9 @@ public:
         // draw mesh
         glBindVertexArray(VAO);
         if (hasIndices)
-            glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0); // NOLINT
         else
-            glDrawArrays(GL_TRIANGLES,0,verticies.size());
+            glDrawArrays(GL_TRIANGLES,0,verticies.size()); // NOLINT
             
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);

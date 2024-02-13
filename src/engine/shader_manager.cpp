@@ -2,15 +2,15 @@
 #include "util/log.h"
 ShaderManager* ShaderManager::_instance = nullptr;
 
-void ShaderManager::bind_shader(const std::string& name){
+void ShaderManager::bindShader(const std::string& name){
     _shaders[name]->bind();
 }
 
-void ShaderManager::unbind_shader(const std::string& name){
+void ShaderManager::unbindShader(const std::string& name){
     _shaders[name]->unbind();
 }
 
-void ShaderManager::reload_shader(const std::string& name){
+void ShaderManager::reloadShader(const std::string& name){
     auto found = _shaders.find(name);
     if (found != _shaders.end())
         _shaders[name]->reload();
@@ -18,19 +18,19 @@ void ShaderManager::reload_shader(const std::string& name){
         CLog::write(CLog::Fatal, "ERROR::ShaderNotFound with name -> %s\n",name.c_str());
 }
 
-void ShaderManager::reload_shaders(){
+void ShaderManager::reloadAllShaders(){
     for (auto &&i : _shaders)
     {
         i.second->reload();
     }
 }
 
-void ShaderManager::add_shader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path){
-    add_shader(name,vertex_path, "", fragment_path);
+void ShaderManager::addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path){
+    addShader(name,vertex_path, "", fragment_path);
 }
 
 
-void ShaderManager::add_shader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path, const std::string &fragment_path){
+void ShaderManager::addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path, const std::string &fragment_path){
     auto found = _shaders.find(name);
     if (found == _shaders.end())
     {
@@ -41,6 +41,6 @@ void ShaderManager::add_shader(const std::string &name, const std::string &verte
     //? can add Shader return type for this function
 }
 
-Shader& ShaderManager::get_shader(const std::string& name){
+Shader& ShaderManager::getShader(const std::string& name){
     return *_shaders[name];
 }

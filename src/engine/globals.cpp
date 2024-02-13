@@ -2,13 +2,13 @@
 #include "callbacks.h"
 #include <glad/glad.h>
 #include <stb_image.h>
-#include "util/log.h"
-
+    
 GLFWwindow *gWindow;
 bool gEditModeEnabled;
 void gInitShaders();
 bool gInitGlobals();
 ShaderManager *gShaderManager;
+StopwatchManager *gStopwatchManager;
 
 // Global variable initalization and backend setup
 
@@ -72,24 +72,24 @@ bool gInitGlobals() {
 
 void gInitShaders(){
     gShaderManager = ShaderManager::getInstance();
-    gShaderManager->add_shader(
+    gShaderManager->addShader(
         "shader_model",
         FileSystem::getPath("shaders/basic_model.vs"),
         FileSystem::getPath("shaders/basic_model.fs"));
-    gShaderManager->add_shader(
+    gShaderManager->addShader(
         "shader_texture",
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
-    gShaderManager->add_shader(
+    gShaderManager->addShader(
         "shader_raythisshaderhasextremelylongname",
         FileSystem::getPath("shaders/ray.vs"),
         FileSystem::getPath("shaders/ray.gs"),
         FileSystem::getPath("shaders/ray.fs"));
-    gShaderManager->add_shader(
+    gShaderManager->addShader(
         "shader_white_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/white.fs"));
-    gShaderManager->add_shader(
+    gShaderManager->addShader(
         "shader_red_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/red.fs"));

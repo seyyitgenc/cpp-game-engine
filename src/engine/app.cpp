@@ -6,7 +6,7 @@
 #include "callbacks.h"
 #include "object_vertices.h"
 #include "shader_manager.h"
-#include "util/stopwatch.h"
+#include "util/stopwatch.hpp"
 #include "gui/gui.h"
 
 App* App::s_instance;
@@ -27,7 +27,7 @@ App::~App() { this->clean(); }
 // }
 // TODO :: implement model gshader
 
-Stopwatch<> t1;
+Stopwatch<> t1; //nolint
 
 void App::run() {
     gInitGlobals();
@@ -40,18 +40,18 @@ void App::run() {
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
-    glm::vec3 picking_pos = glm::vec3(0);
+    // glm::vec3 picking_pos = glm::vec3(0); //
     // note: must be refactored
     t1.start();
     while (!glfwWindowShouldClose(gWindow))
     {
-        auto dtMs = t1.getElapsedTime<float, std::milli>();
-        std::cout << "dtMs : " << dtMs << std::endl;
-        t1.reset();
-        // std::cout << t1.getTick() << std::endl;
         // per-frame time logic
         // --------------------
+        auto dtMs = t1.getElapsedTime<float>();
+        deltaTime = dtMs;
+        // std::cout << "dtMs : " << dtMs << std::endl;
         // update(deltaTime);
+        t1.reset();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -68,9 +68,9 @@ void App::run() {
         glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f); // NOLINT
         glm::mat4 model = glm::mat4(1.0f);
-        Shader shader = gShaderManager->get_shader("shader_model");
+        Shader shader = gShaderManager->getShader("shader_model");
         shader.bind();
         // todo : create function that sets these variables
         shader.setMat4("projection", projection);
@@ -82,7 +82,7 @@ void App::run() {
         cyborg.Draw(shader);
         shader.unbind();
 
-        shader = gShaderManager->get_shader("shader_red_box");
+        shader = gShaderManager->getShader("shader_red_box");
         // note : i can use it like this aswell
         shader.bind();
         shader.setMat4("projection", projection);
@@ -116,7 +116,7 @@ void App::processInput(GLFWwindow* window) {
         camera.processKeyboard(RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
     {
-        gShaderManager->reload_shaders();
+        gShaderManager->reloadAllShaders();
     }
 
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !is_j_pressed)
@@ -143,7 +143,7 @@ void App::update(const float& dt) {
 }
 
 void App::render() {
-    glClearColor(0.1f,0.1f,0.1f,1.0f);
+    glClearColor(0.1f,0.1f,0.1f,1.0f); //nolint
     glClear(GL_COLOR_BUFFER_BIT);
 
     // render stuff here

@@ -2,15 +2,10 @@
 #include "util/log.h"
 
 //! input is like tihs vertex shader, fragment shader
-Shader::Shader(const std::string &vertexPath,  const std::string &fragmentPath) : Shader(vertexPath, nullptr, fragmentPath){}
+Shader::Shader(const std::string &vertexPath,  const std::string &fragmentPath) : Shader(vertexPath, "", fragmentPath){}
 
 //! input is like tihs : vertex shader, geometry shader, fragemnt shader
-Shader::Shader(const std::string &vertexPath, const std::string &geometryPath, const std::string &fragmentPath){
-    // todo: reaserc about this
-    // note: is it good approach ?
-    _vertexPath = vertexPath;
-    _fragmentPath = fragmentPath;
-    _geometryPath = geometryPath;
+Shader::Shader(const std::string &vertexPath, const std::string &geometryPath, const std::string &fragmentPath) : _vertexPath(vertexPath),  _fragmentPath(fragmentPath) , _geometryPath(geometryPath){
     buildShader();   
 }
 

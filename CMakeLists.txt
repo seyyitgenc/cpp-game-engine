@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 # todo: set binary directory
 project(engine)
 
-set(CMAKE_CXX_STANDARD 20)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -52,13 +53,20 @@ set(LIBS ${LIBS} IMGUI)
 #add all executables
 file(GLOB_RECURSE SOURCE 
     src/engine/*.cpp
+    src/engine/*.hpp
     src/engine/*.h
-    src/ECS/*.cpp
-    src/ECS/*.h
+    
     src/external/ImGui/*.cpp
     src/external/ImGui/*.h
+    src/external/ImGui/*.hpp
+    
     src/util/*.cpp
+    src/util/*.hpp
     src/util/*.h
+
+    src/renderer/*.cpp
+    src/renderer/*.hpp
+    src/renderer/*.h
     )
 
 #include directories
