@@ -9,6 +9,7 @@
 
 #include "shader_manager.h"
 #include "util/filesystem.h"
+#include "util/log.h"
 
 #define SCREEN_WIDTH  1366.0f
 #define SCREEN_HEIGHT 768.0f

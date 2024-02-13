@@ -8,7 +8,7 @@ bool gEditModeEnabled;
 void gInitShaders();
 bool gInitGlobals();
 ShaderManager *gShaderManager;
-StopwatchManager *gStopwatchManager;
+// StopwatchManager *gStopwatchManager;
 
 // Global variable initalization and backend setup
 

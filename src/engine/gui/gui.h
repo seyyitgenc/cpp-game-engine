@@ -57,7 +57,7 @@ namespace Gui{
                         ImGui::Image((void*)(intptr_t)my_img_texture,{thumbnailSize, thumbnailSize});
 
                         ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
-                        ImGui::TextWrapped(it.first.c_str());
+                        ImGui::TextWrapped("%s",it.first.c_str());
                         index++;
                         ImGui::TableNextColumn();
                     }
@@ -92,11 +92,11 @@ namespace Gui{
                 ImGui::EndChild();
             }
             if (ImGui::Button("Reload")) {
-                gShaderManager->reload_shader(shaderName);
+                gShaderManager->reloadShader(shaderName);
             }
             ImGui::SameLine();
             if (ImGui::Button("Reload All Shaders")) {
-                gShaderManager->reload_shaders();
+                gShaderManager->reloadAllShaders();
             }
             
             ImGui::EndGroup();
