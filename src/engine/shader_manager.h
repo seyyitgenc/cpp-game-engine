@@ -1,7 +1,8 @@
 #pragma once
-#include <unordered_map>
 #include "shader.h"
+#include <unordered_map>
 #include <memory>
+#include "util/log.h"
 
 // FIXME : this solutuion is not memory friendly maybe ???
 class ShaderManager
@@ -22,16 +23,41 @@ public:
         return _instance;
     }
 
-    void bindShader(const std::string &name);
-    void unbindShader(const std::string &name);
-    void reloadShader(const std::string &name);
-    void reloadAllShaders();
-    void addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path);
-    void addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path);
-    Shader& getShader(const std::string& name);
+    void bindShader(const std::string &name){_shaders[name]->bind();};
+    void unbindShader(const std::string &name){_shaders[name]->unbind();};
+    void reloadShader(const std::string &name){    
+        auto found = _shaders.find(name);
+        if (found != _shaders.end())
+            _shaders[name]->reload();
+        else
+        CLog::write(CLog::Fatal, "ERROR::ShaderNotFound with name -> %s\n",name.c_str());
+    };
+    void reloadAllShaders(){
+        for (auto &&i : _shaders)
+        {
+            i.second->reload();
+        }
+    };
+    void addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path){
+        addShader(name,vertex_path, "", fragment_path);
+    };
+    void addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path){
+        auto found = _shaders.find(name);
+        if (found == _shaders.end())
+        {
+            Shader *shader{new Shader(vertex_path, geometry_path, fragment_path)};
+            std::unique_ptr<Shader> uniquePtr{shader};
+            _shaders[name] = std::move(uniquePtr);
+        }
+        //? can add Shader return type for this function
+    };
+    Shader& getShader(const std::string& name){
+        return *_shaders[name];
+    };
     std::unordered_map<std::string, std::unique_ptr<Shader>> &get_shader_list(){return _shaders;}
-protected:
+private:
     ShaderManager() = default;
     static ShaderManager* _instance;
     std::unordered_map<std::string, std::unique_ptr<Shader>> _shaders;
 };
+inline ShaderManager* ShaderManager::_instance = nullptr;
