@@ -23,8 +23,8 @@ public:
         return _instance;
     }
 
-    void bindShader(const std::string &name){_shaders[name]->bind();};
-    void unbindShader(const std::string &name){_shaders[name]->unbind();};
+    void bindShader(const std::string &name){glUseProgram(_shaders[name]->ID);}
+    void unbindShader(const std::string &name){glUseProgram(0);}
     void reloadShader(const std::string &name){    
         auto found = _shaders.find(name);
         if (found != _shaders.end())
@@ -51,7 +51,7 @@ public:
         }
         //? can add Shader return type for this function
     };
-    Shader& getShader(const std::string& name){
+    Shader& getShader(const std::string &name){
         return *_shaders[name];
     };
     std::unordered_map<std::string, std::unique_ptr<Shader>> &get_shader_list(){return _shaders;}

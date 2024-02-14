@@ -36,7 +36,5 @@ public:
     std::string _vertexPath;
     std::string _fragmentPath;
     std::string _geometryPath;
-    void bind();
-    void unbind();
-    unsigned int ID;
+    GLuint ID;
 };
