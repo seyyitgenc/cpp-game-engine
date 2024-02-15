@@ -9,7 +9,7 @@
 #include "util/stopwatch.hpp"
 #include "gui/gui.h"
 
-App* App::s_instance;
+App* App::_instance;
 
 App::App() { }
 App::~App() { this->clean(); }

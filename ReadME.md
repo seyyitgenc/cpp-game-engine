@@ -18,13 +18,15 @@
 > TODO
 
 - [x] ImGui
-- ![Shaders](/screenshots/imgui.png)
+- ![ImGui](/screenshots/imgui.png)
 - [x] Shaders
 - [x] Hot Reloading Shaders
 - ![Shaders](/screenshots/hot_reloading_shaders.png)
 - [x] Camera
 - [x] Model loading
-- ![Shaders](/screenshots/model_loading.png)
+- ![Model](/screenshots/model_loading.png)
+- [x] Logger(With colors)
+- ![Log](/screenshots/colored_log.png)
 - [x] Custom Model Loading
 - [x] Stopwatch
 - [ ] Editor / Engine hierarchy
