@@ -13,7 +13,7 @@ ShaderManager *gShaderManager;
 // Global variable initalization and backend setup
 
 bool gInitGlobals() {
-    CLog::setLevel(CLog::Fatal);
+    Log::setLevel(Log::All);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
@@ -30,7 +30,7 @@ bool gInitGlobals() {
     // --------------------
     gWindow = glfwCreateWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Engine", NULL, NULL);
     if (gWindow == NULL) {
-        CLog::write(CLog::Fatal,"Failed to create GLFW window\n");
+        Log::write(Log::Fatal,"FATAL::INIT_GLOBALS Failed to create GLFW window\n");
         glfwTerminate();
         return false;
     }
@@ -46,7 +46,7 @@ bool gInitGlobals() {
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        Log::write(Log::Fatal,"FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
         return false;
     }
     // setup Dear ImGui context
@@ -74,7 +74,7 @@ void gInitShaders(){
     gShaderManager = ShaderManager::getInstance();
     gShaderManager->addShader(
         "shader_model",
-        FileSystem::getPath("shaders/basic_model.vs"),
+        FileSystem::getPath("shaders/basic_model.s"),
         FileSystem::getPath("shaders/basic_model.fs"));
     gShaderManager->addShader(
         "shader_texture",

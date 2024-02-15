@@ -17,7 +17,6 @@ struct Texture
     unsigned int id;
     int width;
     int height;
-    void isOk();
 };
 
 inline Texture loadTextureFromFile(const std::string &path ,TextureType type){
@@ -26,7 +25,7 @@ inline Texture loadTextureFromFile(const std::string &path ,TextureType type){
     unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrComponents, 0);
     if (data == NULL)
     {
-        CLog::write(CLog::Fatal, "FATAL::LOAD_TEXTURE_FROM_FILE Texture failed to load at path : %s\n",path);
+        Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::LOAD_TEXTURE_FROM_FILE"), YELLOW_TEXT("Texture failed to load at path : "), YELLOW_TEXT(path), "\n");
         stbi_image_free(data);
         return {};
         // return nullptr;
@@ -51,7 +50,7 @@ inline Texture loadTextureFromFile(const std::string &path ,TextureType type){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
     stbi_image_free(data);
-    CLog::write(CLog::Debug, "DEBUG::LOAD_TEXTURE_FROM_FILE Loaded texture from file with path -> %s and with ID : %d\n", path.c_str(), textureID);
+    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::LOAD_TEXTURE_FROM_FILE") ,YELLOW_TEXT("Loaded texture from file with path -> "), YELLOW_TEXT(path), YELLOW_TEXT(" and with ID : "), textureID, "\n");
     
     return Texture{type, path, textureID, width, height};;
 }
@@ -62,23 +61,26 @@ public:
         if (_instance == nullptr)
         {
             _instance = new TextureManager();
-            CLog::write(CLog::Info, "INFO::TEXTURE_MANAGER::GET_INSTANCE Texture manager initalized succesfully with Mem address of -> %p\n", _instance);
+            Log::write(Log::Info, GREEN_TEXT("INFO::TEXTURE_MANAGER::GET_INSTANCE"), YELLOW_TEXT("Texture manager initalized succesfully with Mem address of ->"), &_instance, "\n");
         }
         return _instance;
     }
     void addTexture(const std::string &name, const std::string &path, TextureType type){
         // Texture returnedTexture = loadTextureFromFile(path ,type);
         if(isTextureExist(name)){
-            CLog::write(CLog::Warning,"WARNING::TEXTURE_MANAGER::ADD_TEXTURE You tried to load texture that already exists with the name of : '%s' please check your texture name\n", name.c_str());
+            Log::write(Log::Warning, LIGHT_YELLOW_TEXT("WARNING::TEXTURE_MANAGER::ADD_TEXTURE"), 
+            YELLOW_TEXT("You tried to load texture that already exists with the name of : "), 
+            YELLOW_TEXT(name), YELLOW_TEXT(" please check your texture name\n"));
             return;
         }
+        // todo: handle null returned texture object
         _textures[name] = std::make_unique<Texture>(loadTextureFromFile(path, type));
     }
     // void removeTexture(const std::string &name){}
     Texture &getTexture(const std::string &name){ return *_textures[name];}
     int getTextureId(const std::string &name){
           if(!isTextureExist(name)){
-            CLog::write(CLog::Warning,"WARNING::TEXTURE_MANAGER::GET_TEXTURE_ID Your tried to get texture_id that doesn't exists name you provided is : '%s' due to that function returned -1. \n", name.c_str());
+            Log::write(Log::Warning,LIGHT_RED_TEXT("WARNING::TEXTURE_MANAGER::GET_TEXTURE_ID"), YELLOW_TEXT("Your tried to get texture_id that doesn't exists name you provided is : "), YELLOW_TEXT(name), YELLOW_TEXT(" due to that function returned -1.\n"));
             return -1;
         }
         return getTexture(name).id;

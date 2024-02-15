@@ -19,7 +19,7 @@ inline bool loadTextureFromFile(const char* path, GLuint *out_texture, int *out_
     int width, height, nrComponents;
     unsigned char* data = stbi_load(path,  &width, &height, &nrComponents, 0);
     if (data == NULL){
-        CLog::write(CLog::Fatal, "Texture failed to load at path : %s\n",path);
+        Log::write(Log::Fatal, "FATAL::UTIL.H::LOAD_TEXTURE_FROM_FILE exture failed to load at path : ",path, "\n");
         stbi_image_free(data);
         return false;
     }
@@ -46,6 +46,6 @@ inline bool loadTextureFromFile(const char* path, GLuint *out_texture, int *out_
     *out_width = width;
     *out_height = height;
 
-    CLog::write(CLog::Debug, "loaded texture from file with path -> %s and with ID : %d\n", path, textureID);
+    Log::write(Log::Debug, "loaded texture from file with path -> ", path," and with ID :", textureID, "\n");
     return true;
 }

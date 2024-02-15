@@ -16,11 +16,11 @@ public:
 
     // ensures that app created only once a.k.a : Singleton
     static App &get() {
-        if (s_instance == nullptr) {
-            std::cout << "App Created" << std::endl;
-            s_instance = new App();
+        if (_instance == nullptr) {
+            _instance = new App();
+            Log::write(Log::Info, GREEN_TEXT("INFO::APP::GET_INSTANCE App Initialized with mem address -> ") ,&_instance,"\n");
         }
-        return *s_instance;
+        return *_instance;
     }
     void run();
     void clean();
@@ -36,5 +36,5 @@ private:
     // App Field
     ImVec4 clear_color = ImVec4(0.45f, 0.55f,0.60f, 1.00f);
     
-    static App *s_instance;
+    static App *_instance;
 };
