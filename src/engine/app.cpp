@@ -70,30 +70,29 @@ void App::run() {
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 0.1f, 100.0f); // NOLINT
         glm::mat4 model = glm::mat4(1.0f);
-        Shader shader = gShaderManager->getShader("shader_model");
-        shader.bind();
+    
+        gShaderManager->bind("shader_model");
+        // shader.bind();
         // todo : create function that sets these variables
-        shader.setMat4("projection", projection);
-        shader.setMat4("view", camera.GetViewMatrix());
+        gShaderManager->getShader("shader_model").setMat4("projection", projection);
+        gShaderManager->getShader("shader_model").setMat4("view", camera.GetViewMatrix());
         // render the loaded model
         model = glm::translate(model, glm::vec3(0.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        shader.setMat4("model", model);
-        cyborg.Draw(shader);
-        shader.unbind();
+        gShaderManager->getShader("shader_model").setMat4("model", model);
+        cyborg.Draw(gShaderManager->getShader("shader_model"));
+        gShaderManager->unbind();
 
-        shader = gShaderManager->getShader("shader_red_box");
         // note : i can use it like this aswell
-        shader.bind();
-        shader.setMat4("projection", projection);
-        shader.setMat4("view", camera.GetViewMatrix());
+        gShaderManager->bind("shader_red_box");
+        gShaderManager->getShader("shader_red_box").setMat4("projection", projection);
+        gShaderManager->getShader("shader_red_box").setMat4("view", camera.GetViewMatrix());
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(2.0f));
-        shader.setMat4("model", model);
-
-        plane.Draw(shader);
-        shader.unbind();
+        gShaderManager->getShader("shader_red_box").setMat4("model", model);
+        plane.Draw(gShaderManager->getShader("shader_red_box"));
+        gShaderManager->unbind();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);

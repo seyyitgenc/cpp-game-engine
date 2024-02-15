@@ -23,8 +23,8 @@ public:
         return _instance;
     }
 
-    void bindShader(const std::string &name){glUseProgram(_shaders[name]->ID);}
-    void unbindShader(const std::string &name){glUseProgram(0);}
+    void bind(const std::string &name){glUseProgram(_shaders[name]->ID);}
+    void unbind(){glUseProgram(0);}
     void reloadShader(const std::string &name){    
         auto found = _shaders.find(name);
         if (found != _shaders.end())
