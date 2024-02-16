@@ -1,5 +1,4 @@
 #include "app.h"
-#include "util/log.h"
 #include "shader.h"
 #include "model.h"
 #include "camera.h"

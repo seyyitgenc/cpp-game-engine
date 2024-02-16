@@ -74,7 +74,7 @@ void gInitShaders(){
     gShaderManager = ShaderManager::getInstance();
     gShaderManager->addShader(
         "shader_model",
-        FileSystem::getPath("shaders/basic_model.s"),
+        FileSystem::getPath("shaders/basic_model.vs"),
         FileSystem::getPath("shaders/basic_model.fs"));
     gShaderManager->addShader(
         "shader_texture",

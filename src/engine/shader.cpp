@@ -1,5 +1,4 @@
 #include "shader.h"
-#include "util/log.h"
 
 //! input is like tihs vertex shader, fragment shader
 Shader::Shader(const std::string &vertexPath,  const std::string &fragmentPath) : Shader(vertexPath, "", fragmentPath){}

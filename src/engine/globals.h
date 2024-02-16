@@ -8,8 +8,8 @@
 #include "ImGui/imgui_impl_opengl3.h"
 
 #include "shader_manager.h"
-#include "util/filesystem.h"
-#include "util/log.h"
+#include "util/filesystem.hpp"
+#include "util/log.hpp"
 
 #define SCREEN_WIDTH  1366.0f
 #define SCREEN_HEIGHT 768.0f

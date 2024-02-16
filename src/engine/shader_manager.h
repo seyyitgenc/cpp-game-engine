@@ -2,7 +2,6 @@
 #include "shader.h"
 #include <unordered_map>
 #include <memory>
-#include "util/log.h"
 
 // FIXME : this solutuion is not memory friendly maybe ???
 class ShaderManager

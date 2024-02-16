@@ -7,8 +7,8 @@
 
 #pragma once
 #include "mesh.h"
-#include "util/filesystem.h"
-#include "util/log.h"
+#include "util/filesystem.hpp"
+#include "util/log.hpp"
 #include "util/util.h"
 
 #include <assimp/postprocess.h>

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/log.hpp"
+
 #include <glad/glad.h>
 #include <glm/gtc/type_ptr.hpp>
 
