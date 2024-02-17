@@ -4,7 +4,7 @@
 Shader::Shader(const std::string &vertexPath,  const std::string &fragmentPath) : Shader(vertexPath, "", fragmentPath){}
 
 //! input is like tihs : vertex shader, geometry shader, fragemnt shader
-Shader::Shader(const std::string &vertexPath, const std::string &geometryPath, const std::string &fragmentPath) : _vertexPath(vertexPath),  _fragmentPath(fragmentPath) , _geometryPath(geometryPath){
+Shader::Shader(const std::string &vertexPath, const std::string &geometryPath, const std::string &fragmentPath) : _info{vertexPath, fragmentPath, geometryPath, "DESCRIPTION IS NOT SPECIFIED"}{
     buildShader();   
 }
 
@@ -37,10 +37,10 @@ void Shader::compileShader(const char* code, GLenum type){
     glShaderSource(shader, 1, &code, NULL);
     glCompileShader(shader);
     checkCompileErrors(shader,"COMPUTE");
-    glAttachShader(ID, shader);
-    glLinkProgram(ID);
+    glAttachShader(_info.ID, shader);
+    glLinkProgram(_info.ID);
     
-    checkCompileErrors(ID, "PROGRAM");
+    checkCompileErrors(_info.ID, "PROGRAM");
     glDeleteShader(shader);
 }
 
@@ -61,55 +61,55 @@ std::string Shader::readFile(const std::string &path){
     return shaderCode;
 }
 void Shader::buildShader(){
-    std::string vertexCode = readFile(_vertexPath.c_str());
-    std::string fragmentCode = readFile(_fragmentPath.c_str());
-    ID = glCreateProgram();
+    std::string vertexCode = readFile(_info.vertexPath.c_str());
+    std::string fragmentCode = readFile(_info.fragmentPath.c_str());
+    _info.ID = glCreateProgram();
 
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Shader initialized with ID -> "), ID, "\n");
+    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Shader initialized with _info.ID -> "), _info.ID, "\n");
     
     compileShader(vertexCode.c_str(), GL_VERTEX_SHADER);
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of vertex Shader -> "), YELLOW_TEXT(_vertexPath), "\n");
+    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of vertex Shader -> "), YELLOW_TEXT(_info.vertexPath), "\n");
     
     compileShader(fragmentCode.c_str(), GL_FRAGMENT_SHADER);
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("of fragment Shader -> "), YELLOW_TEXT(_fragmentPath), "\n");
-    if (!_geometryPath.empty())
+    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("of fragment Shader -> "), YELLOW_TEXT(_info.fragmentPath), "\n");
+    if (!_info.geometryPath.empty())
     {
-        std::string geometryCode = readFile(_geometryPath.c_str());
+        std::string geometryCode = readFile(_info.geometryPath.c_str());
         compileShader(geometryCode.c_str(),GL_GEOMETRY_SHADER);
-        Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of geometry Shader -> "), YELLOW_TEXT(_geometryPath), "\n");
+        Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of geometry Shader -> "), YELLOW_TEXT(_info.geometryPath), "\n");
     }
     Log::write(Log::Debug, BLUE_TEXT("-----------------------------------------------------\n"));
 }
 
 void Shader::reload(){
     Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::RELOAD Reloading Shader ...\n"));
-    glDeleteProgram(ID);
+    glDeleteProgram(_info.ID);
     buildShader();
 }
 void Shader::setBool(const std::string &name, bool value) const{
-    glUniform1i(glGetUniformLocation(ID,name.c_str()), value);
+    glUniform1i(glGetUniformLocation(_info.ID,name.c_str()), value);
 }
 
 void Shader::setInt(const std::string &name, int value) const{
-    glUniform1i(glGetUniformLocation(ID,name.c_str()), value);
+    glUniform1i(glGetUniformLocation(_info.ID,name.c_str()), value);
 }
 
 void Shader::setFloat(const std::string &name, float value) const{
-    glUniform1f(glGetUniformLocation(ID,name.c_str()), value);
+    glUniform1f(glGetUniformLocation(_info.ID,name.c_str()), value);
 }
 
 void Shader::setVec2(const std::string &name, glm::vec2 value) const{
-    glUniform2fv(glGetUniformLocation(ID,name.c_str()), 1, glm::value_ptr(value));
+    glUniform2fv(glGetUniformLocation(_info.ID,name.c_str()), 1, glm::value_ptr(value));
 }
 
 void Shader::setVec3(const std::string &name, glm::vec3 value) const{
-    glUniform3fv(glGetUniformLocation(ID,name.c_str()), 1, glm::value_ptr(value));
+    glUniform3fv(glGetUniformLocation(_info.ID,name.c_str()), 1, glm::value_ptr(value));
 }
 
 void Shader::setVec4(const std::string &name, glm::vec4 value) const{
-    glUniform4fv(glGetUniformLocation(ID,name.c_str()), 1, glm::value_ptr(value));
+    glUniform4fv(glGetUniformLocation(_info.ID,name.c_str()), 1, glm::value_ptr(value));
 }
 
 void Shader::setMat4(const std::string &name, glm::mat4 value) const{
-    glUniformMatrix4fv(glGetUniformLocation(ID,name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+    glUniformMatrix4fv(glGetUniformLocation(_info.ID,name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
 }

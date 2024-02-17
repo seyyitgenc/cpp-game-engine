@@ -2,6 +2,7 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
+#include "../texture.h"
 
 namespace Gui{
     void Init(){
@@ -10,13 +11,10 @@ namespace Gui{
         static float f0 = 0,f1 = 0,f2 = 0;
         static float colboxSizex = 0,colboxSizey = 0,colboxSizez = 0;
         static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
-        
-        int my_img_width = 0;
-        int my_img_height = 0;
-        GLuint my_img_texture = 0;
-        // fixme: memory leak due to the continious creation of same picture
-        // todo: implement asset manager to resolve  this problem
-        loadTextureFromFile(FileSystem::getPath("resources/textures/file-icon.png").c_str(), &my_img_texture, &my_img_width, &my_img_height);
+        Texture* test = TextureManager::getInstance()->getTexture("doesn'txexsit");
+
+        GLuint my_img_texture = TextureManager::getInstance()->getTextureId("file-icon");
+
         ImGui::ShowDemoWindow();
         ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Shaders"))
@@ -30,9 +28,8 @@ namespace Gui{
                 ImGui::BeginChild("left pane", ImVec2(windowWidth / 2, 0), true);
                 
                 float tblWidth = ImGui::GetContentRegionAvail().x;
-                float thumbnailSize = 128;
                 float padding = 5;
-                float cellSize = thumbnailSize + padding;
+                float cellSize = THUMBNAIL_SIZE + padding;
                 int columnCount = tblWidth / cellSize;
                 if(tblWidth < cellSize)
                     columnCount = 1;
@@ -54,7 +51,7 @@ namespace Gui{
                         // note: temporary solution
                         ImGui::SetCursorPos({pos.x + padding / 2,pos.y + padding / 2});
 
-                        ImGui::Image((void*)(intptr_t)my_img_texture,{thumbnailSize, thumbnailSize});
+                        ImGui::Image((void*)(intptr_t)my_img_texture, {THUMBNAIL_SIZE, THUMBNAIL_SIZE});
 
                         ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
                         ImGui::TextWrapped("%s",it.first.c_str());
@@ -81,10 +78,11 @@ namespace Gui{
                     // }
                     if (ImGui::BeginTabItem("Details"))
                     {
-                        ImGui::Text("Shader ID : %d", selectedShader->ID);
-                        ImGui::Text("Shader Vertex Path   : %s", selectedShader->_vertexPath.c_str());
-                        ImGui::Text("Shader Fragment Path : %s", selectedShader->_fragmentPath.c_str());
-                        ImGui::Text("Shader Geometry Path : %s", selectedShader->_geometryPath.c_str());
+                        ShaderInfo info = selectedShader->getShaderInfo(); 
+                        ImGui::Text("Shader ID : %d", info.ID);
+                        ImGui::Text("Shader Vertex Path   : %s", info.vertexPath.c_str());
+                        ImGui::Text("Shader Fragment Path : %s", info.fragmentPath.c_str());
+                        ImGui::Text("Shader Geometry Path : %s", info.geometryPath.c_str());
                         ImGui::EndTabItem();
                     }
                     ImGui::EndTabBar();

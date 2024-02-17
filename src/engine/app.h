@@ -31,7 +31,6 @@ public:
     void processInput(GLFWwindow* window);
 
 private:
-    //fixme: temporary class
     bool is_j_pressed = false;
     // App Field
     ImVec4 clear_color = ImVec4(0.45f, 0.55f,0.60f, 1.00f);

@@ -14,4 +14,5 @@ bld/
 [Cc]onfiguration/config.h
 .clang-format
 .vscode
+[Ii]mgui.ini
 resources/objects/room

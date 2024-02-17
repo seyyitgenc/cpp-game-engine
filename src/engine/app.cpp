@@ -33,7 +33,7 @@ void App::run() {
     std::vector<std::pair<std::string,std::string>> planeTextures;
     planeTextures.push_back(std::pair("bricks2.png","texture_diffuse"));
     planeTextures.push_back(std::pair("brickwall_normal.jpg","texture_normal"));
-    Model plane(planeVertices,planeIndices,planeTextures);
+    Model plane(planeVertices,planeIndices);
     // Model cube(cubeVertices);
     Model cyborg(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
 

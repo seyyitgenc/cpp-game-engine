@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "shader.h"
-
+#include "texture.h"
 // todo: write down implementation of this clas into .cpp file
 
 struct Vertex
@@ -12,15 +12,7 @@ struct Vertex
     glm::vec2 TexCoords;
 };
 
-struct Texture
-{
-    unsigned int id;
-    std::string path;
-    std::string type;
-};
-
-
-class Mesh // NOLINT
+class Mesh
 {    
 public:
     std::vector<Vertex> verticies;
@@ -50,15 +42,29 @@ public:
             {
                 glActiveTexture(GL_TEXTURE0 + i);
                 std::string number;
-                std::string name = textures[i].type;
-                if (name == "texture_diffuse")
+
+                std::string name; 
+                switch (textures[i].type)
+                {
+                case DIFFUSE:
+                    name = "texture_diffuse";
                     number = std::to_string(diffuseNr++);
-                else if(name == "texture_specular")
+                    break;
+                case SPECULAR:
+                    name = "texture_specular";
                     number = std::to_string(specularNr++);
-                else if(name == "texture_normal")
+                    break;
+                case NORMAL:
+                    name = "texture_normal";
                     number = std::to_string(normalNr++);
-                else if(name == "texture_depth")
+                    break; 
+                case DEPTH:
+                    name = "texture_depth";
                     number = std::to_string(depthNr++);
+                    break; 
+                default:
+                    break;
+                }
                 shader.setInt(name + number, i);
                 glBindTexture(GL_TEXTURE_2D, textures[i].id);
             }

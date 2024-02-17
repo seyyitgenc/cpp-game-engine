@@ -10,11 +10,20 @@
 #include <sstream>
 #include <string>
 
+struct ShaderInfo{
+    std::string vertexPath;
+    std::string fragmentPath;
+    std::string geometryPath;
+    std::string description;
+    GLuint ID;
+};
+
 class Shader
 {
 public:
     Shader(const std::string &vertexPath, const std::string &fragmentPath);
     Shader(const std::string &vertexPath, const std::string &geometrypath, const std::string &fragmentPath);
+    ShaderInfo &getShaderInfo(){return _info;}
     // utiliy uniforrm functions
     void setBool(const std::string &name, bool value) const;
    
@@ -31,12 +40,9 @@ private:
     std::string readFile(const std::string &path);
     void compileShader(const char*  code, GLenum type);
     void buildShader();
-public:
+private:
     // TODO: add descripton
     // std::string _description;
     // FIXME : later on i need to fix this access modifier i don't want user to access these
-    std::string _vertexPath;
-    std::string _fragmentPath;
-    std::string _geometryPath;
-    GLuint ID;
+    ShaderInfo _info;
 };
