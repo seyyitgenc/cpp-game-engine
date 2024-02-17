@@ -32,13 +32,12 @@ public:
     };
     // model constructor for custom models if normal mapping is not required
     Model(std::vector<float> verticies, std::vector<unsigned int> 
-    indices, std::vector<std::pair<std::string,std::string>> textures = {}){
-        
+    indices, std::vector<std::pair<std::string,TextureType>> textures = {}){
         loadModel(verticies, indices, textures);
     };
     // model constructor for custom model if normal mapping is required
     Model(std::vector<float> verticies, std::vector<unsigned int> 
-    indices, std::vector<std::pair<std::string,std::string>> textures,  std::vector<float> normals){
+    indices, std::vector<std::pair<std::string,TextureType>> textures,  std::vector<float> normals){
         // loadModel(vertices, indices, textures, normals);
     };
     
@@ -77,7 +76,7 @@ private:
     // this will load custom models with indices/texture but no normal mapping
     // note : incoming texture files is structured like this :  {{"texture_diffuse.jpg","diffuse_texture"},{"texture_normal.jpg","normal_texture"}}
     // ----------------------------------------------------------------------
-    void loadModel(std::vector<float>& vert, std::vector<unsigned int>& ind, std::vector<std::pair<std::string,std::string>>& tex){
+    void loadModel(std::vector<float>& vert, std::vector<unsigned int>& ind, std::vector<std::pair<std::string,TextureType>>& tex){
         std::vector<Vertex> vertices;
         std::vector<Texture> textures;
 
@@ -194,19 +193,19 @@ private:
         if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            std::vector<Texture> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, "texture_diffuse");
+            std::vector<Texture> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, DIFFUSE);
             textures.insert(textures.end(),diffuseMaps.begin(),diffuseMaps.end());
-            std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+            std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, SPECULAR);
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-            std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+            std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, NORMAL);
             textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-            std::vector<Texture> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+            std::vector<Texture> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, HEIGHT);
             textures.insert(textures.end(), heightMap.begin(), heightMap.end());    
         }
         Mesh lastMesh(vertices, indices, textures, true, hasNormals, hasTexCoords);
         return lastMesh;
     }
-    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName){
+    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType ownType){
         std::vector<Texture> textures;
         std::vector<Texture> textures_loaded;
         for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
@@ -227,7 +226,7 @@ private:
             {
                 Texture texture;
                 texture.id = TextureFromFile(str.C_Str(), directory);
-                texture.type = typeName;
+                // texture.type = typeName;
                 texture.path = str.C_Str();
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);

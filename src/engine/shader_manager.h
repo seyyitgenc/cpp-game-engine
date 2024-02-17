@@ -3,13 +3,11 @@
 #include <unordered_map>
 #include <memory>
 
-// FIXME : this solutuion is not memory friendly maybe ???
 class ShaderManager
 {
 public:
     ~ShaderManager(){
-        // maybe later on i will use shader pointer to hold the shader
-        _shaders.clear(); // temporaray solution
+        _shaders.clear();
     } // delete all shaders
     ShaderManager(ShaderManager&) = delete;
     void operator=(const ShaderManager&) = delete;
@@ -22,7 +20,7 @@ public:
         return _instance;
     }
 
-    void bind(const std::string &name){glUseProgram(_shaders[name]->ID);}
+    void bind(const std::string &name){glUseProgram(_shaders[name]->getShaderInfo().ID);}
     void unbind(){glUseProgram(0);}
     void reloadShader(const std::string &name){    
         auto found = _shaders.find(name);

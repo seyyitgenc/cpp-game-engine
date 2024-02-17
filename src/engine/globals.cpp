@@ -7,6 +7,7 @@ GLFWwindow *gWindow;
 bool gEditModeEnabled;
 void gInitShaders();
 bool gInitGlobals();
+void gInitTextures();
 ShaderManager *gShaderManager;
 // StopwatchManager *gStopwatchManager;
 
@@ -65,9 +66,12 @@ bool gInitGlobals() {
     const char* glsl_version = "#version 460 core";
     ImGui_ImplGlfw_InitForOpenGL(gWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-
+    gInitTextures();
     gInitShaders();
     return true;
+}
+void gInitTextures(){
+    TextureManager::getInstance()->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), ICON);
 }
 
 void gInitShaders(){
