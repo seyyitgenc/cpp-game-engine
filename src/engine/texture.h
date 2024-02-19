@@ -38,7 +38,6 @@ public:
         return _instance;
     }
     void addTexture(const std::string &name, const std::string &path, TextureType type){
-        // Texture returnedTexture = loadTextureFromFile(path ,type);
         if(isTextureExist(name)){
             Log::write(
                 Log::Warning, 
@@ -51,19 +50,19 @@ public:
         _textures[name] = std::make_unique<Texture>(loadTextureFromFile(path, type));
     }
     // void removeTexture(const std::string &name){}
-    Texture *getTexture(const std::string &name){
+    [[nodiscard]] Texture* getTexture(const std::string &name){
         if(!isTextureExist(name)){
             Log::write(
-                    Log::Warning,
-                    LIGHT_RED_TEXT("WARNING::TEXTURE_MANAGER::GET_TEXTURE "), 
+                    Log::Fatal,
+                    LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE "),
                     YELLOW_TEXT("Your tried to get texture that doesn't exist. Name you provided is : '"), 
                     YELLOW_TEXT(name), 
-                    YELLOW_TEXT("' due to that function returned null.\n"));
+                    YELLOW_TEXT("' due to that function returned nullptr. Application may crash.\n"));
             return nullptr;
         }
         return _textures[name].get();
     }
-    int getTextureId(const std::string &name){
+    [[nodiscard]] int getTextureId(const std::string &name){
         if(!isTextureExist(name)){
             Log::write(
                 Log::Warning,

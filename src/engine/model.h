@@ -9,7 +9,6 @@
 #include "mesh.h"
 #include "util/filesystem.hpp"
 #include "util/log.hpp"
-#include "util/util.h"
 
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -102,7 +101,11 @@ private:
             textures.push_back(texture);
         }
         for (unsigned int i = 0; i < textures.size(); i++)
-            Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MODEL "), YELLOW_TEXT("Texture loaded -> "), YELLOW_TEXT(textures[i].path), "\n");
+            Log::write(
+                Log::Debug,
+                LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MODEL "),
+                YELLOW_TEXT("Texture loaded -> "),
+                YELLOW_TEXT(textures[i].path), "\n");
 
         Mesh myMesh(vertices, ind, textures, true,false, true);
         
@@ -121,7 +124,10 @@ private:
         Assimp::Importer import;
         const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode){
-            Log::write(Log::Fatal,LIGHT_RED_TEXT("FATAL::MODEL::ASSIMP::LOAD_MODAL "), YELLOW_TEXT(import.GetErrorString()), "\n");
+            Log::write(
+                Log::Fatal,
+                LIGHT_RED_TEXT("FATAL::MODEL::ASSIMP::LOAD_MODAL "),
+                YELLOW_TEXT(import.GetErrorString()), "\n");
             return;
         }
         directory = path.substr(0, path.find_last_of('/'));
@@ -230,7 +236,11 @@ private:
                 texture.path = str.C_Str();
                 textures.push_back(texture);
                 textures_loaded.push_back(texture);
-                Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MATERIAL_TEXTURE "), YELLOW_TEXT("Texture loaded -> "), YELLOW_TEXT(textures[i].path), "\n");
+                Log::write(
+                    Log::Debug,
+                    LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MATERIAL_TEXTURE "),
+                    YELLOW_TEXT("Texture loaded -> "),
+                    YELLOW_TEXT(textures[i].path), "\n");
             }
         }
         return textures;
@@ -267,7 +277,10 @@ inline unsigned int TextureFromFile(const char* path, const std::string& directo
         stbi_image_free(data);
     }
     else{
-        Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::TEXTURE_FROM_FILE"), YELLOW_TEXT("Texture failed to load at path : "), YELLOW_TEXT(path), "\n");
+        Log::write(Log::Fatal,
+            LIGHT_RED_TEXT("FATAL::TEXTURE_FROM_FILE"),
+            YELLOW_TEXT("Texture failed to load at path : "),
+            YELLOW_TEXT(path), "\n");
         stbi_image_free(data);
     }
 

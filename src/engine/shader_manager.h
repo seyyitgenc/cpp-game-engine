@@ -15,7 +15,9 @@ public:
     static ShaderManager *getInstance(){ // singleton
         if (_instance == nullptr){
             _instance = new ShaderManager();
-            Log::write(Log::Info, GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE Shader Manager Initialized with mem address -> "), &_instance, "\n");
+            Log::write(
+                Log::Info,
+                GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE Shader Manager Initialized with mem address -> "), &_instance, "\n");
         }
         return _instance;
     }
@@ -27,7 +29,11 @@ public:
         if (found != _shaders.end())
             _shaders[name]->reload();
         else
-        Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::RELOAD_SHADER"), YELLOW_TEXT("Shader not found with name -> "), YELLOW_TEXT(name), "\n");
+        Log::write(
+            Log::Fatal,
+            LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::RELOAD_SHADER"),
+            YELLOW_TEXT("Shader not found with name -> "),
+            YELLOW_TEXT(name), "\n");
     };
     void reloadAllShaders(){
         for (auto &&i : _shaders)

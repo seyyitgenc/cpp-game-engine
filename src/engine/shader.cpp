@@ -17,7 +17,11 @@ void checkCompileErrors(GLuint shader, std::string type){
         if (!success)
         {
             glGetShaderInfoLog(shader, 512, NULL, infoLog);
-            Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::SHADER::FILE_COMPILATION_FAILED"), YELLOW_TEXT(" -> "), YELLOW_TEXT(infoLog) , "\n");
+            Log::write(
+                Log::Fatal,
+                LIGHT_RED_TEXT("FATAL::SHADER::FILE_COMPILATION_FAILED"),
+                YELLOW_TEXT(" -> "),
+                YELLOW_TEXT(infoLog) , "\n");
         }        
     }
     else
@@ -26,7 +30,11 @@ void checkCompileErrors(GLuint shader, std::string type){
         if (!success)
         {
             glGetShaderInfoLog(shader, 512, NULL, infoLog);
-            Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::SHADER::FILE_LINKING_FAILED"), YELLOW_TEXT( " -> "), YELLOW_TEXT(infoLog), "\n");
+            Log::write(
+                Log::Fatal,
+                LIGHT_RED_TEXT("FATAL::SHADER::FILE_LINKING_FAILED"),
+                YELLOW_TEXT( " -> "),
+                YELLOW_TEXT(infoLog), "\n");
         }
     }
     
@@ -56,7 +64,11 @@ std::string Shader::readFile(const std::string &path){
         shaderCode = shaderStream.str();
     }
     catch(const std::ifstream::failure& e){
-        Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::SHADER::FILE_NOT_SUCCEFULLY_READ "), YELLOW_TEXT("shader file is located at -> "), YELLOW_TEXT(path), "\n");
+        Log::write(
+            Log::Fatal,
+            LIGHT_RED_TEXT("FATAL::SHADER::FILE_NOT_SUCCEFULLY_READ "),
+            YELLOW_TEXT("shader file is located at -> "),
+            YELLOW_TEXT(path), "\n");
     }
     return shaderCode;
 }
@@ -65,24 +77,45 @@ void Shader::buildShader(){
     std::string fragmentCode = readFile(_info.fragmentPath.c_str());
     _info.ID = glCreateProgram();
 
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Shader initialized with _info.ID -> "), _info.ID, "\n");
+    Log::write(
+        Log::Debug,
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
+        YELLOW_TEXT("Shader initialized with _info.ID -> "),_info.ID, "\n");
     
     compileShader(vertexCode.c_str(), GL_VERTEX_SHADER);
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of vertex Shader -> "), YELLOW_TEXT(_info.vertexPath), "\n");
+
+    Log::write(
+        Log::Debug,
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
+        YELLOW_TEXT("Path of vertex Shader -> "),
+        YELLOW_TEXT(_info.vertexPath), "\n");
     
     compileShader(fragmentCode.c_str(), GL_FRAGMENT_SHADER);
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("of fragment Shader -> "), YELLOW_TEXT(_info.fragmentPath), "\n");
+
+    Log::write(
+        Log::Debug,
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
+        YELLOW_TEXT("of fragment Shader -> "),
+        YELLOW_TEXT(_info.fragmentPath), "\n");
+
     if (!_info.geometryPath.empty())
     {
         std::string geometryCode = readFile(_info.geometryPath.c_str());
         compileShader(geometryCode.c_str(),GL_GEOMETRY_SHADER);
-        Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "), YELLOW_TEXT("Path of geometry Shader -> "), YELLOW_TEXT(_info.geometryPath), "\n");
+        Log::write(
+            Log::Debug,
+            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
+            YELLOW_TEXT("Path of geometry Shader -> "),
+            YELLOW_TEXT(_info.geometryPath), "\n");
     }
     Log::write(Log::Debug, BLUE_TEXT("-----------------------------------------------------\n"));
 }
 
 void Shader::reload(){
-    Log::write(Log::Debug, LIGHT_MAGENTA_TEXT("DEBUG::SHADER::RELOAD Reloading Shader ...\n"));
+    Log::write(
+        Log::Debug,
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::RELOAD Reloading Shader ...\n"));
+        
     glDeleteProgram(_info.ID);
     buildShader();
 }

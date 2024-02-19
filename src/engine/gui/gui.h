@@ -4,6 +4,7 @@
 #include "ImGui/imgui_impl_opengl3.h"
 #include "../texture.h"
 
+// todo: check out dependency injection
 namespace Gui{
     void Init(){
         // todo : implement imgui::layer kind of thingy
@@ -13,7 +14,6 @@ namespace Gui{
         static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
         Texture* test = TextureManager::getInstance()->getTexture("doesn'txexsit");
 
-        GLuint my_img_texture = TextureManager::getInstance()->getTextureId("file-icon");
 
         ImGui::ShowDemoWindow();
         ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
@@ -51,7 +51,7 @@ namespace Gui{
                         // note: temporary solution
                         ImGui::SetCursorPos({pos.x + padding / 2,pos.y + padding / 2});
 
-                        ImGui::Image((void*)(intptr_t)my_img_texture, {THUMBNAIL_SIZE, THUMBNAIL_SIZE});
+                        ImGui::Image((void*)(intptr_t)TextureManager::getInstance()->getTextureId("file-icon"), {THUMBNAIL_SIZE, THUMBNAIL_SIZE});
 
                         ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
                         ImGui::TextWrapped("%s",it.first.c_str());

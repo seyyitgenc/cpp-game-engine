@@ -14,7 +14,7 @@ ShaderManager *gShaderManager;
 // Global variable initalization and backend setup
 
 bool gInitGlobals() {
-    Log::setLevel(Log::All);
+    Log::setLevel(Log::Info);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
