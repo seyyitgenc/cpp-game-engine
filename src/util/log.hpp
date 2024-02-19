@@ -30,7 +30,8 @@ public:
     template<typename... Args>
     static void write(int nLevel, Args... args){
         checkInit();
-        (std::cout << ... << args);
+        if (nLevel >= _nLevel)
+            (std::cout << ... << args);
     }
     static void setLevel(int nLevel){  
         _nLevel = nLevel;
