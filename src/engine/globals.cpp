@@ -12,12 +12,12 @@ void InitCameras();
 // Global variable initalization and backend setup
 
 bool gInitGlobals() {
-    Log::setLevel(Log::All);
+    Log::setLevel(Log::Debug);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
     if(!glfwInit()){
-        std::cout << "Failed to init glfw" << std::endl;
+        Log::write(Log::Fatal,"FATAL::INIT_GLOBALS Failed to init GLFW\n");
         return false;
     }
     
@@ -46,7 +46,7 @@ bool gInitGlobals() {
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         Log::write(
-            Log::Fatal,
+            Log::Debug,
             "FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
         return false;
     }
@@ -102,4 +102,5 @@ void InitShaders(){
 void InitCameras(){
     CameraManager::getInstance()->addCamera("scene_cam");
     CameraManager::getInstance()->addCamera("test_cam");
+    CameraManager::getInstance()->addCamera("test_cam2");
 }

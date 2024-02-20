@@ -1,11 +1,11 @@
 #pragma once 
 
 #include <memory>
-#include <unordered_map>
+#include <map>
 
 #include "camera.h"
 #include "util/log.hpp"
-
+#include <algorithm>
 class CameraManager
 {
 public:
@@ -52,15 +52,64 @@ public:
         }
         return _cameras[name].get();
     }
-    std::unordered_map<std::string,std::unique_ptr<Camera>> &getCameraList(){
-        return _cameras;
+    std::map<std::string,std::unique_ptr<Camera>> *getCameraList(){
+        return &_cameras;
     }
+
+public:
+    // helper functions
+    Camera* getActiveCamera(){return activeCamera;}
+    Camera* setActiveCamera(Camera *newCam){return activeCamera = newCam;}
+    void setNextCamera(){
+        auto it = std::find_if(_cameras.begin(),_cameras.end(),[&](const auto& pair){return pair.second.get() == activeCamera;});
+        it++;
+        if (it != _cameras.end())
+        {
+            activeCamera = it->second.get();
+            Log::write(
+                Log::Debug,
+                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_NEXT_CAMERA "),
+                YELLOW_TEXT("Switched camera to -> '"),
+                YELLOW_TEXT(it->first),
+                YELLOW_TEXT("'\n"));
+        }
+        else{
+            Log::write(
+                Log::Warning,
+                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_NEXT_CAMERA "),
+                YELLOW_TEXT("There is no camera on right\n"));
+        }
+    }
+    void setPrevCamera(){
+        auto it = std::find_if(_cameras.begin(),_cameras.end(),[&](const auto& pair){return pair.second.get() == activeCamera;});
+        if (it != _cameras.begin())
+        {
+            it--;
+            activeCamera = it->second.get();
+            Log::write(
+                Log::Debug,
+                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> '"),
+                YELLOW_TEXT(it->first),
+                YELLOW_TEXT("'\n"));
+        }
+        else{
+            Log::write(
+                Log::Warning,
+                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_PREV_CAMERA "),
+                YELLOW_TEXT("There is no camera on left\n"));
+        }
+    }
+    // todo: get currently active camera here
+    // todo: get next cam here
+    // todo: get prev cam here
 private:
     [[nodiscard]] bool isCameraExist(const std::string& name){
     return _cameras.find(name) != _cameras.end();
     }
     CameraManager() = default;
+private:
+    std::map<std::string, std::unique_ptr<Camera>> _cameras;
     static CameraManager* _instance;
-    std::unordered_map<std::string, std::unique_ptr<Camera>> _cameras;
+    Camera* activeCamera;
 };
 inline CameraManager* CameraManager::_instance = nullptr;

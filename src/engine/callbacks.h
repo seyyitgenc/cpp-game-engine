@@ -1,7 +1,7 @@
 #pragma once
 #include "camera.h"
 #include "camera_manager.h"
-#include "app.h"
+
 inline void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0,0,width,height);
@@ -20,15 +20,14 @@ inline void mouse_callback_edit(GLFWwindow *window, double xpos, double ypos)
 inline void scroll_callback(GLFWwindow *window, double xpos, double ypos)
 {
 	if (!gEditModeEnabled){
-		App::getCamera().processMouseScroll(xpos, ypos);
+		CameraManager::getInstance()->getActiveCamera()->processMouseScroll(xpos, ypos);
 	}
   
 }
 inline void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
 	if (!gEditModeEnabled){
-
-		App::getCamera().processMouseMovement(xpos, ypos);
+		CameraManager::getInstance()->getActiveCamera()->processMouseMovement(xpos, ypos);
 	}
 }
 

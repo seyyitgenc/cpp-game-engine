@@ -28,9 +28,6 @@ public:
     }
     // todo: find a good way to resolve this.
     // fixme: possibly nullptr when called
-    static Camera& getCamera(){
-        return *camRef;
-    }
     void run();
     void clean();
     void initEntities();
@@ -45,8 +42,6 @@ private:
     ImVec4 clear_color = ImVec4(0.45f, 0.55f,0.60f, 1.00f);
     
     static App *_instance;
-    static Camera* camRef;
-
-    bool is_n_pressed = false;
-    bool is_m_pressed = false;
+    bool is_right_pressed = false;
+    bool is_left_pressed = false;
 };

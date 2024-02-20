@@ -9,7 +9,9 @@
 #include "gui/gui.h"
 
 App* App::_instance = nullptr;
-Camera* App::camRef = nullptr;
+
+// fixme: this is not safe
+Camera *camRef = nullptr;
 
 App::App() { }
 App::~App() { this->clean(); }
@@ -27,7 +29,7 @@ App::~App() { this->clean(); }
 // }
 // TODO :: implement model gshader
 
-Stopwatch<> t1; //nolint
+Stopwatch<> t1;
 
 void App::run() {
     gInitGlobals();
@@ -43,12 +45,14 @@ void App::run() {
     glEnable(GL_DEPTH_TEST);
     // glm::vec3 picking_pos = glm::vec3(0); //
     // note: must be refactored
-    t1.start();
     
-    camRef = CameraManager::getInstance()->getCamera("scene_cam");
+    CameraManager::getInstance()->setActiveCamera(CameraManager::getInstance()->getCamera("scene_cam"));
 
+    t1.start();
     while (!glfwWindowShouldClose(gWindow))
     {
+        camRef = CameraManager::getInstance()->getActiveCamera();
+
         // per-frame time logic
         // --------------------
         auto dtMs = t1.getElapsedTime<float>();
@@ -76,30 +80,23 @@ void App::run() {
         glm::mat4 model = glm::mat4(1.0f);
     
         // render the cameras
-        for (auto &&i : CameraManager::getInstance()->getCameraList())
+        for (auto &&i : *CameraManager::getInstance()->getCameraList())
         {
             if (i.second.get() != camRef)
             {
-                model = glm::mat4(1.0f);
                 ShaderManager::getInstance()->bind("shader_model");
                 // todo : create function that sets these variables
                 ShaderManager::getInstance()->getShader("shader_model").setMat4("projection", projection);
                 ShaderManager::getInstance()->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
-                // // Convert pitch and yaw to radians
-                // float pitchRadians = glm::radians(i.second.get()->Pitch);
-                // float yawRadians = glm::radians(i.second.get()->Yaw);
+                model = glm::inverse(i.second->GetViewMatrix());
 
-                // // Create rotation matrices for pitch and yaw
-                // glm::mat4 pitchMatrix = glm::rotate(glm::mat4(1.0f), pitchRadians, glm::vec3(1.0f, 0.0f, 0.0f));
-                // glm::mat4 yawMatrix = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-
-                // // Combine the pitch and yaw rotations
-                // glm::mat4 rotationMatrix = yawMatrix * pitchMatrix;
-
-                // // Apply the rotation to the model matrix
-                // model = rotationMatrix * model;
+                model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
                 model = glm::translate(model, i.second.get()->Position);
-                model = glm::scale(model, glm::vec3(0.010f));	// it's a bit too big for our scene, so scale it down
+                
+                // Create rotation matrices for pitch and yaw
+                model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
+                model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
+                
                 ShaderManager::getInstance()->getShader("shader_model").setMat4("model", model);
                 camera.Draw(ShaderManager::getInstance()->getShader("shader_model"));
                 ShaderManager::getInstance()->unbind();
@@ -137,26 +134,19 @@ void App::run() {
 // event loop
 // ----------
 void App::processInput(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS && !is_n_pressed)
-    {
-        is_n_pressed = true;
-        camRef = CameraManager::getInstance()->getCamera("test_cam");
-        camRef->setLastMouse(true);
-
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && !is_left_pressed){
+        CameraManager::getInstance()->setPrevCamera();
+        is_left_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_RELEASE)
-    {
-        is_n_pressed = false;
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_RELEASE){
+        is_left_pressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS && !is_m_pressed)
-    {
-        is_m_pressed = true;
-        camRef = CameraManager::getInstance()->getCamera("scene_cam");
-        camRef->setLastMouse(true);
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS && !is_right_pressed){
+        CameraManager::getInstance()->setNextCamera();
+        is_right_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE)
-    {
-        is_m_pressed = false;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_RELEASE){
+        is_right_pressed = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -193,8 +183,6 @@ void App::processInput(GLFWwindow* window) {
     {
         is_j_pressed = false;
     }
-    
-    
 }
 
 void App::update(const float& dt) {
