@@ -23,13 +23,14 @@
 - [x] Hot Reloading Shaders
 - ![Shaders](/screenshots/hot_reloading_shaders.png)
 - [x] Camera
-- [ ] Multiple Cameras
+- [x] Multiple Cameras
 - [x] Model loading
 - ![Model](/screenshots/model_loading.png)
 - [x] Logger(With colors)
 - ![Log](/screenshots/colored_log.png)
 - [x] Custom Model Loading
 - [x] Stopwatch
+- [ ] Input Manager
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
 - [ ] Scene Hierarchy

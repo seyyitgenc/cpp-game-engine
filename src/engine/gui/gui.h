@@ -12,8 +12,6 @@ namespace Gui{
         static float f0 = 0,f1 = 0,f2 = 0;
         static float colboxSizex = 0,colboxSizey = 0,colboxSizez = 0;
         static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
-        Texture* test = TextureManager::getInstance()->getTexture("doesn'txexsit");
-
 
         ImGui::ShowDemoWindow();
         ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
@@ -36,7 +34,7 @@ namespace Gui{
                 
                 if (ImGui::BeginTable("tbl_shaders", columnCount))
                 {
-                    for (int index = 0; auto &&it : gShaderManager->get_shader_list())
+                    for (int index = 0; auto &&it : ShaderManager::getInstance()->get_shader_list())
                     {
                         ImVec2 pos = ImGui::GetCursorPos();
                         std::string itemid = "##" + it.first;
@@ -83,6 +81,7 @@ namespace Gui{
                         ImGui::Text("Shader Vertex Path   : %s", info.vertexPath.c_str());
                         ImGui::Text("Shader Fragment Path : %s", info.fragmentPath.c_str());
                         ImGui::Text("Shader Geometry Path : %s", info.geometryPath.c_str());
+                        ImGui::TextWrapped("Description : %s", info.description.c_str());
                         ImGui::EndTabItem();
                     }
                     ImGui::EndTabBar();
@@ -90,11 +89,11 @@ namespace Gui{
                 ImGui::EndChild();
             }
             if (ImGui::Button("Reload")) {
-                gShaderManager->reloadShader(shaderName);
+                ShaderManager::getInstance()->reloadShader(shaderName);
             }
             ImGui::SameLine();
             if (ImGui::Button("Reload All Shaders")) {
-                gShaderManager->reloadAllShaders();
+                ShaderManager::getInstance()->reloadAllShaders();
             }
             
             ImGui::EndGroup();

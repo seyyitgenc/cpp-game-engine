@@ -33,7 +33,8 @@ public:
             Log::write(
                 Log::Info, 
                 GREEN_TEXT("INFO::TEXTURE_MANAGER::GET_INSTANCE "), 
-                YELLOW_TEXT("Texture manager initalized succesfully with Mem address of ->'"), &_instance, "'\n");
+                YELLOW_TEXT("Texture manager initalized succesfully with mem address -> '"),
+                &_instance, YELLOW_TEXT("'\n"));
         }
         return _instance;
     }

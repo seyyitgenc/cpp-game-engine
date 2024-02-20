@@ -5,16 +5,14 @@
     
 GLFWwindow *gWindow;
 bool gEditModeEnabled;
-void gInitShaders();
 bool gInitGlobals();
-void gInitTextures();
-ShaderManager *gShaderManager;
-// StopwatchManager *gStopwatchManager;
-
+void InitShaders();
+void InitTextures();
+void InitCameras();
 // Global variable initalization and backend setup
 
 bool gInitGlobals() {
-    Log::setLevel(Log::Info);
+    Log::setLevel(Log::All);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
@@ -47,7 +45,9 @@ bool gInitGlobals() {
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        Log::write(Log::Fatal,"FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
+        Log::write(
+            Log::Fatal,
+            "FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
         return false;
     }
     // setup Dear ImGui context
@@ -66,35 +66,40 @@ bool gInitGlobals() {
     const char* glsl_version = "#version 460 core";
     ImGui_ImplGlfw_InitForOpenGL(gWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-    gInitTextures();
-    gInitShaders();
+    InitTextures();
+    InitShaders();
+    InitCameras();
     return true;
 }
-void gInitTextures(){
+void InitTextures(){
     TextureManager::getInstance()->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), ICON);
 }
 
-void gInitShaders(){
-    gShaderManager = ShaderManager::getInstance();
-    gShaderManager->addShader(
+void InitShaders(){
+    ShaderManager::getInstance()->addShader(
         "shader_model",
         FileSystem::getPath("shaders/basic_model.vs"),
         FileSystem::getPath("shaders/basic_model.fs"));
-    gShaderManager->addShader(
+    ShaderManager::getInstance()->getShader("shader_model").getShaderInfo().description = ("testing this thing .");
+    ShaderManager::getInstance()->addShader(
         "shader_texture",
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
-    gShaderManager->addShader(
+    ShaderManager::getInstance()->addShader(
         "shader_raythisshaderhasextremelylongname",
         FileSystem::getPath("shaders/ray.vs"),
         FileSystem::getPath("shaders/ray.gs"),
         FileSystem::getPath("shaders/ray.fs"));
-    gShaderManager->addShader(
+    ShaderManager::getInstance()->addShader(
         "shader_white_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/white.fs"));
-    gShaderManager->addShader(
+    ShaderManager::getInstance()->addShader(
         "shader_red_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/red.fs"));
+}
+void InitCameras(){
+    CameraManager::getInstance()->addCamera("scene_cam");
+    CameraManager::getInstance()->addCamera("test_cam");
 }

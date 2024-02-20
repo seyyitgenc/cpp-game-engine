@@ -35,13 +35,13 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
-
 private:    
-    bool m_firstMouse = true;
+    // fixme: due to last mouse position, camera switch works fine but it will not recognize last position
     float lastX{}, lastY{};
+    bool m_firstMouse = true;
 
 public:
-    Camera(glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH ) : Position(position), Front(glm::vec3(0.0f,0.0f,-1.0f)), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
+    Camera(glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH   ) : Position(position), Front(glm::vec3(0.0f,0.0f,-1.0f)), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
         updateCameraVectors();
     };
 
@@ -95,6 +95,7 @@ public:
         if(Zoom < 1.0f) Zoom = 1.0f;
         if(Zoom > 45.0f) Zoom = 45.0f;
     }
+    void setLastMouse(bool set){m_firstMouse = set;}
 
 private:
     void updateCameraVectors(){
@@ -108,8 +109,3 @@ private:
         Up    = glm::normalize(glm::cross(Right, Front));
     }
 };
-
-// ! NOTE TO MYSELF : DON'T DECLERA THIS VARIABLE AS STATIC BECAUSE EVERY TIME I INCLUDED THIS CAMERA.H 
-// ! IT WILL CREATE SEPERATE OBJECT FOR THE INCLUDED FILE
-// ! INSTEAD USE INLINE TO PREVENT THAT OR YOU MAY USE EXTERN TO DECLERA AS A GLOBAL VARIABLE
-inline Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));

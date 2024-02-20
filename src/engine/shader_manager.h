@@ -17,7 +17,7 @@ public:
             _instance = new ShaderManager();
             Log::write(
                 Log::Info,
-                GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE Shader Manager Initialized with mem address -> "), &_instance, "\n");
+                GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE "), YELLOW_TEXT("Shader Manager Initialized with mem address -> '"), &_instance, YELLOW_TEXT("'\n"));
         }
         return _instance;
     }
@@ -37,9 +37,7 @@ public:
     };
     void reloadAllShaders(){
         for (auto &&i : _shaders)
-        {
             i.second->reload();
-        }
     };
     void addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path){
         addShader(name,vertex_path, "", fragment_path);
@@ -47,11 +45,7 @@ public:
     void addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path){
         auto found = _shaders.find(name);
         if (found == _shaders.end())
-        {
-            Shader *shader{new Shader(vertex_path, geometry_path, fragment_path)};
-            std::unique_ptr<Shader> uniquePtr{shader};
-            _shaders[name] = std::move(uniquePtr);
-        }
+            _shaders[name] = std::make_unique<Shader>(Shader(vertex_path, geometry_path, fragment_path));
         //? can add Shader return type for this function
     };
     Shader& getShader(const std::string &name){

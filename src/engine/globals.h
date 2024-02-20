@@ -8,6 +8,7 @@
 #include "ImGui/imgui_impl_opengl3.h"
 
 #include "shader_manager.h"
+#include "camera_manager.h"
 #include "texture.h"
 #include "util/filesystem.hpp"
 #include "util/log.hpp"
@@ -21,9 +22,4 @@ constexpr int TILE_HEIGHT = 32;
 extern GLFWwindow *gWindow;
 extern bool gEditModeEnabled;
 
-extern ShaderManager *gShaderManager;
-
-
 extern bool gInitGlobals();
-extern void gInitShaders();
-extern void gInitTextures();
