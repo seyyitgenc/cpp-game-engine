@@ -36,6 +36,7 @@ namespace Gui{
                 {
                     for (int index = 0; auto &&it : ShaderManager::getInstance()->get_shader_list())
                     {
+                        ImGui::TableNextColumn();
                         ImVec2 pos = ImGui::GetCursorPos();
                         std::string itemid = "##" + it.first;
                         // ImGui::PushID(itemid.c_str());
@@ -54,7 +55,6 @@ namespace Gui{
                         ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
                         ImGui::TextWrapped("%s",it.first.c_str());
                         index++;
-                        ImGui::TableNextColumn();
                     }
                     ImGui::EndTable();
                 }
