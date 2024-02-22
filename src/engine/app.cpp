@@ -8,6 +8,8 @@
 #include "util/stopwatch.hpp"
 #include "gui/gui.h"
 
+// todo: rename some of the functions of Camera and CameraMananger.
+
 App* App::_instance = nullptr;
 
 // fixme: this is not safe
@@ -43,9 +45,7 @@ void App::run() {
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
-    // glm::vec3 picking_pos = glm::vec3(0); //
-    // note: must be refactored
-    
+
     CameraManager::getInstance()->setActiveCamera(CameraManager::getInstance()->getCamera("scene_cam"));
 
     t1.start();
@@ -108,7 +108,7 @@ void App::run() {
         // todo : create function that sets these variables
         ShaderManager::getInstance()->getShader("shader_model").setMat4("projection", projection);
         ShaderManager::getInstance()->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
-        model = glm::translate(model, glm::vec3(0.0f, 2.0f, 0.0));
+        model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
         ShaderManager::getInstance()->getShader("shader_model").setMat4("model", model);
         cyborg.Draw(ShaderManager::getInstance()->getShader("shader_model"));

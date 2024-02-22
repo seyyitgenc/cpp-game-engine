@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "util/log.hpp"
 #include <algorithm>
+
 class CameraManager
 {
 public:
@@ -66,6 +67,7 @@ public:
         if (it != _cameras.end())
         {
             activeCamera = it->second.get();
+            activeCamera->setLastMouse(true);
             Log::write(
                 Log::Debug,
                 LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_NEXT_CAMERA "),
@@ -86,6 +88,7 @@ public:
         {
             it--;
             activeCamera = it->second.get();
+            activeCamera->setLastMouse(true);
             Log::write(
                 Log::Debug,
                 LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> '"),
@@ -99,9 +102,6 @@ public:
                 YELLOW_TEXT("There is no camera on left\n"));
         }
     }
-    // todo: get currently active camera here
-    // todo: get next cam here
-    // todo: get prev cam here
 private:
     [[nodiscard]] bool isCameraExist(const std::string& name){
     return _cameras.find(name) != _cameras.end();

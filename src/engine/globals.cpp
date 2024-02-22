@@ -100,7 +100,9 @@ void InitShaders(){
         FileSystem::getPath("shaders/red.fs"));
 }
 void InitCameras(){
-    CameraManager::getInstance()->addCamera("scene_cam");
-    CameraManager::getInstance()->addCamera("test_cam");
-    CameraManager::getInstance()->addCamera("test_cam2");
+    CameraManager::getInstance()->addCamera("scene_cam",glm::vec3{0.0f,0.0f,2.0f});
+    CameraManager::getInstance()->addCamera("test_cam",glm::vec3{1.0f,1.0f,1.0f});
+    CameraManager::getInstance()->addCamera("test_cam2",glm::vec3{-1.0f,-1.0f,-1.0f});
+    CameraManager::getInstance()->addCamera("test_cam3",glm::vec3{-4.0f,0.0f,5.0f});
+    CameraManager::getInstance()->addCamera("test_cam4",glm::vec3{-3.0f,2.0f,2.0f});
 }
