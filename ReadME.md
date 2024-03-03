@@ -31,6 +31,14 @@
 - ![Log](/screenshots/colored_log.png)
 - [x] Custom Model Loading
 - [x] Stopwatch
+- [ ] Different Materials (wood, metal, rock etc...)
+- [ ] Directional Lighting
+- [ ] Birectional Lighting
+- [ ] Multiple Point Lights
+- [ ] Simple Shadows
+- [ ] Framebuffers (gBuffer, colorBuffer etc...)
+- [ ] Debugging Framebuffers
+- [ ] Deferred Shading
 - [ ] Input Manager
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
@@ -38,7 +46,3 @@
 - [ ] Scene Editor Tool
 - [ ] Gizmos (translate/scale/rotate)
 - [ ] Instanced Rendering
-- [ ] Directional Lighting
-- [ ] Birectional Lighting
-- [ ] Multiple Point Lights
-- [ ] Simple Shadows

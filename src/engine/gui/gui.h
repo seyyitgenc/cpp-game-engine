@@ -34,7 +34,7 @@ namespace Gui{
                 
                 if (ImGui::BeginTable("tbl_shaders", columnCount))
                 {
-                    for (int index = 0; auto &&it : ShaderManager::getInstance()->get_shader_list())
+                    for (int index = 0; auto &&it : gShaderManager->get_shader_list())
                     {
                         ImGui::TableNextColumn();
                         ImVec2 pos = ImGui::GetCursorPos();
@@ -50,7 +50,7 @@ namespace Gui{
                         // note: temporary solution
                         ImGui::SetCursorPos({pos.x + padding / 2,pos.y + padding / 2});
 
-                        ImGui::Image((void*)(intptr_t)TextureManager::getInstance()->getTextureId("file-icon"), {THUMBNAIL_SIZE, THUMBNAIL_SIZE});
+                        ImGui::Image((void*)(intptr_t)gTextureManager->getTextureId("file-icon"), {THUMBNAIL_SIZE, THUMBNAIL_SIZE});
 
                         ImGui::SetCursorPos({pos.x,pos.y + cellSize + 2});
                         ImGui::TextWrapped("%s",it.first.c_str());
@@ -89,11 +89,11 @@ namespace Gui{
                 ImGui::EndChild();
             }
             if (ImGui::Button("Reload")) {
-                ShaderManager::getInstance()->reloadShader(shaderName);
+                gShaderManager->reloadShader(shaderName);
             }
             ImGui::SameLine();
             if (ImGui::Button("Reload All Shaders")) {
-                ShaderManager::getInstance()->reloadAllShaders();
+                gShaderManager->reloadAllShaders();
             }
             
             ImGui::EndGroup();

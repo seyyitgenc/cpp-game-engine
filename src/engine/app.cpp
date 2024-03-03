@@ -19,7 +19,7 @@ App::App() { }
 App::~App() { this->clean(); }
  
 // void init_shader_values(const std::string &name){
-//     Shader shader = ShaderManager::getInstance()->get_shader(name);
+//     Shader shader = gShaderManager->get_shader(name);
 //     shader.bind();
 //     // shader.setMat4("projection", projection);
 //     shader.setMat4("view", camera.GetViewMatrix());
@@ -46,18 +46,17 @@ void App::run() {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
 
-    CameraManager::getInstance()->setActiveCamera(CameraManager::getInstance()->getCamera("scene_cam"));
+    gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
 
-    t1.start();
     while (!glfwWindowShouldClose(gWindow))
     {
-        camRef = CameraManager::getInstance()->getActiveCamera();
+        camRef = gCameraManager->getActiveCamera();
 
         // per-frame time logic
         // --------------------
-        auto dtMs = t1.getElapsedTime<float>();
-        deltaTime = dtMs;
-        // std::cout << "dtMs : " << dtMs << std::endl;
+        auto dts = t1.getElapsedTime<float>();
+        deltaTime = dts;
+        std::cout << "dtMs : " << dts << std::endl;
         // update(deltaTime);
         t1.reset();
 
@@ -80,14 +79,14 @@ void App::run() {
         glm::mat4 model = glm::mat4(1.0f);
     
         // render the cameras
-        for (auto &&i : *CameraManager::getInstance()->getCameraList())
+        for (auto &&i : *gCameraManager->getCameraList())
         {
             if (i.second.get() != camRef)
             {
-                ShaderManager::getInstance()->bind("shader_model");
+                gShaderManager->bind("shader_model");
                 // todo : create function that sets these variables
-                ShaderManager::getInstance()->getShader("shader_model").setMat4("projection", projection);
-                ShaderManager::getInstance()->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
+                gShaderManager->getShader("shader_model").setMat4("projection", projection);
+                gShaderManager->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
                 model = glm::inverse(i.second->GetViewMatrix());
 
                 model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
@@ -97,33 +96,33 @@ void App::run() {
                 model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
                 model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
                 
-                ShaderManager::getInstance()->getShader("shader_model").setMat4("model", model);
-                camera.Draw(ShaderManager::getInstance()->getShader("shader_model"));
-                ShaderManager::getInstance()->unbind();
+                gShaderManager->getShader("shader_model").setMat4("model", model);
+                camera.Draw(gShaderManager->getShader("shader_model"));
+                gShaderManager->unbind();
             }
         }
 
         model = glm::mat4(1.0f);
-        ShaderManager::getInstance()->bind("shader_model");
+        gShaderManager->bind("shader_model");
         // todo : create function that sets these variables
-        ShaderManager::getInstance()->getShader("shader_model").setMat4("projection", projection);
-        ShaderManager::getInstance()->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->getShader("shader_model").setMat4("projection", projection);
+        gShaderManager->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        ShaderManager::getInstance()->getShader("shader_model").setMat4("model", model);
-        cyborg.Draw(ShaderManager::getInstance()->getShader("shader_model"));
-        ShaderManager::getInstance()->unbind();
+        gShaderManager->getShader("shader_model").setMat4("model", model);
+        cyborg.Draw(gShaderManager->getShader("shader_model"));
+        gShaderManager->unbind();
 
         // note : i can use it like this aswell
-        ShaderManager::getInstance()->bind("shader_red_box");
-        ShaderManager::getInstance()->getShader("shader_red_box").setMat4("projection", projection);
-        ShaderManager::getInstance()->getShader("shader_red_box").setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->bind("shader_red_box");
+        gShaderManager->getShader("shader_red_box").setMat4("projection", projection);
+        gShaderManager->getShader("shader_red_box").setMat4("view", camRef->GetViewMatrix());
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(2.0f));
-        ShaderManager::getInstance()->getShader("shader_red_box").setMat4("model", model);
-        plane.Draw(ShaderManager::getInstance()->getShader("shader_red_box"));
-        ShaderManager::getInstance()->unbind();
+        gShaderManager->getShader("shader_red_box").setMat4("model", model);
+        plane.Draw(gShaderManager->getShader("shader_red_box"));
+        gShaderManager->unbind();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);
@@ -135,14 +134,14 @@ void App::run() {
 // ----------
 void App::processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && !is_left_pressed){
-        CameraManager::getInstance()->setPrevCamera();
+        gCameraManager->setPrevCamera();
         is_left_pressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_RELEASE){
         is_left_pressed = false;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS && !is_right_pressed){
-        CameraManager::getInstance()->setNextCamera();
+        gCameraManager->setNextCamera();
         is_right_pressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_RELEASE){
@@ -162,7 +161,7 @@ void App::processInput(GLFWwindow* window) {
     
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
     {
-        ShaderManager::getInstance()->reloadAllShaders();
+        gShaderManager->reloadAllShaders();
     }
 
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !is_j_pressed)

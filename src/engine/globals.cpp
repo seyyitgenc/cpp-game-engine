@@ -4,12 +4,17 @@
 #include <stb_image.h>
     
 GLFWwindow *gWindow;
+
 bool gEditModeEnabled;
 bool gInitGlobals();
 void InitShaders();
 void InitTextures();
 void InitCameras();
 // Global variable initalization and backend setup
+
+TextureManager   *gTextureManager   = nullptr;
+ShaderManager    *gShaderManager    = nullptr;
+CameraManager    *gCameraManager    = nullptr;
 
 bool gInitGlobals() {
     Log::setLevel(Log::Debug);
@@ -72,37 +77,40 @@ bool gInitGlobals() {
     return true;
 }
 void InitTextures(){
-    TextureManager::getInstance()->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), ICON);
+    gTextureManager = TextureManager::getInstance(); 
+    gTextureManager->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), ICON);
 }
 
 void InitShaders(){
-    ShaderManager::getInstance()->addShader(
+    gShaderManager = ShaderManager::getInstance();
+    gShaderManager->addShader(
         "shader_model",
         FileSystem::getPath("shaders/basic_model.vs"),
         FileSystem::getPath("shaders/basic_model.fs"));
-    ShaderManager::getInstance()->getShader("shader_model").getShaderInfo().description = ("testing this thing .");
-    ShaderManager::getInstance()->addShader(
+    gShaderManager->getShader("shader_model").getShaderInfo().description = ("testing this thing .");
+    gShaderManager->addShader(
         "shader_texture",
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
-    ShaderManager::getInstance()->addShader(
+    gShaderManager->addShader(
         "shader_raythisshaderhasextremelylongname",
         FileSystem::getPath("shaders/ray.vs"),
         FileSystem::getPath("shaders/ray.gs"),
         FileSystem::getPath("shaders/ray.fs"));
-    ShaderManager::getInstance()->addShader(
+    gShaderManager->addShader(
         "shader_white_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/white.fs"));
-    ShaderManager::getInstance()->addShader(
+    gShaderManager->addShader(
         "shader_red_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/red.fs"));
 }
 void InitCameras(){
-    CameraManager::getInstance()->addCamera("scene_cam",glm::vec3{0.0f,0.0f,2.0f});
-    CameraManager::getInstance()->addCamera("test_cam",glm::vec3{1.0f,1.0f,1.0f});
-    CameraManager::getInstance()->addCamera("test_cam2",glm::vec3{-1.0f,-1.0f,-1.0f});
-    CameraManager::getInstance()->addCamera("test_cam3",glm::vec3{-4.0f,0.0f,5.0f});
-    CameraManager::getInstance()->addCamera("test_cam4",glm::vec3{-3.0f,2.0f,2.0f});
+    gCameraManager = CameraManager::getInstance();
+    gCameraManager->addCamera("scene_cam",glm::vec3{0.0f,0.0f,2.0f});
+    gCameraManager->addCamera("test_cam",glm::vec3{1.0f,1.0f,1.0f});
+    gCameraManager->addCamera("test_cam2",glm::vec3{-1.0f,-1.0f,-1.0f});
+    gCameraManager->addCamera("test_cam3",glm::vec3{-4.0f,0.0f,5.0f});
+    gCameraManager->addCamera("test_cam4",glm::vec3{-3.0f,2.0f,2.0f});
 }
