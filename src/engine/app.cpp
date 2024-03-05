@@ -7,6 +7,7 @@
 #include "shader_manager.h"
 #include "util/stopwatch.hpp"
 #include "gui/gui.h"
+#include "light.h"
 
 // todo: rename some of the functions of Camera and CameraMananger.
 
@@ -39,15 +40,25 @@ void App::run() {
     planeTextures.push_back(std::pair("bricks2.png","texture_diffuse"));
     planeTextures.push_back(std::pair("brickwall_normal.jpg","texture_normal"));
     Model plane(planeVertices,planeIndices);
+    Model cube(cubeVertices);
     Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
     // Model cube(cubeVertices);
     Model cyborg(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
-
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
 
     gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
 
+    auto testingProp1 = std::make_unique<PointLightProperties>();
+    testingProp1->color = glm::vec3{1,1,1};
+    testingProp1->position = glm::vec3{-3.0f, 1.0f, 2.0f};
+    testingProp1->constant = 1.0f;
+    testingProp1->linear = 0.09f;
+    testingProp1->quadratic = 0.032f;
+
+    auto pLight = Light<LightSpec::Point>(std::move(testingProp1));
+
+    // testLights();
     while (!glfwWindowShouldClose(gWindow))
     {
         camRef = gCameraManager->getActiveCamera();
@@ -56,7 +67,7 @@ void App::run() {
         // --------------------
         auto dts = t1.getElapsedTime<float>();
         deltaTime = dts;
-        std::cout << "dtMs : " << dts << std::endl;
+        // std::cout << "dtMs : " << dts << std::endl;
         // update(deltaTime);
         t1.reset();
 
@@ -85,8 +96,8 @@ void App::run() {
             {
                 gShaderManager->bind("shader_model");
                 // todo : create function that sets these variables
-                gShaderManager->getShader("shader_model").setMat4("projection", projection);
-                gShaderManager->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
+                gShaderManager->getShader("shader_model")->setMat4("projection", projection);
+                gShaderManager->getShader("shader_model")->setMat4("view", camRef->GetViewMatrix());
                 model = glm::inverse(i.second->GetViewMatrix());
 
                 model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
@@ -96,8 +107,8 @@ void App::run() {
                 model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
                 model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
                 
-                gShaderManager->getShader("shader_model").setMat4("model", model);
-                camera.Draw(gShaderManager->getShader("shader_model"));
+                gShaderManager->getShader("shader_model")->setMat4("model", model);
+                camera.Draw(*gShaderManager->getShader("shader_model"));
                 gShaderManager->unbind();
             }
         }
@@ -105,25 +116,49 @@ void App::run() {
         model = glm::mat4(1.0f);
         gShaderManager->bind("shader_model");
         // todo : create function that sets these variables
-        gShaderManager->getShader("shader_model").setMat4("projection", projection);
-        gShaderManager->getShader("shader_model").setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->getShader("shader_model")->setMat4("projection", projection);
+        gShaderManager->getShader("shader_model")->setMat4("view", camRef->GetViewMatrix());
         model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        gShaderManager->getShader("shader_model").setMat4("model", model);
-        cyborg.Draw(gShaderManager->getShader("shader_model"));
+        gShaderManager->getShader("shader_model")->setMat4("model", model);
+        cyborg.Draw(*gShaderManager->getShader("shader_model"));
+        gShaderManager->unbind();
+
+        model = glm::mat4(1.0f);
+        gShaderManager->bind("point_light");
+        pLight.setUniforms("point_light");
+        // todo : create function that sets these variables
+        gShaderManager->getShader("point_light")->setMat4("projection", projection);
+        gShaderManager->getShader("point_light")->setMat4("view", camRef->GetViewMatrix());
+        model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 0.0));
+        model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
+        gShaderManager->getShader("point_light")->setMat4("model", model);
+        cyborg.Draw(*gShaderManager->getShader("point_light"));
+        gShaderManager->unbind();
+        
+        
+        // note : i can use it like this aswell
+        gShaderManager->bind("shader_red_box");
+        gShaderManager->getShader("shader_red_box")->setMat4("projection", projection);
+        gShaderManager->getShader("shader_red_box")->setMat4("view", camRef->GetViewMatrix());
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
+        model = glm::scale(model, glm::vec3(2.0f));
+        gShaderManager->getShader("shader_red_box")->setMat4("model", model);
+        plane.Draw(*gShaderManager->getShader("shader_red_box"));
         gShaderManager->unbind();
 
         // note : i can use it like this aswell
         gShaderManager->bind("shader_red_box");
-        gShaderManager->getShader("shader_red_box").setMat4("projection", projection);
-        gShaderManager->getShader("shader_red_box").setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->getShader("shader_red_box")->setMat4("projection", projection);
+        gShaderManager->getShader("shader_red_box")->setMat4("view", camRef->GetViewMatrix());
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
-        model = glm::scale(model, glm::vec3(2.0f));
-        gShaderManager->getShader("shader_red_box").setMat4("model", model);
-        plane.Draw(gShaderManager->getShader("shader_red_box"));
+        model = glm::translate(model, pLight.getProperties<PointLightProperties>()->position);
+        model = glm::scale(model, glm::vec3(0.25f));
+        gShaderManager->getShader("shader_red_box")->setMat4("model", model);
+        cube.Draw(*gShaderManager->getShader("shader_red_box"));
         gShaderManager->unbind();
-
+        
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(gWindow);
         glfwPollEvents();

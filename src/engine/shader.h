@@ -36,6 +36,7 @@ public:
 
     void setMat4(const std::string &name, glm::mat4 value) const;
     void reload();
+    void use();
 private:
     std::string readFile(const std::string &path);
     void compileShader(const char*  code, GLenum type);

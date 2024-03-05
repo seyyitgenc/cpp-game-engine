@@ -34,7 +34,7 @@
 - [ ] Different Materials (wood, metal, rock etc...)
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
-- [ ] Multiple Point Lights
+- [x] Multiple Point Lights (WIP)
 - [ ] Simple Shadows
 - [ ] Framebuffers (gBuffer, colorBuffer etc...)
 - [ ] Debugging Framebuffers

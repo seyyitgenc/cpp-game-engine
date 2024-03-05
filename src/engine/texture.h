@@ -66,8 +66,8 @@ public:
     [[nodiscard]] int getTextureId(const std::string &name){
         if(!isTextureExist(name)){
             Log::write(
-                Log::Warning,
-                LIGHT_RED_TEXT("WARNING::TEXTURE_MANAGER::GET_TEXTURE_ID "), 
+                Log::Fatal,
+                LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE_ID "), 
                 YELLOW_TEXT("Your tried to get texture_id that doesn't exists. Name you provided is : '"),
                 YELLOW_TEXT(name), 
                 YELLOW_TEXT("' due to that function returned -1.\n"));

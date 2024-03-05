@@ -87,7 +87,7 @@ void InitShaders(){
         "shader_model",
         FileSystem::getPath("shaders/basic_model.vs"),
         FileSystem::getPath("shaders/basic_model.fs"));
-    gShaderManager->getShader("shader_model").getShaderInfo().description = ("testing this thing .");
+    gShaderManager->getShader("shader_model")->getShaderInfo().description = ("testing this thing .");
     gShaderManager->addShader(
         "shader_texture",
         FileSystem::getPath("shaders/basic_texture.vs"),
@@ -105,6 +105,11 @@ void InitShaders(){
         "shader_red_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/red.fs"));
+    gShaderManager->addShader(
+        "point_light",
+        FileSystem::getPath("shaders/point_light.vs"),
+        FileSystem::getPath("shaders/point_light.fs"));
+
 }
 void InitCameras(){
     gCameraManager = CameraManager::getInstance();
