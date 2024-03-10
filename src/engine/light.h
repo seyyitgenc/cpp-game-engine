@@ -88,14 +88,14 @@ template<> void Light <LightSpec::Directional>::setUniforms(const std::string &n
 
 template<> void Light <LightSpec::Point>::setUniforms(const std::string &name){
     Shader* shader = gShaderManager->getShader(name);
-    shader->use();
-
-    auto prop = static_cast<PointLightProperties*>(lightProp.get());
-    shader->setVec3("light.position",   prop->position);
-    shader->setVec3("light.color",      prop->color);
-    shader->setFloat("light.constant",  prop->constant);
-    shader->setFloat("light.linear",    prop->linear);
-    shader->setFloat("light.quadratic", prop->quadratic);
+    if (gShaderManager->bind(name)){
+        auto prop = static_cast<PointLightProperties*>(lightProp.get());
+        shader->setVec3("light.position",   prop->position);
+        shader->setVec3("light.color",      prop->color);
+        shader->setFloat("light.constant",  prop->constant);
+        shader->setFloat("light.linear",    prop->linear);
+        shader->setFloat("light.quadratic", prop->quadratic);
+    }
     // std::cout << "----- properties -----" << std::endl;
     // std::cout << "position "<< prop->position.x << " " << prop->position.y << " " << prop->position.z << std::endl;
     // std::cout << "color "<< prop->color.x << " " << prop->color.y << " " << prop->color.z << std::endl;

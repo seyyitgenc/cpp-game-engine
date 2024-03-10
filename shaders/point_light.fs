@@ -46,6 +46,6 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), shininess);
     vec3 specular = spec * vec3(texture(texture_specular1, TexCoords));
 
-    vec3 result = attenuation * (ambient + diffuse + specular);
+    vec3 result = (ambient + diffuse + specular);
     FragColor = vec4(result, 1.0f);
 }

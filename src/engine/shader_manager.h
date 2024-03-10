@@ -22,7 +22,19 @@ public:
         return _instance;
     }
 
-    void bind(const std::string &name){glUseProgram(_shaders[name]->getShaderInfo().ID);}
+    [[nodiscard]] bool bind(const std::string &name){
+        if (!isShaderExist(name)){
+            Log::write(
+                Log::Fatal, 
+                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::BIND "),
+                YELLOW_TEXT("Shader with name : "),
+                YELLOW_TEXT(name),
+                YELLOW_TEXT(" doesn't exist returning false\n"));
+            return false;
+        }
+        glUseProgram(_shaders[name]->getShaderInfo().ID);
+        return true;
+    }
     void unbind(){glUseProgram(0);}
     void reloadShader(const std::string &name){    
         auto found = _shaders.find(name);
@@ -56,7 +68,7 @@ public:
                 LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::GET_SHADER "),
                 YELLOW_TEXT("Shader with name : "),
                 YELLOW_TEXT(name),
-                YELLOW_TEXT("doesn't exist returning nullptr\n"));
+                YELLOW_TEXT(" doesn't exist returning nullptr\n"));
             return nullptr;
         }
         

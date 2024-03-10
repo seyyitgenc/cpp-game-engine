@@ -29,12 +29,12 @@
 - ![Model](/screenshots/model_loading.png)
 - [x] Logger(With colors)
 - ![Log](/screenshots/colored_log.png)
-- [x] Custom Model Loading
+- [x] Custom Model Loading (Deprecated. Instead of hard coding models i prefer using premade models. Such as cube/plane)
 - [x] Stopwatch
 - [ ] Different Materials (wood, metal, rock etc...)
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
-- [x] Multiple Point Lights (WIP)
+- [ ] Multiple Point Lights (WIP)
 - [ ] Simple Shadows
 - [ ] Framebuffers (gBuffer, colorBuffer etc...)
 - [ ] Debugging Framebuffers

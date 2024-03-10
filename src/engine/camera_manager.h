@@ -91,7 +91,7 @@ public:
             activeCamera->setLastMouse(true);
             Log::write(
                 Log::Debug,
-                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> '"),
+                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_PREV_CAMERA"), YELLOW_TEXT("Switched camera to -> '"),
                 YELLOW_TEXT(it->first),
                 YELLOW_TEXT("'\n"));
         }

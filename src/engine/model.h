@@ -25,21 +25,6 @@ public:
     Model(const std::string path){
         loadModel(path);
     };
-    // model constructor for custom model if normal mapping/indices and textures are not required
-    Model(std::vector<float> &v){
-        loadModel(v);
-    };
-    // model constructor for custom models if normal mapping is not required
-    Model(std::vector<float> verticies, std::vector<unsigned int> 
-    indices, std::vector<std::pair<std::string,TextureType>> textures = {}){
-        loadModel(verticies, indices, textures);
-    };
-    // model constructor for custom model if normal mapping is required
-    Model(std::vector<float> verticies, std::vector<unsigned int> 
-    indices, std::vector<std::pair<std::string,TextureType>> textures,  std::vector<float> normals){
-        // loadModel(vertices, indices, textures, normals);
-    };
-    
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
