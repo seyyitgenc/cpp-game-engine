@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include "object.h"
 #include "globals.h"
 
 #include <glm/glm.hpp>

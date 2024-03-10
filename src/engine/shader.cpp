@@ -119,6 +119,10 @@ void Shader::reload(){
     glDeleteProgram(_info.ID);
     buildShader();
 }
+
+void Shader::use(){
+    glUseProgram(_info.ID);
+}
 void Shader::setBool(const std::string &name, bool value) const{
     glUniform1i(glGetUniformLocation(_info.ID,name.c_str()), value);
 }

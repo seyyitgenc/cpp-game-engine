@@ -22,4 +22,8 @@ constexpr int TILE_HEIGHT = 32;
 extern GLFWwindow *gWindow;
 extern bool gEditModeEnabled;
 
+extern TextureManager   *gTextureManager;
+extern ShaderManager    *gShaderManager;
+extern CameraManager    *gCameraManager;
+
 extern bool gInitGlobals();

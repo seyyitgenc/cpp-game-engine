@@ -22,7 +22,19 @@ public:
         return _instance;
     }
 
-    void bind(const std::string &name){glUseProgram(_shaders[name]->getShaderInfo().ID);}
+    [[nodiscard]] bool bind(const std::string &name){
+        if (!isShaderExist(name)){
+            Log::write(
+                Log::Fatal, 
+                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::BIND "),
+                YELLOW_TEXT("Shader with name : "),
+                YELLOW_TEXT(name),
+                YELLOW_TEXT(" doesn't exist returning false\n"));
+            return false;
+        }
+        glUseProgram(_shaders[name]->getShaderInfo().ID);
+        return true;
+    }
     void unbind(){glUseProgram(0);}
     void reloadShader(const std::string &name){    
         auto found = _shaders.find(name);
@@ -48,12 +60,26 @@ public:
             _shaders[name] = std::make_unique<Shader>(Shader(vertex_path, geometry_path, fragment_path));
         //? can add Shader return type for this function
     };
-    Shader& getShader(const std::string &name){
-        return *_shaders[name];
+    [[nodiscard]] Shader* getShader(const std::string &name){
+        if (!isShaderExist(name))
+        {
+            Log::write(
+                Log::Fatal, 
+                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::GET_SHADER "),
+                YELLOW_TEXT("Shader with name : "),
+                YELLOW_TEXT(name),
+                YELLOW_TEXT(" doesn't exist returning nullptr\n"));
+            return nullptr;
+        }
+        
+        return _shaders[name].get();
     };
     std::unordered_map<std::string, std::unique_ptr<Shader>> &get_shader_list(){return _shaders;}
 private:
     ShaderManager() = default;
+    [[nodiscard]] bool isShaderExist(const std::string &name){
+        return _shaders.find(name) != _shaders.end();
+    }
     static ShaderManager* _instance;
     std::unordered_map<std::string, std::unique_ptr<Shader>> _shaders;
 };

@@ -20,14 +20,14 @@ inline void mouse_callback_edit(GLFWwindow *window, double xpos, double ypos)
 inline void scroll_callback(GLFWwindow *window, double xpos, double ypos)
 {
 	if (!gEditModeEnabled){
-		CameraManager::getInstance()->getActiveCamera()->processMouseScroll(xpos, ypos);
+		gCameraManager->getActiveCamera()->processMouseScroll(xpos, ypos);
 	}
   
 }
 inline void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
 	if (!gEditModeEnabled){
-		CameraManager::getInstance()->getActiveCamera()->processMouseMovement(xpos, ypos);
+		gCameraManager->getActiveCamera()->processMouseMovement(xpos, ypos);
 	}
 }
 
