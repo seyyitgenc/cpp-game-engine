@@ -66,27 +66,27 @@ private:
             "there is no implementation for this LightSpec");
     }
 };
-template<> void Light <LightSpec::Directional>::setUniforms(const std::string &name){
-    std::cout << " this is from Directional Set Uniforms" << std::endl;
-    Shader* shader =  gShaderManager->getShader(name);
-    shader->use();
-    // upcasting to directional light
-    auto prop = static_cast<DirectionalLightProperties*>(lightProp.get());
-    shader->setVec3("light.direction",  prop->direction);
-    shader->setVec3("light.color",      prop->color);
-    shader->setFloat("light.constant",  prop->constant);
-    shader->setFloat("light.linear",    prop->linear);
-    shader->setFloat("light.quadratic", prop->quadratic);
-
-    std::cout << "----- properties -----" << std::endl;
-    std::cout <<"direction " << prop->direction.x << " " << prop->direction.y << " " << prop->direction.z << std::endl;
-    std::cout <<"color " << prop->color.x << " " << prop->color.y << " " << prop->color.z << std::endl;
-    std::cout << prop->constant << std::endl;
-    std::cout << prop->linear << std::endl;
-    std::cout << prop->quadratic << std::endl;
+template<> inline void Light <LightSpec::Directional>::setUniforms(const std::string &name){
+    Shader* shader = gShaderManager->getShader(name);
+    if (gShaderManager->bind(name)){
+        // upcasting to directional light
+        auto prop = static_cast<DirectionalLightProperties*>(lightProp.get());
+        shader->setVec3("light.direction",  prop->direction);
+        shader->setVec3("light.color",      prop->color);
+        shader->setFloat("light.constant",  prop->constant);
+        shader->setFloat("light.linear",    prop->linear);
+        shader->setFloat("light.quadratic", prop->quadratic);
+        shader->setFloat("shininess",16);
+    }
+    // std::cout << "----- properties -----" << std::endl;
+    // std::cout <<"direction " << prop->direction.x << " " << prop->direction.y << " " << prop->direction.z << std::endl;
+    // std::cout <<"color " << prop->color.x << " " << prop->color.y << " " << prop->color.z << std::endl;
+    // std::cout << prop->constant << std::endl;
+    // std::cout << prop->linear << std::endl;
+    // std::cout << prop->quadratic << std::endl;
 }
 
-template<> void Light <LightSpec::Point>::setUniforms(const std::string &name){
+template<> inline void Light <LightSpec::Point>::setUniforms(const std::string &name){
     Shader* shader = gShaderManager->getShader(name);
     if (gShaderManager->bind(name)){
         auto prop = static_cast<PointLightProperties*>(lightProp.get());
@@ -95,6 +95,7 @@ template<> void Light <LightSpec::Point>::setUniforms(const std::string &name){
         shader->setFloat("light.constant",  prop->constant);
         shader->setFloat("light.linear",    prop->linear);
         shader->setFloat("light.quadratic", prop->quadratic);
+        shader->setFloat("shininess",16);
     }
     // std::cout << "----- properties -----" << std::endl;
     // std::cout << "position "<< prop->position.x << " " << prop->position.y << " " << prop->position.z << std::endl;
@@ -105,7 +106,7 @@ template<> void Light <LightSpec::Point>::setUniforms(const std::string &name){
 
 }
 // TODO: take shader pointer as variable 
-template<> void Light <LightSpec::Spot>::setUniforms(const std::string &name){
+template<> inline void Light <LightSpec::Spot>::setUniforms(const std::string &name){
     std::cout << " this is from Spot Set Uniforms" << std::endl;
     Shader* shader = gShaderManager->getShader(name);
     // gShaderManager->bind(name);
@@ -129,7 +130,7 @@ template<> void Light <LightSpec::Spot>::setUniforms(const std::string &name){
     std::cout << prop->quadratic << std::endl;
 }
 
-void testLights(){
+inline void testLights(){
     auto testingProp1 = std::make_unique<DirectionalLightProperties>();
     testingProp1->color = glm::vec3{1,1,1};
     testingProp1->direction = glm::vec3{1,0,2};

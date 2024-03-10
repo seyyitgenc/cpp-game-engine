@@ -31,6 +31,8 @@
 - ![Log](/screenshots/colored_log.png)
 - [x] Custom Model Loading (Deprecated. Instead of hard coding models i prefer using premade models. Such as cube/plane)
 - [x] Stopwatch
+- [ ] Renderer
+- [ ] Set uniforms via GUI
 - [ ] Different Materials (wood, metal, rock etc...)
 - [ ] Directional Lighting
 - [ ] Birectional Lighting
