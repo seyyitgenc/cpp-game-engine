@@ -17,16 +17,16 @@ class Mesh
 public:
     std::vector<Vertex> verticies;
     std::vector<unsigned int> indices;
-    std::vector<Texture> textures;
+    std::vector<std::string> texture_names;
     bool hasIndices;
     // bool hasTextures;
     bool hasNormals;
     bool hasTexCoords;
         unsigned int VAO, VBO, EBO;
     public:
-        Mesh(std::vector<Vertex> verticies , std::vector<unsigned int> indices, std::vector<Texture> textures,
+        Mesh(std::vector<Vertex> verticies , std::vector<unsigned int> indices, std::vector<std::string> texture_names,
         bool hasIndices = false, bool hasNormals = false, bool hasTexCoords = false) 
-        : verticies(verticies), indices(indices), textures(textures), hasIndices(hasIndices), hasNormals(hasNormals), hasTexCoords(hasTexCoords) {
+        : verticies(verticies), indices(indices), texture_names(texture_names), hasIndices(hasIndices), hasNormals(hasNormals), hasTexCoords(hasTexCoords) {
             setupMesh();
         }
         ~Mesh() = default;
@@ -38,13 +38,13 @@ public:
             unsigned int specularNr = 1;
             unsigned int normalNr = 1;
             unsigned int depthNr = 1;
-            for (int i = 0; i < textures.size(); i++)
+            for (int i = 0; i < texture_names.size(); i++)
             {
                 glActiveTexture(GL_TEXTURE0 + i);
                 std::string number;
-
+                Texture *currentText = gTextureManager->getTexture(texture_names[i]);
                 std::string name; 
-                switch (textures[i].type)
+                switch (currentText->type)
                 {
                 case DIFFUSE:
                     name = "texture_diffuse";
@@ -66,7 +66,7 @@ public:
                     break;
                 }
                 shader.setInt(name + number, i);
-                glBindTexture(GL_TEXTURE_2D, textures[i].id);
+                glBindTexture(GL_TEXTURE_2D, currentText->ID);
             }
         }
                 

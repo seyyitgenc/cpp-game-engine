@@ -38,7 +38,7 @@ public:
                 "\n");
             return;
         }
-        _cameras[name] = std::make_unique<Camera>(Camera(position, up, yaw, pitch));
+        _cameras[name] = std::make_unique<Camera>(position, up, yaw, pitch);
     }
     // this function may return nullptr.
     // handling this is users responsibility

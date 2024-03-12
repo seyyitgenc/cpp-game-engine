@@ -51,14 +51,15 @@ public:
         for (auto &&i : _shaders)
             i.second->reload();
     };
+    // todo: add return value bool
     void addShader(const std::string &name, const std::string &vertex_path, const std::string &fragment_path){
         addShader(name,vertex_path, "", fragment_path);
     };
+    // todo: add return value bool
     void addShader(const std::string &name, const std::string &vertex_path, const std::string &geometry_path,std::string const &fragment_path){
         auto found = _shaders.find(name);
         if (found == _shaders.end())
-            _shaders[name] = std::make_unique<Shader>(Shader(vertex_path, geometry_path, fragment_path));
-        //? can add Shader return type for this function
+            _shaders[name] = std::make_unique<Shader>(vertex_path, geometry_path, fragment_path);
     };
     [[nodiscard]] Shader* getShader(const std::string &name){
         if (!isShaderExist(name))

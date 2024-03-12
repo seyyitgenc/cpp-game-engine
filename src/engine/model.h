@@ -16,8 +16,6 @@
 #include <assimp/Importer.hpp>
 #include <string>
 
-unsigned int TextureFromFile(const char* path, const std::string& directory);
-
 class Model
 {
 public:
@@ -36,71 +34,6 @@ private:
 
 private:
     std::string directory;
-    // ----------------------------------------------------------------
-    // this will load custom models without normal mapping and indices
-    // ----------------------------------------------------------------
-    void loadModel(std::vector<float> &v){
-        std::vector<Vertex> verticies;
-        
-        for (int i = 0; i < v.size(); i += 3)
-        {
-            Vertex vertex{};
-            vertex.Position = glm::vec3(v[i], v[i + 1], v[i + 2]);
-            verticies.push_back(vertex);
-        }
-        // FIXME : this is a temporary solution  
-        std::vector<unsigned int> indices;
-        std::vector<Texture> textures;
-
-        Mesh myMesh(verticies, indices, textures);
-        meshes.push_back(myMesh);
-    }
-
-    // ----------------------------------------------------------------------
-    // this will load custom models with indices/texture but no normal mapping
-    // note : incoming texture files is structured like this :  {{"texture_diffuse.jpg","diffuse_texture"},{"texture_normal.jpg","normal_texture"}}
-    // ----------------------------------------------------------------------
-    void loadModel(std::vector<float>& vert, std::vector<unsigned int>& ind, std::vector<std::pair<std::string,TextureType>>& tex){
-        std::vector<Vertex> vertices;
-        std::vector<Texture> textures;
-
-        // FIXME:  this is temporary solution
-        // note: this will not handle theh different path textures
-        directory = FileSystem::getPath("resources/textures");
-        int stepSize = 5;
-        // we assume that incoming vertices array contains texcoords
-        for (int i = 0; i < vert.size(); i+=stepSize)
-        {
-            Vertex vertex{};
-            vertex.Position = glm::vec3(vert[i], vert[i + 1], vert[i + 2]);
-            vertex.TexCoords = glm::vec2(vert[i + 3], vert[i + 4]);
-            vertices.push_back(vertex);
-        }
-
-        for (int i = 0; i < tex.size(); i++)
-        {
-            Texture texture;
-            texture.id = TextureFromFile("bricks2.jpg", directory);
-            texture.path = tex[i].first;
-            texture.type = tex[i].second;
-            textures.push_back(texture);
-        }
-        for (unsigned int i = 0; i < textures.size(); i++)
-            Log::write(
-                Log::Debug,
-                LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MODEL "),
-                YELLOW_TEXT("Texture loaded -> "),
-                YELLOW_TEXT(textures[i].path), "\n");
-
-        Mesh myMesh(vertices, ind, textures, true,false, true);
-        
-        meshes.push_back(myMesh);
-    }
-    // ----------------------------------------------------------------------
-    // this will load custom models with indices/textures/normal mapping
-    // ----------------------------------------------------------------------
-    // void loadModel(std::vector<float>&v, std::vector<float>&i, std::vector<float>&t, const std::vector<float>&normals){
-    // }
 
     // ----------------------------------------------------------------
     // loads a model with supported ASSIMP extensions from file
@@ -136,7 +69,7 @@ private:
     Mesh processMesh(aiMesh* mesh, const aiScene* scene){
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        std::vector<Texture> textures;
+        std::vector<std::string> texture_names;
 
         bool hasTexCoords = false, hasNormals = false;
         // process vertices
@@ -184,90 +117,30 @@ private:
         if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            std::vector<Texture> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, DIFFUSE);
-            textures.insert(textures.end(),diffuseMaps.begin(),diffuseMaps.end());
-            std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, SPECULAR);
-            textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-            std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, NORMAL);
-            textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-            std::vector<Texture> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, HEIGHT);
-            textures.insert(textures.end(), heightMap.begin(), heightMap.end());    
+            std::vector<std::string> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, DIFFUSE);
+            texture_names.insert(texture_names.end(),diffuseMaps.begin(),diffuseMaps.end());
+            std::vector<std::string> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, SPECULAR);
+            texture_names.insert(texture_names.end(), specularMaps.begin(), specularMaps.end());
+            std::vector<std::string> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, NORMAL);
+            texture_names.insert(texture_names.end(), normalMaps.begin(), normalMaps.end());
+            std::vector<std::string> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, HEIGHT);
+            texture_names.insert(texture_names.end(), heightMap.begin(), heightMap.end());    
         }
-        Mesh lastMesh(vertices, indices, textures, true, hasNormals, hasTexCoords);
+        Mesh lastMesh(vertices, indices, texture_names, true, hasNormals, hasTexCoords);
         return lastMesh;
     }
-    std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType ownType){
-        std::vector<Texture> textures;
-        std::vector<Texture> textures_loaded;
-        for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
-        {
+    std::vector<std::string> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType myType){
+        // gTextureManager->addTexture()
+        std::vector<std::string> textures;
+        for (unsigned int i = 0; i < mat->GetTextureCount(type); i++){
             aiString str;
             mat->GetTexture(type, i, &str);
             bool skip = false;
-            for (unsigned int j = 0; j < textures_loaded.size(); j++)
-            {
-                if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
-                {
-                    textures.push_back(textures_loaded[j]);
-                    skip = true;
-                    break;
-                }
-            }
-            if (!skip)
-            {
-                Texture texture;
-                texture.id = TextureFromFile(str.C_Str(), directory);
-                // texture.type = typeName;
-                texture.path = str.C_Str();
-                textures.push_back(texture);
-                textures_loaded.push_back(texture);
-                Log::write(
-                    Log::Debug,
-                    LIGHT_MAGENTA_TEXT("DEBUG::MODEL::LOAD_MATERIAL_TEXTURE "),
-                    YELLOW_TEXT("Texture loaded -> "),
-                    YELLOW_TEXT(textures[i].path), "\n");
-            }
+            std::string path;
+            path = directory + '/' + str.C_Str(); // complete path to image
+            gTextureManager->addTexture(str.C_Str(), path, myType);
+            textures.push_back(str.C_Str());
         }
         return textures;
     }
 };
-
-// Loads texture from specified path
-inline unsigned int TextureFromFile(const char* path, const std::string& directory){
-    std::string filename = std::string(path);
-    filename = directory + '/' + filename; // complete path to image
-    unsigned int textureID = 0;
-    glGenTextures(1, &textureID);
-    int width = 0, height = 0, nrComponents = 0;
-    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
-    if (data)
-    {
-        GLenum format = 0;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if(nrComponents == 3)
-            format = GL_RGB;
-        else if(nrComponents == 4)
-            format = GL_RGBA;
-        
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    }
-    else{
-        Log::write(Log::Fatal,
-            LIGHT_RED_TEXT("FATAL::TEXTURE_FROM_FILE"),
-            YELLOW_TEXT("Texture failed to load at path : "),
-            YELLOW_TEXT(path), "\n");
-        stbi_image_free(data);
-    }
-
-    return textureID;
-}

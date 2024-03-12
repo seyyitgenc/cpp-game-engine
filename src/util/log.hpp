@@ -40,7 +40,7 @@ public:
             auto time_t_now = std::chrono::system_clock::to_time_t(now);
             auto local_time = std::localtime(&time_t_now);
             std::stringstream ss;
-            ss << "["<< std::put_time(local_time, "%Y-%m-%d %H:%M:%S") << "] ";
+            ss << "["<< std::put_time(local_time, "%H:%M:%S") << "] ";
             (std::cout << ss.str() << ... << args);
         }
     }
