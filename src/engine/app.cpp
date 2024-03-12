@@ -6,7 +6,6 @@
 #include "shader_manager.h"
 #include "util/stopwatch.hpp"
 #include "gui/gui.h"
-#include "light.h"
 
 // todo: rename some of the functions of Camera and CameraMananger.
 
@@ -33,44 +32,42 @@ App::~App() { this->clean(); }
 
 Stopwatch<> t1;
 
-float deltaTime = 0; // temporary solution
-
-void lightingPass(Light<LightSpec::Point> *light, Model *mod){
- if(gShaderManager->bind("shader_point_light")){
-        glm::mat4 model = glm::mat4(1.0f);
-        light->setUniforms("shader_point_light");
-        // todo : create function that sets these variables
-        // gShaderManager->getShader("shader_point_light")->setMat4("projection", projection);
-        // gShaderManager->getShader("shader_point_light")->setMat4("view", camRef->GetViewMatrix());
-        model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 0.0));
-        model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        gShaderManager->getShader("shader_point_light")->setMat4("model", model);
-        mod->Draw(*gShaderManager->getShader("shader_point_light"));
-        gShaderManager->unbind();
-    }
-}
+float deltaTime = 0; // note: temporary solution
 
 void App::run() {
     gInitGlobals();
     Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
     Model cube(FileSystem::getPath("resources/objects/Box/glTF-Binary/Box.glb"));
     Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
-    // Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
+    Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
     Model cyborg(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
+    
+    
+    GLint numUniforms = 0;
+    glGetProgramiv(gShaderManager->getShader("shader_directional_light")->getShaderInfo().ID, GL_ACTIVE_UNIFORMS, &numUniforms);
+    for(GLint i = 0; i < numUniforms; i++)
+    {
+        char buffer[128];
+        GLsizei length = 0;
+        GLint size = 0;
+        GLenum type = 0;
+        glGetActiveUniform(gShaderManager->getShader("shader_directional_light")->getShaderInfo().ID, i, sizeof(buffer), &length, &size, &type, buffer);
+        // std::cout << "Uniform name: " << buffer << ", type: " << getGLSLType(type) << std::endl;
+    }
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
 
     gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
 
-    auto testingProp1 = std::make_unique<PointLightProperties>();
-    testingProp1->color = glm::vec3{1,1,1};
-    testingProp1->position = glm::vec3{-3.0f, 1.0f, 2.0f};
-    testingProp1->constant = 1.0f;
-    testingProp1->linear = 0.09f;
-    testingProp1->quadratic = 0.032f;
-
-    auto pLight = Light<LightSpec::Point>(std::move(testingProp1));
+    auto dLightProp = std::make_unique<DirectionalLightProperties>();
+    dLightProp->color = glm::vec3{1,1,1};
+    dLightProp->direction = glm::vec3{-0.2,-1,-0.3};
+    dLightProp->constant = 1.0f;
+    dLightProp->linear = 0.09f;
+    dLightProp->quadratic = 0.032f;
+    
+    dLight = new Light<LightSpec::Directional>(std::move(dLightProp));
 
     // testLights();
     while (!glfwWindowShouldClose(gWindow))
@@ -153,28 +150,27 @@ void App::run() {
             gShaderManager->unbind();
         }
 
-        // note : i can use it like this aswell
-        if (gShaderManager->bind("shader_light_cube")){
-            gShaderManager->getShader("shader_light_cube")->setMat4("projection", projection);
-            gShaderManager->getShader("shader_light_cube")->setMat4("view", camRef->GetViewMatrix());
-            gShaderManager->getShader("shader_light_cube")->setVec3("color",pLight.getProperties<PointLightProperties>()->color);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, pLight.getProperties<PointLightProperties>()->position);
-            model = glm::scale(model, glm::vec3(0.25f));
-            gShaderManager->getShader("shader_light_cube")->setMat4("model", model);
-            cube.Draw(*gShaderManager->getShader("shader_light_cube"));
-            gShaderManager->unbind();
-        }
+        // if (gShaderManager->bind("shader_light_cube")){
+        //     gShaderManager->getShader("shader_light_cube")->setMat4("projection", projection);
+        //     gShaderManager->getShader("shader_light_cube")->setMat4("view", camRef->GetViewMatrix());
+        //     gShaderManager->getShader("shader_light_cube")->setVec3("color",pLight.getProperties<PointLightProperties>()->color);
+        //     model = glm::mat4(1.0f);
+        //     model = glm::translate(model, pLight.getProperties<PointLightProperties>()->position);
+        //     model = glm::scale(model, glm::vec3(0.25f));
+        //     gShaderManager->getShader("shader_light_cube")->setMat4("model", model);
+        //     cube.Draw(*gShaderManager->getShader("shader_light_cube"));
+        //     gShaderManager->unbind();
+        // }
         
         model = glm::mat4(1.0f);
-        pLight.setUniforms("shader_point_light");
+        dLight->setUniforms("shader_directional_light");
         // todo : create function that sets these variables
-        gShaderManager->getShader("shader_point_light")->setMat4("projection", projection);
-        gShaderManager->getShader("shader_point_light")->setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->getShader("shader_directional_light")->setMat4("projection", projection);
+        gShaderManager->getShader("shader_directional_light")->setMat4("view", camRef->GetViewMatrix());
         model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 0.0));
-        model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        gShaderManager->getShader("shader_point_light")->setMat4("model", model);
-        cyborg. Draw(*gShaderManager->getShader("shader_point_light"));
+        model = glm::scale(model, glm::vec3(0.05f));	// it's a bit too big for our scene, so scale it down
+        gShaderManager->getShader("shader_directional_light")->setMat4("model", model);
+        sponza. Draw(*gShaderManager->getShader("shader_directional_light"));
         gShaderManager->unbind();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

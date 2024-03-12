@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "light.h"
 
 class App {
 private:
@@ -19,9 +20,9 @@ public:
             _instance = new App();
             Log::write(
                 Log::Info,
-                GREEN_TEXT("INFO::APP::GET_INSTANCE "),
-                YELLOW_TEXT("App Initialized with mem address -> '"),
-                &_instance,YELLOW_TEXT("'\n"));
+                GREEN_TEXT("INFO::APP::GET_INSTANCE App Initialized with mem address -> "),
+                &_instance,
+                "\n");
         }
         return *_instance;
     }
@@ -34,7 +35,7 @@ public:
     void render();
     void update(const float &dt);
     void processInput(GLFWwindow* window);
-
+    Light<LightSpec::Directional> *dLight;
 private:
     bool is_j_pressed = false;
     // App Field
@@ -43,4 +44,5 @@ private:
     static App *_instance;
     bool is_right_pressed = false;
     bool is_left_pressed = false;
+    // note: temporary testing something.
 };

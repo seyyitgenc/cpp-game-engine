@@ -68,19 +68,24 @@ namespace Gui{
                 ImGui::Separator();
                 if (ImGui::BeginTabBar("##Tabs", ImGuiTabBarFlags_None))
                 {
+                    ShaderInfo info = selectedShader->getShaderInfo(); 
                     // todo: enable this after adding description property to the shader
-                    // if (ImGui::BeginTabItem("Description"))
-                    // {
-                    //     ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ");
-                    //     ImGui::EndTabItem();
-                    // }
-                    if (ImGui::BeginTabItem("Details"))
-                    {
-                        ShaderInfo info = selectedShader->getShaderInfo(); 
+                    if (ImGui::BeginTabItem("Attributes")){
+                        static glm::vec3 pos;
+                        pos =  selectedShader->getVec3("light.direction");
+                        static float test[3] = {pos.x,pos.y,pos.z};
+                        ImGui::SliderFloat3("direction",test,-1,1);
+                        auto zibap = App::getInstance().dLight->getProperties<DirectionalLightProperties>();
+                        zibap->direction = glm::make_vec3(test);
+                        ImGui::EndTabItem();
+                    }
+                    if (ImGui::BeginTabItem("Details")){
                         ImGui::Text("Shader ID : %d", info.ID);
                         ImGui::Text("Shader Vertex Path   : %s", info.vertexPath.c_str());
                         ImGui::Text("Shader Fragment Path : %s", info.fragmentPath.c_str());
                         ImGui::Text("Shader Geometry Path : %s", info.geometryPath.c_str());
+                        static float test[3] = {0,1,1};
+                        ImGui::SliderFloat3("testing",test,0,100);
                         ImGui::TextWrapped("Description : %s", info.description.c_str());
                         ImGui::EndTabItem();
                     }

@@ -11,7 +11,7 @@
 enum TextureType{NONE, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT};
 
 struct Texture
-{  
+{
     TextureType type;
     std::string path;
     unsigned int id;
@@ -31,20 +31,20 @@ public:
         {
             _instance = new TextureManager();
             Log::write(
-                Log::Info, 
-                GREEN_TEXT("INFO::TEXTURE_MANAGER::GET_INSTANCE "), 
-                YELLOW_TEXT("Texture manager initalized succesfully with mem address -> '"),
-                &_instance, YELLOW_TEXT("'\n"));
+                Log::Info,
+                GREEN_TEXT("INFO::TEXTURE_MANAGER::GET_INSTANCE Texture manager initalized succesfully with mem address -> "),
+                &_instance,
+                "\n");
         }
         return _instance;
     }
     void addTexture(const std::string &name, const std::string &path, TextureType type){
         if(isTextureExist(name)){
             Log::write(
-                Log::Warning, 
-                LIGHT_YELLOW_TEXT("WARNING::TEXTURE_MANAGER::ADD_TEXTURE"), 
-                YELLOW_TEXT(" You tried to load texture that already exists with the name of : '"), 
-                YELLOW_TEXT(name), YELLOW_TEXT("' please check your texture name\n"));
+                Log::Warning,
+                LIGHT_RED_TEXT("WARNING::TEXTURE_MANAGER::ADD_TEXTURE  You tried to load texture that already exists with the name of -> "),
+                YELLOW_TEXT(name),
+                LIGHT_RED_TEXT(" please check your texture name\n"));
             return;
         }
         // todo: handle null returned texture object
@@ -55,10 +55,9 @@ public:
         if(!isTextureExist(name)){
             Log::write(
                     Log::Fatal,
-                    LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE "),
-                    YELLOW_TEXT("Your tried to get texture that doesn't exist. Name you provided is : '"), 
-                    YELLOW_TEXT(name), 
-                    YELLOW_TEXT("' due to that function returned nullptr. Application may crash.\n"));
+                    LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE Your tried to get texture that doesn't exist. Name you provided is -> "),
+                    YELLOW_TEXT(name),
+                    LIGHT_RED_TEXT(" due to that function returned nullptr. Application may crash.\n"));
             return nullptr;
         }
         return _textures[name].get();
@@ -67,9 +66,9 @@ public:
         if(!isTextureExist(name)){
             Log::write(
                 Log::Fatal,
-                LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE_ID "), 
+                LIGHT_RED_TEXT("FATAL::TEXTURE_MANAGER::GET_TEXTURE_ID "),
                 YELLOW_TEXT("Your tried to get texture_id that doesn't exists. Name you provided is : '"),
-                YELLOW_TEXT(name), 
+                YELLOW_TEXT(name),
                 YELLOW_TEXT("' due to that function returned -1.\n"));
             return -1;
         }
@@ -94,8 +93,8 @@ inline Texture loadTextureFromFile(const std::string &path ,TextureType type){
     if (data == NULL)
     {
         Log::write(
-            Log::Fatal, 
-            LIGHT_RED_TEXT("FATAL::LOAD_TEXTURE_FROM_FILE "), 
+            Log::Fatal,
+            LIGHT_RED_TEXT("FATAL::LOAD_TEXTURE_FROM_FILE "),
             YELLOW_TEXT("Texture failed to load at path : '"), YELLOW_TEXT(path), YELLOW_TEXT("'\n"));
         stbi_image_free(data);
         return {NONE, path, 1};
@@ -119,13 +118,15 @@ inline Texture loadTextureFromFile(const std::string &path ,TextureType type){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
+
     stbi_image_free(data);
     Log::write(
-        Log::Debug, 
-        LIGHT_MAGENTA_TEXT("DEBUG::LOAD_TEXTURE_FROM_FILE ") ,
-        YELLOW_TEXT("Loaded texture from file with path -> "), 
-        YELLOW_TEXT(path), YELLOW_TEXT(" and with ID : '"), textureID, YELLOW_TEXT("'\n"));
-    
+        Log::Debug,
+        LIGHT_MAGENTA_TEXT("DEBUG::LOAD_TEXTURE_FROM_FILE Loaded texture from file with path -> "),
+        YELLOW_TEXT(path),
+        LIGHT_MAGENTA_TEXT(" and with ID -> "),
+        textureID,
+        "\n");
+
     return Texture{type, path, textureID/*, width, height*/};
 }

@@ -8,7 +8,7 @@ Shader::Shader(const std::string &vertexPath, const std::string &geometryPath, c
     buildShader();   
 }
 
-void checkCompileErrors(GLuint shader, std::string type){
+bool checkCompileErrors(GLuint shader, std::string type){
     int success;
     char infoLog[512];
     if (type != "PROGRAM")
@@ -22,7 +22,8 @@ void checkCompileErrors(GLuint shader, std::string type){
                 LIGHT_RED_TEXT("FATAL::SHADER::FILE_COMPILATION_FAILED"),
                 YELLOW_TEXT(" -> "),
                 YELLOW_TEXT(infoLog) , "\n");
-        }        
+            return false;
+        }
     }
     else
     {
@@ -35,21 +36,27 @@ void checkCompileErrors(GLuint shader, std::string type){
                 LIGHT_RED_TEXT("FATAL::SHADER::FILE_LINKING_FAILED"),
                 YELLOW_TEXT( " -> "),
                 YELLOW_TEXT(infoLog), "\n");
+            return false;
         }
     }
-    
+    return true;
 }
-void Shader::compileShader(const char* code, GLenum type){
+bool Shader::compileShader(const char* code, GLuint ID,GLenum type){
     GLuint shader;
     shader = glCreateShader(type);
     glShaderSource(shader, 1, &code, NULL);
     glCompileShader(shader);
-    checkCompileErrors(shader,"COMPUTE");
-    glAttachShader(_info.ID, shader);
-    glLinkProgram(_info.ID);
-    
-    checkCompileErrors(_info.ID, "PROGRAM");
+
+    if (!checkCompileErrors(shader,"COMPUTE"))
+        return false;
+
+    glAttachShader(ID, shader);
+    glLinkProgram(ID);
+    if (!checkCompileErrors(ID, "PROGRAM"))
+        return false;
+
     glDeleteShader(shader);
+    return true;
 }
 
 std::string Shader::readFile(const std::string &path){
@@ -72,52 +79,70 @@ std::string Shader::readFile(const std::string &path){
     }
     return shaderCode;
 }
-void Shader::buildShader(){
+bool Shader::buildShader(){
     std::string vertexCode = readFile(_info.vertexPath.c_str());
     std::string fragmentCode = readFile(_info.fragmentPath.c_str());
-    _info.ID = glCreateProgram();
 
+
+    GLuint tempID = glCreateProgram();
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("Shader initialized with _info.ID -> "),_info.ID, "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Shader initialized with ID -> "),
+        tempID,
+        "\n");
     
-    compileShader(vertexCode.c_str(), GL_VERTEX_SHADER);
+    if (!compileShader(vertexCode.c_str(), tempID, GL_VERTEX_SHADER))
+        return false;
 
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("Path of vertex Shader -> "),
-        YELLOW_TEXT(_info.vertexPath), "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of vertex Shader -> "),
+        YELLOW_TEXT(_info.vertexPath),
+        "\n");
     
-    compileShader(fragmentCode.c_str(), GL_FRAGMENT_SHADER);
+    if (!compileShader(fragmentCode.c_str(), tempID, GL_FRAGMENT_SHADER))
+        return false;
 
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("of fragment Shader -> "),
-        YELLOW_TEXT(_info.fragmentPath), "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of fragment Shader -> "),
+        YELLOW_TEXT(_info.fragmentPath), 
+        "\n");
 
     if (!_info.geometryPath.empty())
     {
         std::string geometryCode = readFile(_info.geometryPath.c_str());
-        compileShader(geometryCode.c_str(),GL_GEOMETRY_SHADER);
+        if (!compileShader(geometryCode.c_str(), tempID, GL_GEOMETRY_SHADER))
+            return false;
         Log::write(
             Log::Debug,
-            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-            YELLOW_TEXT("Path of geometry Shader -> "),
-            YELLOW_TEXT(_info.geometryPath), "\n");
+            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of geometry Shader -> "),
+            YELLOW_TEXT(_info.geometryPath), 
+            "\n");
     }
-    Log::write(Log::Debug, BLUE_TEXT("-----------------------------------------------------\n"));
+    if (_info.ID != -1)
+        glDeleteProgram(_info.ID);
+    
+    _info.ID = tempID;
+    return true;
 }
 
 void Shader::reload(){
     Log::write(
         Log::Debug,
         LIGHT_MAGENTA_TEXT("DEBUG::SHADER::RELOAD Reloading Shader ...\n"));
-        
-    glDeleteProgram(_info.ID);
-    buildShader();
+
+    if (buildShader()){
+        Log::write(
+            Log::Debug,
+            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::RELOAD Shader Reloaded succesfully ...\n\n"));
+    }
+    else{
+        Log::write(
+            Log::Warning,
+            LIGHT_RED_TEXT("DEBUG::SHADER::RELOAD Shader Reloading failed. ...\n\n"));
+    }
+    Log::write(Log::Debug, BLUE_TEXT("-----------------------------------------------------\n"));
 }
 
 void Shader::use(){
@@ -150,3 +175,43 @@ void Shader::setVec4(const std::string &name, glm::vec4 value) const{
 void Shader::setMat4(const std::string &name, glm::mat4 value) const{
     glUniformMatrix4fv(glGetUniformLocation(_info.ID,name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
 }
+
+bool Shader::getBool(const std::string &name){
+    GLint value;
+    glGetUniformiv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), &value);
+    return static_cast<bool>(value);
+};
+int Shader::getInt(const std::string &name){
+    GLint value;
+    glGetUniformiv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), &value);
+    return value;
+};
+float Shader::getFloat(const std::string &name){
+    GLfloat value;
+    glGetUniformfv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), &value);
+    return value;
+};
+
+glm::vec2 Shader::getVec2(const std::string &name){
+    GLfloat value[2];
+    glGetUniformfv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), value);
+    return glm::make_vec2(value);
+};
+
+glm::vec3 Shader::getVec3(const std::string &name){
+    GLfloat value[3];
+    glGetUniformfv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), value);
+    return glm::make_vec3(value);
+};
+
+glm::vec4 Shader::getVec4(const std::string &name){
+    GLfloat value[4];
+    glGetUniformfv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), value);
+    return glm::make_vec4(value);
+};
+
+glm::mat4 Shader::getMat4(const std::string &name){
+    GLfloat value[16];
+    glGetUniformfv(_info.ID, glGetUniformLocation(_info.ID, name.c_str()), value);
+    return glm::make_mat4(value);
+};
