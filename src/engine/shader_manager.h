@@ -17,7 +17,9 @@ public:
             _instance = new ShaderManager();
             Log::write(
                 Log::Info,
-                GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE "), YELLOW_TEXT("Shader Manager Initialized with mem address -> '"), &_instance, YELLOW_TEXT("'\n"));
+                GREEN_TEXT("INFO::SHADER_MANAGER::GET_INSTANCE Shader Manager Initialized with mem address -> "), 
+                &_instance, 
+                "\n");
         }
         return _instance;
     }
@@ -26,10 +28,9 @@ public:
         if (!isShaderExist(name)){
             Log::write(
                 Log::Fatal, 
-                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::BIND "),
-                YELLOW_TEXT("Shader with name : "),
+                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::BIND Shader with name : "),
                 YELLOW_TEXT(name),
-                YELLOW_TEXT(" doesn't exist returning false\n"));
+                LIGHT_RED_TEXT(" doesn't exist returning false\n"));
             return false;
         }
         glUseProgram(_shaders[name]->getShaderInfo().ID);
@@ -43,8 +44,7 @@ public:
         else
         Log::write(
             Log::Fatal,
-            LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::RELOAD_SHADER"),
-            YELLOW_TEXT("Shader not found with name -> "),
+            LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::RELOAD_SHADER Shader not found with name -> "),
             YELLOW_TEXT(name), "\n");
     };
     void reloadAllShaders(){
@@ -65,10 +65,9 @@ public:
         {
             Log::write(
                 Log::Fatal, 
-                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::GET_SHADER "),
-                YELLOW_TEXT("Shader with name : "),
+                LIGHT_RED_TEXT("FATAL::SHADER_MANAGER::GET_SHADER Shader with name : "),
                 YELLOW_TEXT(name),
-                YELLOW_TEXT(" doesn't exist returning nullptr\n"));
+                LIGHT_RED_TEXT(" doesn't exist returning -> nullptr\n"));
             return nullptr;
         }
         

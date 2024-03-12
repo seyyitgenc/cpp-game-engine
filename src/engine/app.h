@@ -20,9 +20,9 @@ public:
             _instance = new App();
             Log::write(
                 Log::Info,
-                GREEN_TEXT("INFO::APP::GET_INSTANCE "),
-                YELLOW_TEXT("App Initialized with mem address -> '"),
-                &_instance,YELLOW_TEXT("'\n"));
+                GREEN_TEXT("INFO::APP::GET_INSTANCE App Initialized with mem address -> "),
+                &_instance,
+                "\n");
         }
         return *_instance;
     }

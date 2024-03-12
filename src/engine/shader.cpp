@@ -87,26 +87,27 @@ bool Shader::buildShader(){
     GLuint tempID = glCreateProgram();
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("Shader initialized with _info.ID -> "),_info.ID, "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Shader initialized with ID -> "),
+        tempID,
+        "\n");
     
     if (!compileShader(vertexCode.c_str(), tempID, GL_VERTEX_SHADER))
         return false;
 
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("Path of vertex Shader -> "),
-        YELLOW_TEXT(_info.vertexPath), "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of vertex Shader -> "),
+        YELLOW_TEXT(_info.vertexPath),
+        "\n");
     
     if (!compileShader(fragmentCode.c_str(), tempID, GL_FRAGMENT_SHADER))
         return false;
 
     Log::write(
         Log::Debug,
-        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-        YELLOW_TEXT("of fragment Shader -> "),
-        YELLOW_TEXT(_info.fragmentPath), "\n");
+        LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of fragment Shader -> "),
+        YELLOW_TEXT(_info.fragmentPath), 
+        "\n");
 
     if (!_info.geometryPath.empty())
     {
@@ -115,9 +116,9 @@ bool Shader::buildShader(){
             return false;
         Log::write(
             Log::Debug,
-            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER "),
-            YELLOW_TEXT("Path of geometry Shader -> "),
-            YELLOW_TEXT(_info.geometryPath), "\n");
+            LIGHT_MAGENTA_TEXT("DEBUG::SHADER::BUILD_SHADER Path of geometry Shader -> "),
+            YELLOW_TEXT(_info.geometryPath), 
+            "\n");
     }
     if (_info.ID != -1)
         glDeleteProgram(_info.ID);

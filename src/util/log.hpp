@@ -1,6 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <chrono>
+#include <sstream>
+#include <iomanip>
 
 inline std::string RED_TEXT             (std::string text){return "\033[0;31m" + text + "\033[0m";}
 inline std::string BLUE_TEXT            (std::string text){return "\033[0;34m" + text + "\033[0m";}
@@ -30,10 +33,18 @@ public:
     template<typename... Args>
     static void write(int nLevel, Args... args){
         checkInit();
-        if (nLevel >= _nLevel)
-            (std::cout << ... << args);
+        if (nLevel >= _nLevel){
+            // note: in case if i use multithreadding
+            // fixme: this is not thread safe.
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            auto local_time = std::localtime(&time_t_now);
+            std::stringstream ss;
+            ss << "["<< std::put_time(local_time, "%Y-%m-%d %H:%M:%S") << "] ";
+            (std::cout << ss.str() << ... << args);
+        }
     }
-    static void setLevel(int nLevel){  
+    static void setLevel(int nLevel){
         _nLevel = nLevel;
         _bIinitialised = true;
     }

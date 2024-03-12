@@ -21,8 +21,9 @@ public:
             _instance = new CameraManager();
             Log::write(
                 Log::Info,
-                GREEN_TEXT("INFO::CAMERA_MANAGER_GET_INSTANCE "),
-                YELLOW_TEXT("Camera Manager with mem address -> '"),&_instance,YELLOW_TEXT("'\n"));
+                GREEN_TEXT("INFO::CAMERA_MANAGER_GET_INSTANCE Camera Manager with mem address -> "),
+                &_instance,
+                "\n");
         }
         return _instance;
     }
@@ -32,9 +33,9 @@ public:
         {
             Log::write(
                 Log::Fatal,
-                LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::ADD_CAMERA "),
-                YELLOW_TEXT("You tried to add camera that already exist. Key you provided is -> '"),
-                YELLOW_TEXT(name),"'\n");
+                LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::ADD_CAMERA You tried to add camera that already exist. Key you provided is -> "),
+                YELLOW_TEXT(name),
+                "\n");
             return;
         }
         _cameras[name] = std::make_unique<Camera>(Camera(position, up, yaw, pitch));
@@ -46,10 +47,10 @@ public:
         {
             Log::write(
                 Log::Fatal,
-                LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::GET_CAMERA"),
-                YELLOW_TEXT("You tried to get camera that doesn't exist. Key you provided is -> '"),
-                YELLOW_TEXT(name),"'\n");
-                return nullptr;
+                LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::GET_CAMERA You tried to get camera that doesn't exist. Key you provided is -> "),
+                YELLOW_TEXT(name),
+                "\n");
+            return nullptr;
         }
         return _cameras[name].get();
     }
@@ -69,17 +70,15 @@ public:
             activeCamera = it->second.get();
             activeCamera->setLastMouse(true);
             Log::write(
-                Log::Debug,
-                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_NEXT_CAMERA "),
-                YELLOW_TEXT("Switched camera to -> '"),
+                Log::Info,
+                LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_NEXT_CAMERA Switched camera to -> "),
                 YELLOW_TEXT(it->first),
-                YELLOW_TEXT("'\n"));
+                "\n");
         }
         else{
             Log::write(
                 Log::Warning,
-                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_NEXT_CAMERA "),
-                YELLOW_TEXT("There is no camera on right\n"));
+                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_NEXT_CAMERA There is no camera on right\n"));
         }
     }
     void setPrevCamera(){
@@ -90,16 +89,15 @@ public:
             activeCamera = it->second.get();
             activeCamera->setLastMouse(true);
             Log::write(
-                Log::Debug,
-                LIGHT_MAGENTA_TEXT("DEBUG::CAMERA_MANAGER::SET_PREV_CAMERA"), YELLOW_TEXT("Switched camera to -> '"),
+                Log::Info,
+                LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> "),
                 YELLOW_TEXT(it->first),
-                YELLOW_TEXT("'\n"));
+                "\n");
         }
         else{
             Log::write(
                 Log::Warning,
-                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_PREV_CAMERA "),
-                YELLOW_TEXT("There is no camera on left\n"));
+                LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_PREV_CAMERA There is no camera on left\n"));
         }
     }
 private:
