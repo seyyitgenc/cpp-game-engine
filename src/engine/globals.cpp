@@ -89,14 +89,9 @@ void InitShaders(){
         FileSystem::getPath("shaders/basic_model.fs"));
     gShaderManager->getShader("shader_model")->getShaderInfo().description = ("testing this thing .");
     gShaderManager->addShader(
-        "shader_texture",
+        "shader_texture that has extremely long name but it is very very looooong name",
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
-    gShaderManager->addShader(
-        "shader_raythisshaderhasextremelylongname",
-        FileSystem::getPath("shaders/ray.vs"),
-        FileSystem::getPath("shaders/ray.gs"),
-        FileSystem::getPath("shaders/ray.fs"));
     gShaderManager->addShader(
         "shader_white_box",
         FileSystem::getPath("shaders/basic_mesh.vs"),
@@ -107,12 +102,16 @@ void InitShaders(){
         FileSystem::getPath("shaders/red.fs"));
     gShaderManager->addShader(
         "shader_point_light",
-        FileSystem::getPath("shaders/light.vs"),
-        FileSystem::getPath("shaders/point_light.fs"));
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/point_light.fs"));
+    gShaderManager->addShader(
+        "shader_spot_light",
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/spot_light.fs"));
     gShaderManager->addShader(
         "shader_directional_light",
-        FileSystem::getPath("shaders/light.vs"),
-        FileSystem::getPath("shaders/directional_light.fs"));
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/directional_light.fs"));
     gShaderManager->addShader(
         "shader_light_cube",
         FileSystem::getPath("shaders/basic_mesh.vs"),

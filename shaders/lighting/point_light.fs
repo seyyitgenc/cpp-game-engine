@@ -1,11 +1,5 @@
 #version 460 core
 
-// struct Material {
-//     sampler2D diffuse;
-//     sampler2D specular;
-//     float shininess;
-// };
-
 struct Light {
     vec3 color;
     vec3 position;
@@ -22,7 +16,6 @@ in vec3 FragPos;
 
 uniform vec3 viewPos;
 uniform Light light;
-// uniform Material material;
 
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;

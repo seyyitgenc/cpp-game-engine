@@ -35,7 +35,8 @@ public:
     void render();
     void update(const float &dt);
     void processInput(GLFWwindow* window);
-    Light<LightSpec::Directional> *dLight;
+    Light<LightSpec::Point> *pLight;
+    Light<LightSpec::Spot> *sLight;
 private:
     bool is_j_pressed = false;
     // App Field
@@ -44,5 +45,4 @@ private:
     static App *_instance;
     bool is_right_pressed = false;
     bool is_left_pressed = false;
-    // note: temporary testing something.
 };

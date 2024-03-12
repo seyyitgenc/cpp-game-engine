@@ -42,33 +42,15 @@ void App::run() {
     Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
     Model cyborg(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
     
-    
-    GLint numUniforms = 0;
-    glGetProgramiv(gShaderManager->getShader("shader_directional_light")->getShaderInfo().ID, GL_ACTIVE_UNIFORMS, &numUniforms);
-    for(GLint i = 0; i < numUniforms; i++)
-    {
-        char buffer[128];
-        GLsizei length = 0;
-        GLint size = 0;
-        GLenum type = 0;
-        glGetActiveUniform(gShaderManager->getShader("shader_directional_light")->getShaderInfo().ID, i, sizeof(buffer), &length, &size, &type, buffer);
-        // std::cout << "Uniform name: " << buffer << ", type: " << getGLSLType(type) << std::endl;
-    }
-
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     glEnable(GL_DEPTH_TEST);
 
     gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
 
-    auto dLightProp = std::make_unique<DirectionalLightProperties>();
-    dLightProp->color = glm::vec3{1,1,1};
-    dLightProp->direction = glm::vec3{-0.2,-1,-0.3};
-    dLightProp->constant = 1.0f;
-    dLightProp->linear = 0.09f;
-    dLightProp->quadratic = 0.032f;
-    
-    dLight = new Light<LightSpec::Directional>(std::move(dLightProp));
-
+    auto pLightProp = std::make_unique<PointLightProperties>();
+    auto sLightProp = std::make_unique<SpotLightProperties>();
+    pLight = new Light<LightSpec::Point>(std::move(pLightProp));
+    sLight = new Light<LightSpec::Spot>(std::move(sLightProp));
     // testLights();
     while (!glfwWindowShouldClose(gWindow))
     {
@@ -139,38 +121,42 @@ void App::run() {
         }
  
         // note : i can use it like this aswell
-        if (gShaderManager->bind("shader_model")){
-            gShaderManager->getShader("shader_model")->setMat4("projection", projection);
-            gShaderManager->getShader("shader_model")->setMat4("view", camRef->GetViewMatrix());
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
-            model = glm::scale(model, glm::vec3(5.0f,1.0,5.0));
-            gShaderManager->getShader("shader_model")->setMat4("model", model);
-            plane.Draw(*gShaderManager->getShader("shader_model"));
-            gShaderManager->unbind();
-        }
+        // if (gShaderManager->bind("shader_model")){
+        //     gShaderManager->getShader("shader_model")->setMat4("projection", projection);
+        //     gShaderManager->getShader("shader_model")->setMat4("view", camRef->GetViewMatrix());
+        //     model = glm::mat4(1.0f);
+        //     model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0));
+        //     model = glm::scale(model, glm::vec3(5.0f,1.0,5.0));
+        //     gShaderManager->getShader("shader_model")->setMat4("model", model);
+        //     plane.Draw(*gShaderManager->getShader("shader_model"));
+        //     gShaderManager->unbind();
+        // }
 
         // if (gShaderManager->bind("shader_light_cube")){
         //     gShaderManager->getShader("shader_light_cube")->setMat4("projection", projection);
         //     gShaderManager->getShader("shader_light_cube")->setMat4("view", camRef->GetViewMatrix());
-        //     gShaderManager->getShader("shader_light_cube")->setVec3("color",pLight.getProperties<PointLightProperties>()->color);
+        //     gShaderManager->getShader("shader_light_cube")->setVec3("color", sLight->getProperties<SpotLightProperties>()->color);
         //     model = glm::mat4(1.0f);
-        //     model = glm::translate(model, pLight.getProperties<PointLightProperties>()->position);
-        //     model = glm::scale(model, glm::vec3(0.25f));
+        //     model = glm::scale(model, glm::vec3(0.5f));
+        //     model = glm::translate(model, sLight->getProperties<SpotLightProperties>()->position);
         //     gShaderManager->getShader("shader_light_cube")->setMat4("model", model);
         //     cube.Draw(*gShaderManager->getShader("shader_light_cube"));
         //     gShaderManager->unbind();
         // }
-        
+        // fixme: this light pass sucks. because i cast light for each mesh seperatlys. model must act like a complete mesh
         model = glm::mat4(1.0f);
-        dLight->setUniforms("shader_directional_light");
         // todo : create function that sets these variables
-        gShaderManager->getShader("shader_directional_light")->setMat4("projection", projection);
-        gShaderManager->getShader("shader_directional_light")->setMat4("view", camRef->GetViewMatrix());
+
+        sLight->getProperties<SpotLightProperties>()->position = camRef->Position;
+        sLight->getProperties<SpotLightProperties>()->direction = camRef->Front;
+        sLight->setUniforms("shader_spot_light");
+        gShaderManager->getShader("shader_spot_light")->setMat4("projection", projection);
+        gShaderManager->getShader("shader_spot_light")->setMat4("view", camRef->GetViewMatrix());
+        gShaderManager->getShader("shader_spot_light")->setVec3("viewPos", camRef->Position);
         model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 0.0));
         model = glm::scale(model, glm::vec3(0.05f));	// it's a bit too big for our scene, so scale it down
-        gShaderManager->getShader("shader_directional_light")->setMat4("model", model);
-        sponza. Draw(*gShaderManager->getShader("shader_directional_light"));
+        gShaderManager->getShader("shader_spot_light")->setMat4("model", model);
+        sponza.Draw(*gShaderManager->getShader("shader_spot_light"));
         gShaderManager->unbind();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
