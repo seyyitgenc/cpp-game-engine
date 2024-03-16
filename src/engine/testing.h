@@ -1,34 +1,55 @@
 #pragma once
 
-#include "model.h"
-#include <vector>
 
-struct FrameBuffer
-{
-public:
-    void configure(int width, int height);
-    void addTextureType();
-    void bind();
-private:
-    std::vector<Texture> textures;
-};
+#include "globals.h"
+#include "model.h"
+#include "ImGui/imgui.h"
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_opengl3.h"
+#include "gui/gui.h"
+#include <vector>
+#include "renderer/framebuffer.h"
+
 
 class Scene
 {
 public:
     Scene() = default;
     ~Scene() = default;
+    void draw(){
+        for(auto &&i : listOfObjects)
+            i.first.Draw(i.second);
+    };
 private:
-    std::vector<Model> listOfObjects;
+    std::vector<std::pair<Model, Shader>> listOfObjects;
     // std::vector<Decal> listOfObjects;
     // Camera* activeCam = nullptr; // default camera pointer
+    FrameBuffer gBuffer;
 };
 
-class Renderer
+struct ImGuiLayer
 {
+    void beginFrame(){
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+    }
+    void endFrame(){
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+};
+
+class Renderer{
+    void draw(){
+        // draw imgui components
+        imguiLayer.beginFrame();
+
+        Gui::Init();
+        ImGui::ShowDemoWindow();
+
+        imguiLayer.endFrame();
+    }
 private:
-    
-public:
-    Renderer() = default;
-    ~Renderer() = default;
+    ImGuiLayer imguiLayer;
 };

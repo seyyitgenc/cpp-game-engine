@@ -74,7 +74,7 @@ public:
         
         return _shaders[name].get();
     };
-    std::unordered_map<std::string, std::unique_ptr<Shader>> &get_shader_list(){return _shaders;}
+    std::unordered_map<std::string, std::unique_ptr<Shader>> &getShaderList(){return _shaders;}
 private:
     ShaderManager() = default;
     [[nodiscard]] bool isShaderExist(const std::string &name){

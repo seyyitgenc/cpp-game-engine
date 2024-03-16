@@ -116,6 +116,18 @@ void InitShaders(){
         "shader_light_cube",
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/color.fs"));
+    gShaderManager->addShader(
+        "shader_albedo",
+        FileSystem::getPath("shaders/albedo.vs"),
+        FileSystem::getPath("shaders/albedo.fs"));
+    gShaderManager->addShader(
+        "shader_lighting_pass",
+        FileSystem::getPath("shaders/lighting/lighting_pass.vs"),
+        FileSystem::getPath("shaders/lighting/lighting_pass.fs"));
+    gShaderManager->addShader(
+        "shader_depth_pass",
+        FileSystem::getPath("shaders/lighting/depth_pass.vs"),
+        FileSystem::getPath("shaders/lighting/depth_pass.fs"));
 }
 void InitCameras(){
     gCameraManager = CameraManager::getInstance();
