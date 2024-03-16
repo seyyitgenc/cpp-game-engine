@@ -31,7 +31,7 @@ public:
         }
         ~Mesh() = default;
 
-    void Draw(Shader& shader){
+    void Draw(const Shader& shader) const{
         if (hasTexCoords)
         {
             unsigned int diffuseNr = 1;

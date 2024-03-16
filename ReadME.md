@@ -1,6 +1,6 @@
 # This project is all about OpenGL based C++ game engine
 
-- **_NOTE:_**  For now, this project works on only linux.
+- **_NOTE:_**  For now, this project works on only windows.
 
 > REQUIRED LIBS FOR OpenGL branch
 
@@ -34,8 +34,9 @@
 - [ ] Renderer
 - [ ] Set uniforms via GUI
 - [ ] Different Materials (wood, metal, rock etc...)
-- [ ] Directional Lighting
-- [ ] Birectional Lighting
+- [x] Directional Lighting
+- [x] Spot Light
+- [x] Point Light
 - [ ] Multiple Point Lights (WIP)
 - [ ] Simple Shadows
 - [ ] Framebuffers (gBuffer, colorBuffer etc...)

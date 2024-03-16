@@ -8,10 +8,6 @@
 namespace Gui{
     void Init(){
         // todo : implement imgui::layer kind of thingy
-        // start dear ImGui frame
-        static float f0 = 0,f1 = 0,f2 = 0;
-        static float colboxSizex = 0,colboxSizey = 0,colboxSizez = 0;
-        static float colbox0 = 0, colbox1 = 0, colbox2 = 1;
 
         ImGui::ShowDemoWindow();
         ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
@@ -34,7 +30,7 @@ namespace Gui{
                 
                 if (ImGui::BeginTable("tbl_shaders", columnCount))
                 {
-                    for (int index = 0; auto &&it : gShaderManager->get_shader_list())
+                    for (int index = 0; auto &&it : gShaderManager->getShaderList())
                     {
                         ImGui::TableNextColumn();
                         ImVec2 pos = ImGui::GetCursorPos();
@@ -71,24 +67,16 @@ namespace Gui{
                     ShaderInfo info = selectedShader->getShaderInfo(); 
                     // todo: enable this after adding description property to the shader
                     if (ImGui::BeginTabItem("Attributes")){
-                        static glm::vec3 pos;
-                        pos =  selectedShader->getVec3("light.direction");
-                        static float test[3] = {pos.x,pos.y,pos.z};
-                        ImGui::SliderFloat3("direction",test,-1,1);
-                        auto zibap = App::getInstance().dLight->getProperties<DirectionalLightProperties>();
-                        zibap->direction = glm::make_vec3(test);
+                        ImGui::Text("-------------------- WIP --------------------");
+                        // static glm::vec3 pos;
+                        // pos =  selectedShader->getVec3("light.direction");
+                        // static float test[3] = {pos.x,pos.y,pos.z};
+                        // ImGui::SliderFloat3("direction",test,-1,1);
+                        // auto zibap = App::getInstance().dLight->getProperties<DirectionalLightProperties>();
+                        // zibap->direction = glm::make_vec3(test);
                         ImGui::EndTabItem();
                     }
-                    if (ImGui::BeginTabItem("Details")){
-                        ImGui::Text("Shader ID : %d", info.ID);
-                        ImGui::Text("Shader Vertex Path   : %s", info.vertexPath.c_str());
-                        ImGui::Text("Shader Fragment Path : %s", info.fragmentPath.c_str());
-                        ImGui::Text("Shader Geometry Path : %s", info.geometryPath.c_str());
-                        static float test[3] = {0,1,1};
-                        ImGui::SliderFloat3("testing",test,0,100);
-                        ImGui::TextWrapped("Description : %s", info.description.c_str());
-                        ImGui::EndTabItem();
-                    }
+                    selectedShader->getShaderInfo().drawInfo();
                     ImGui::EndTabBar();
                 }
                 ImGui::EndChild();
@@ -105,30 +93,5 @@ namespace Gui{
         }
         
         ImGui::End();
-        // // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        // static float f = 0.0f;
-        // static int counter = 0;
-        // ImGui::Begin("Debug Window");                           // Create a window called "Debug Window" and append into it.
-
-        // ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-
-        // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-        // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        // ImGui::Text("Object Location");               // for now this represents the cyborgs location
-        // ImGui::PushItemWidth(120);
-        // // note: imagine you have lots of objects you must list all of them
-        // // note: and can edit their location in the world.
-        // ImGui::SliderFloat("X", &colbox0, -10.0f, 10.0f); ImGui::SameLine();
-        // ImGui::SliderFloat("Y", &colbox1, -10.0f, 10.0f); ImGui::SameLine();
-        // ImGui::SliderFloat("Z", &colbox2, -10.0f, 10.0f);
-        
-        // ImGui::Text("Object Size");
-        // ImGui::SliderFloat("w", &colboxSizex, -10.0f, 10.0f); ImGui::SameLine();
-        // ImGui::SliderFloat("h", &colboxSizey, -10.0f, 10.0f); ImGui::SameLine();
-        // ImGui::SliderFloat("d", &colboxSizez, -10.0f, 10.0f);
-
-        // ImGui::Text("Point Pos x: %.6f y: %.6f z: %.6f",picking_pos.x, picking_pos.y, picking_pos.z);
-        // ImGui::End();
-        // glDeleteTextures(0,&my_img_texture);
     }
 }
