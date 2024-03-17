@@ -183,15 +183,12 @@ void App::run() {
         glBindFramebuffer(GL_DRAW_BUFFER, 0); // write to default frame buffer
         glBlitFramebuffer(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        // 2.5 copy content of geometry's depth buffer to default framebuffer's depth buffer
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer._framebuffer); // use g buffer to read
-        glBindFramebuffer(GL_DRAW_BUFFER, 0); // write to default frame buffer
-        glBlitFramebuffer(0, 0,SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0,SCREEN_WIDTH, SCREEN_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if (gShaderManager->bind("shader_light_cube")){
             gShaderManager->getShader("shader_light_cube")->setMat4("projection", projection);
             gShaderManager->getShader("shader_light_cube")->setMat4("view", camRef->GetViewMatrix());
-            gShaderManager->getShader("shader_light_cube")->setVec3("color", sLight->getProperties<SpotLightProperties>()->color);
+            gShaderManager->getShader("shader_light_cube")->setVec3("color", {1,1,1});
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(0.5f));
             model = glm::translate(model, pos);

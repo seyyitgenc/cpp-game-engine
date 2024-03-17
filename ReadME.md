@@ -31,6 +31,7 @@
 - ![Log](/screenshots/colored_log.png)
 - [x] Custom Model Loading (Deprecated. Instead of hard coding models i prefer using premade models. Such as cube/plane)
 - [x] Stopwatch
+- [ ] Scope Stopwatch
 - [ ] Renderer
 - [ ] Set uniforms via GUI
 - [ ] Different Materials (wood, metal, rock etc...)
@@ -39,9 +40,9 @@
 - [x] Point Light
 - [ ] Multiple Point Lights (WIP)
 - [ ] Simple Shadows
-- [ ] Framebuffers (gBuffer, colorBuffer etc...)
+- [x] Framebuffers (gBuffer, colorBuffer etc...)
+- [x] Deferred Shading
 - [ ] Debugging Framebuffers
-- [ ] Deferred Shading
 - [ ] Input Manager
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
