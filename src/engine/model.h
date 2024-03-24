@@ -7,14 +7,14 @@
 
 #pragma once
 #include "mesh.h"
-#include "util/filesystem.hpp"
 #include "util/log.hpp"
+#include "util/filesystem.hpp"
+#include "../external/stb_image.h"
 
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
-#include <stb_image.h>
-#include <assimp/Importer.hpp>
 #include <string>
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 
 class Model
 {

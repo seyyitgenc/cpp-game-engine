@@ -35,8 +35,8 @@ set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
 # set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
 
 # configure file to get root directory
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/configuration/config.h)
-include_directories(${CMAKE_SOURCE_DIR}/configuration)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h)
+include_directories(${CMAKE_SOURCE_DIR}/src/configuration)
 
 # stb_image
 add_library(STB_IMAGE "src/external/stb_image.cpp")

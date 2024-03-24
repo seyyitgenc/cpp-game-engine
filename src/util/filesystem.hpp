@@ -3,7 +3,7 @@
 
 #include <string>
 #include <cstdlib>
-#include "config.h"
+#include "../configuration/config.h"
 
 class FileSystem
 {

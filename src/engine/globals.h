@@ -3,15 +3,16 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_opengl3.h"
+#include "../external/ImGui/imgui.h"
+#include "../external/ImGui/imgui_impl_glfw.h"
+#include "../external/ImGui/imgui_impl_opengl3.h"
+#include "../util/filesystem.hpp"
+#include "../util/log.hpp"
 
+#include "texture.h"
 #include "shader_manager.h"
 #include "camera_manager.h"
-#include "texture.h"
-#include "util/filesystem.hpp"
-#include "util/log.hpp"
+
 
 constexpr int SCREEN_WIDTH  = 1366;
 constexpr int SCREEN_HEIGHT = 768;

@@ -1,18 +1,18 @@
 #pragma once
 
-#include "util/log.hpp"
+#include "../util/log.hpp"
+#include "../external/glad/glad.h"
 
-#include <glad/glad.h>
+#include "../external/ImGui/imgui.h"
+#include "../external/ImGui/imgui_impl_glfw.h"
+#include "../external/ImGui/imgui_impl_opengl3.h"
+
 #include <glm/gtc/type_ptr.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_opengl3.h"
 
 struct ShaderInfo{
     std::string vertexPath;

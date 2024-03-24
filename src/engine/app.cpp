@@ -1,12 +1,13 @@
 #include "app.h"
-#include "shader.h"
 #include "model.h"
 #include "camera.h"
+#include "shader.h"
+#include "gui/gui.h"
 #include "callbacks.h"
 #include "shader_manager.h"
-#include "util/stopwatch.hpp"
-#include "gui/gui.h"
+#include "../util/stopwatch.hpp"
 #include "renderer/framebuffer.h"
+
 // todo: rename some of the functions of Camera and CameraMananger.
 
 App* App::_instance = nullptr;

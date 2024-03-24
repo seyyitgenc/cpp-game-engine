@@ -1,12 +1,12 @@
 #pragma once
 
-#include "util/log.hpp"
+#include "../util/log.hpp"
+#include "../external/stb_image.h"
+#include "../external/glad/glad.h"
 
-#include "glad/glad.h"
 #include <string>
-#include <unordered_map>
 #include <memory>
-#include <stb_image.h>
+#include <unordered_map>
 
 enum TextureType{NONE = 0, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT};
 
