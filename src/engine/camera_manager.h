@@ -2,7 +2,6 @@
 
 #include "camera.h"
 #include "../util/log.hpp"
-#include "io/mouse.h"
 #include <map>
 #include <memory>
 #include <algorithm>
@@ -16,6 +15,7 @@ public:
     CameraManager(CameraManager&) = delete;
     void operator=(const CameraManager&) = delete;
 
+    // returns camera manager instance
     [[nodiscard]] static CameraManager *getInstance(){
         if (_instance == nullptr){
             _instance = new CameraManager();
@@ -28,6 +28,7 @@ public:
         return _instance;
     }
 
+    // adds camera with given name and spec
     void addCamera(const std::string& name, glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH){
         if (isCameraExist(name))
         {
@@ -40,8 +41,9 @@ public:
         }
         _cameras[name] = std::make_unique<Camera>(position, up, yaw, pitch);
     }
-    // this function may return nullptr.
-    // handling this is users responsibility
+    // ! this function may return nullptr.
+    // ! handling this is users responsibility
+    // returns camera pointer with name
     [[nodiscard]] Camera* getCamera(const std::string& name){
         if (!isCameraExist(name))
         {
@@ -54,6 +56,8 @@ public:
         }
         return _cameras[name].get();
     }
+
+    // returns list of cameras
     std::map<std::string,std::unique_ptr<Camera>> *getCameraList(){
         return &_cameras;
     }
@@ -98,6 +102,15 @@ public:
             Log::write(
                 Log::Warning,
                 LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_PREV_CAMERA There is no camera on left\n"));
+        }
+    }
+    
+    void handleEvents(float dt){
+        if (Keyboard::keyWentDown(GLFW_KEY_LEFT)){
+            setPrevCamera();
+        }
+        if (Keyboard::keyWentDown(GLFW_KEY_RIGHT)){
+            setNextCamera();
         }
     }
 private:

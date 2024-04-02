@@ -65,6 +65,9 @@ void renderQuad()
     glBindVertexArray(0);
 }
 glm::vec3 lightPos(0,1,0);
+// ---------
+// main loop
+// ---------
 void App::run() {
     gInitGlobals();
     Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
@@ -170,61 +173,43 @@ void App::run() {
 
     }
 }
+// ----------
 // event loop
 // ----------
-void App::processInput(GLFWwindow* window) {    
-    if (Keyboard::keyWentDown(GLFW_KEY_LEFT)){
-        gCameraManager->setPrevCamera();
-    }
-    if (Keyboard::keyWentDown(GLFW_KEY_RIGHT)){
-        gCameraManager->setNextCamera();
-    }
+void App::processInput(GLFWwindow* window) {
     if (Keyboard::key(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(gWindow, true);
 
-    if (Keyboard::key(GLFW_KEY_W)){
-        camRef->updateCameraPosition(FORWARD, deltaTime);
+    if (!gEditModeEnabled){
+        camRef->handleEvents(deltaTime);
     }
-    if (Keyboard::key(GLFW_KEY_S)){
-        camRef->updateCameraPosition(BACKWARD, deltaTime);
-    }
-    if (Keyboard::key(GLFW_KEY_A)){
-        camRef->updateCameraPosition(LEFT, deltaTime);
-    }
-    if (Keyboard::key(GLFW_KEY_D)){
-        camRef->updateCameraPosition(RIGHT, deltaTime);
-    }
+    gCameraManager->handleEvents(deltaTime);
+    gShaderManager->handleEvents(deltaTime);
     
-    if (Keyboard::keyWentDown(GLFW_KEY_R)){
-        gShaderManager->reloadAllShaders();
-    }
-
-    if (Keyboard::keyWentDown(GLFW_KEY_J)){
+    Gui::handleEvents(deltaTime);
+    if(Keyboard::keyWentDown(GLFW_KEY_J)){
         gEditModeEnabled = !gEditModeEnabled;
         if (gEditModeEnabled){
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             setEditModeCallbacks(gWindow);
         }
         else{
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             setNormalModeCallbacks(gWindow);
             Mouse::setFirstMouse(true);
         }
     }
-
-    double dx = Mouse::getDX(), dy = Mouse::getDY();
-    if (dx != 0 || dy != 0)
-        camRef->updateCameraDirection(dx, dy);
-
-    double scrollDy = Mouse::getScrollDY();
-    if (scrollDy != 0)
-        camRef->updateCameraZoom(scrollDy);
-
 }
 
+// ------
+// update
+// ------
 void App::update(const float& dt) {
 }
 
+// ------
+// render
+// ------
 void App::render() {
     glClearColor(0.1f,0.1f,0.1f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT);

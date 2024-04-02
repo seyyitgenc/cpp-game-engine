@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <vector>
+#include "io/keyboard.h"
+#include "io/mouse.h"
 
 // camera movement directions
 enum CameraDirection{
@@ -95,7 +97,29 @@ public:
         if(Zoom < 1.0f) Zoom = 1.0f;
         if(Zoom > 45.0f) Zoom = 45.0f;
     }
+    
+    void handleEvents(float dt){
+        if (Keyboard::key(GLFW_KEY_W)){
+            updateCameraPosition(FORWARD, dt);
+        }
+        if (Keyboard::key(GLFW_KEY_S)){
+            updateCameraPosition(BACKWARD, dt);
+        }
+        if (Keyboard::key(GLFW_KEY_A)){
+            updateCameraPosition(LEFT, dt);
+        }
+        if (Keyboard::key(GLFW_KEY_D)){
+            updateCameraPosition(RIGHT, dt);
+        }
 
+        double dx = Mouse::getDX(), dy = Mouse::getDY();
+        if (dx != 0 || dy != 0)
+            updateCameraDirection(dx, dy);
+
+        double scrollDy = Mouse::getScrollDY();
+        if (scrollDy != 0)
+            updateCameraZoom(scrollDy);
+    }
 private:
     void updateCameraVectors(){
         glm::vec3 front;

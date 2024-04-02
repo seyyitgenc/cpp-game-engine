@@ -4,6 +4,7 @@
 #include "ImGui/imgui_impl_opengl3.h"
 #include "../texture.h"
 
+
 // todo: check out dependency injection
 namespace Gui{
     void Init(){
@@ -91,7 +92,8 @@ namespace Gui{
             
             ImGui::EndGroup();
         }
-        
         ImGui::End();
+    }
+    void handleEvents(float dt){
     }
 }

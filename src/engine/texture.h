@@ -68,6 +68,7 @@ public:
     TextureManager(TextureManager&) = delete;
     void operator=(const TextureManager&) = delete;
 
+    // return texture manager instance
     static TextureManager *getInstance(){
         if (_instance == nullptr)
         {

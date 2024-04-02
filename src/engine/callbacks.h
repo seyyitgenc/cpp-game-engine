@@ -16,12 +16,12 @@ inline void glfw_error_callback(int error, const char* description)
 }
 
 inline void setNormalModeCallbacks(GLFWwindow *window){
-    glfwSetMouseButtonCallback    (window, Mouse::normalModeMouseButtonCallbaack);
+    glfwSetMouseButtonCallback    (window, Mouse::normalModeMouseButtonCallback);
     glfwSetCursorPosCallback      (window, Mouse::normalModeCursorPosCallback);
     glfwSetScrollCallback         (window, Mouse::normalModeMouseWheelCallback);
 }
 inline void setEditModeCallbacks(GLFWwindow *window){
-    glfwSetMouseButtonCallback    (window, Mouse::editModeMouseButtonCallbaack);
+    glfwSetMouseButtonCallback    (window, Mouse::editModeMouseButtonCallback);
     glfwSetCursorPosCallback      (window, Mouse::editModeCursorPosCallback);
     glfwSetScrollCallback         (window, Mouse::editModeMouseWheelCallback);
 }

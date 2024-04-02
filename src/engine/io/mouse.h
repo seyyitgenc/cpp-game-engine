@@ -7,11 +7,11 @@ class Mouse
 {
 public:
     static void normalModeCursorPosCallback(GLFWwindow *window, double x, double y);
-    static void normalModeMouseButtonCallbaack(GLFWwindow *window, int button, int action, int mods);
+    static void normalModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
     static void normalModeMouseWheelCallback(GLFWwindow *window, double dx, double dy);
 
     static void editModeCursorPosCallback(GLFWwindow *window, double x, double y);
-    static void editModeMouseButtonCallbaack(GLFWwindow *window, int button, int action, int mods);
+    static void editModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
     static void editModeMouseWheelCallback(GLFWwindow *window, double dx, double dy);
 
 

@@ -1,4 +1,7 @@
 #include "mouse.h"
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_opengl3.h"
+#include "ImGui/imgui.h"
 
 double Mouse::_x = 0;
 double Mouse::_y = 0;
@@ -86,17 +89,17 @@ void Mouse::setFirstMouse(bool firstMouse){
 
 // edit mode mouse cursor callback
 void Mouse::editModeCursorPosCallback(GLFWwindow *window, double x, double y){
-
+    ImGui_ImplGlfw_CursorPosCallback(window, x,y);
 }
 
 // edit mode mouse button callback
-void Mouse::editModeMouseButtonCallbaack(GLFWwindow *window, int button, int action, int mods){
-
+void Mouse::editModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods){
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 // edit mode mouse wheel callback
 void Mouse::editModeMouseWheelCallback(GLFWwindow *window, double dx, double dy){
-
+    ImGui_ImplGlfw_ScrollCallback(window, dx, dy);
 }
 
 // normal mode mouse cursor callback
@@ -115,7 +118,7 @@ void Mouse::normalModeCursorPosCallback(GLFWwindow *window, double x, double y){
 }
 
 // edit mode mouse button callback
-void Mouse::normalModeMouseButtonCallbaack(GLFWwindow *window, int button, int action, int mods){
+void Mouse::normalModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods){
     if (action != GLFW_RELEASE){
         if (_buttons[button])
             _buttons[button] = true;
