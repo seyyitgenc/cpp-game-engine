@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-enum TextureType{NONE = 0, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT};
+enum struct TextureType{NONE = 0, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT};
 
 struct Texture
 {
@@ -53,7 +53,7 @@ struct Texture
         return true;
     }
     
-    TextureType type = NONE;
+    TextureType type = TextureType::NONE;
     std::string file_name = "";
     GLuint      ID = -1;
     int width = -1;

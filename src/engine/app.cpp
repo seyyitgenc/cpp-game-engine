@@ -6,7 +6,6 @@
 #include "callbacks.h"
 #include "shader_manager.h"
 #include "../util/stopwatch.hpp"
-#include "renderer/framebuffer.h"
 
 // todo: rename some of the functions of Camera and CameraMananger.
 
@@ -65,7 +64,7 @@ void renderQuad()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
-
+glm::vec3 lightPos(0,1,0);
 void App::run() {
     gInitGlobals();
     Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
@@ -88,6 +87,16 @@ void App::run() {
     gBuffer.checkCompleteness();
     gBuffer.unbind();
 
+    FrameBuffer shadowMap;
+    shadowMap.bind();
+    shadowMap.attachRenderBuffer();
+    shadowMap.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::SHADOW, GL_DEPTH_ATTACHMENT);
+    shadowMap.checkCompleteness();
+    shadowMap.unbind();
+    
+    // renderer instance
+    _deferredRenderer = new DeferredRenderer(SCREEN_WIDTH, SCREEN_HEIGHT);
+
     while (!glfwWindowShouldClose(gWindow))
     {
         camRef = gCameraManager->getActiveCamera();
@@ -101,15 +110,24 @@ void App::run() {
         t1.reset();
 
         processInput(gWindow);
-
         // show edit window
 
-        // Rendering
-       
-        // glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // view/projection transformations
-    
+        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        auto modelShader = gShaderManager->getShader("shader_model");
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camRef->Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 1000.0f);
+        glm::mat4 view = camRef->GetViewMatrix();
+            modelShader->use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model,glm::vec3(0,0,0));
+            model = glm::scale(model, glm::vec3(0.03f));
+            modelShader->setMat4("model", model);
+            modelShader->setMat4("projection", projection);
+            modelShader->setMat4("view", view);
+            sponza.Draw(*modelShader);
+
         // render the cameras
         // for (auto &&i : *gCameraManager->getCameraList())
         // {
@@ -136,67 +154,6 @@ void App::run() {
         //     }
         // }
 
-        auto pos = glm::vec3(0,60,1);
-            glm::mat4 projection = glm::perspective(glm::radians(camRef->Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 view = camRef->GetViewMatrix();
-            glm::mat4 model = glm::mat4(1.0f);
-        gBuffer.bind();
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            auto gAlbedoShader = gShaderManager->getShader("shader_albedo"); 
-            gAlbedoShader->use();
-            gAlbedoShader->setMat4("projection", projection);
-            gAlbedoShader->setMat4("view", view);
-            model = glm::mat4(1.0f);
-            model = glm::translate(model,glm::vec3(0,0,0));
-            model = glm::scale(model, glm::vec3(0.03f));
-            gAlbedoShader->setMat4("model", model);
-            sponza.Draw(*gAlbedoShader);
-        gBuffer.unbind();
-        // 2. lighting pass : calcualte lighting by itearationg over a screen filled quad pixel-by-pixel using the gbuffer's content
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        auto lightingPassShader = gShaderManager->getShader("shader_lighting_pass");
-
-        lightingPassShader->use();
-
-        // note: if i reload shader i must reload this aswell
-        lightingPassShader->setInt("gPosition", 0);
-        lightingPassShader->setInt("gNormal", 1);
-        lightingPassShader->setInt("gAlbedoSpec", 2);
-
-        gBuffer.bindTextures();
-
-        lightingPassShader->setVec3("light.Position", pos);
-        // lightingPassShader->setVec3("", pos);
-        lightingPassShader->setVec3("light.Position", pos);
-        lightingPassShader->setVec3("light.Color", glm::vec3(1));
-        // update attenuation parameters and calculate radius
-        const float linear = 0.009f;
-        const float quadratic = 0.032f;
-        lightingPassShader->setFloat("light.Linear", linear);
-        lightingPassShader->setFloat("light.Quadratic", quadratic);
-        lightingPassShader->setVec3("viewPos", camRef->Position);
-        renderQuad();
-
-        // 2.5 copy content of geometry's depth buffer to default framebuffer's depth buffer
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer._framebuffer); // use g buffer to read
-        glBindFramebuffer(GL_DRAW_BUFFER, 0); // write to default frame buffer
-        glBlitFramebuffer(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        if (gShaderManager->bind("shader_light_cube")){
-            gShaderManager->getShader("shader_light_cube")->setMat4("projection", projection);
-            gShaderManager->getShader("shader_light_cube")->setMat4("view", camRef->GetViewMatrix());
-            gShaderManager->getShader("shader_light_cube")->setVec3("color", {1,1,1});
-            model = glm::mat4(1.0f);
-            model = glm::scale(model, glm::vec3(0.5f));
-            model = glm::translate(model, pos);
-            gShaderManager->getShader("shader_light_cube")->setMat4("model", model);
-            cube.Draw(*gShaderManager->getShader("shader_light_cube"));
-            gShaderManager->unbind();
-        }
         if (gEditModeEnabled){
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
@@ -215,56 +172,54 @@ void App::run() {
 }
 // event loop
 // ----------
-void App::processInput(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && !is_left_pressed){
+void App::processInput(GLFWwindow* window) {    
+    if (Keyboard::keyWentDown(GLFW_KEY_LEFT)){
         gCameraManager->setPrevCamera();
-        is_left_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_RELEASE){
-        is_left_pressed = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS && !is_right_pressed){
+    if (Keyboard::keyWentDown(GLFW_KEY_RIGHT)){
         gCameraManager->setNextCamera();
-        is_right_pressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_RELEASE){
-        is_right_pressed = false;
-    }
+    if (Keyboard::key(GLFW_KEY_ESCAPE))
+        glfwSetWindowShouldClose(gWindow, true);
 
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(gWindow,true);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camRef->processKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camRef->processKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camRef->processKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camRef->processKeyboard(RIGHT, deltaTime);
+    if (Keyboard::key(GLFW_KEY_W)){
+        camRef->updateCameraPosition(FORWARD, deltaTime);
+    }
+    if (Keyboard::key(GLFW_KEY_S)){
+        camRef->updateCameraPosition(BACKWARD, deltaTime);
+    }
+    if (Keyboard::key(GLFW_KEY_A)){
+        camRef->updateCameraPosition(LEFT, deltaTime);
+    }
+    if (Keyboard::key(GLFW_KEY_D)){
+        camRef->updateCameraPosition(RIGHT, deltaTime);
+    }
     
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
-    {
+    if (Keyboard::keyWentDown(GLFW_KEY_R)){
         gShaderManager->reloadAllShaders();
     }
 
-    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !is_j_pressed)
-    {
+    if (Keyboard::keyWentDown(GLFW_KEY_J)){
         gEditModeEnabled = !gEditModeEnabled;
-        is_j_pressed = true;
-        if (gEditModeEnabled)
-        {
+        if (gEditModeEnabled){
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            setEditModeCallbacks(gWindow);
         }
-        else
-        {
+        else{
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            camRef->setLastMouse(true);
+            setNormalModeCallbacks(gWindow);
+            Mouse::setFirstMouse(true);
         }
     }
-    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_RELEASE)
-    {
-        is_j_pressed = false;
-    }
+
+    double dx = Mouse::getDX(), dy = Mouse::getDY();
+    if (dx != 0 || dy != 0)
+        camRef->updateCameraDirection(dx, dy);
+
+    double scrollDy = Mouse::getScrollDY();
+    if (scrollDy != 0)
+        camRef->updateCameraZoom(scrollDy);
+
 }
 
 void App::update(const float& dt) {

@@ -43,7 +43,7 @@
 - [x] Framebuffers (gBuffer, colorBuffer etc...)
 - [x] Deferred Shading
 - [ ] Debugging Framebuffers
-- [ ] Input Manager
+- [x] Keyboard / Mouse IO Manager
 - [ ] Editor / Engine hierarchy
 - [ ] ECS
 - [ ] Scene Hierarchy

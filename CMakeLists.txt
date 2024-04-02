@@ -67,6 +67,10 @@ file(GLOB_RECURSE SOURCE
     src/renderer/*.cpp
     src/renderer/*.hpp
     src/renderer/*.h
+    
+    src/io/*.cpp
+    src/io/*.hpp
+    src/io/*.h
     )
 
 #include directories

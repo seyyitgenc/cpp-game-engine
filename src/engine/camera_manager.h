@@ -2,7 +2,7 @@
 
 #include "camera.h"
 #include "../util/log.hpp"
-
+#include "io/mouse.h"
 #include <map>
 #include <memory>
 #include <algorithm>
@@ -68,7 +68,7 @@ public:
         if (it != _cameras.end())
         {
             activeCamera = it->second.get();
-            activeCamera->setLastMouse(true);
+            Mouse::setFirstMouse(true);
             Log::write(
                 Log::Info,
                 LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_NEXT_CAMERA Switched camera to -> "),
@@ -87,7 +87,7 @@ public:
         {
             it--;
             activeCamera = it->second.get();
-            activeCamera->setLastMouse(true);
+            Mouse::setFirstMouse(true);
             Log::write(
                 Log::Info,
                 LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> "),

@@ -2,6 +2,7 @@
 
 #include "light.h"
 #include "globals.h"
+#include "renderer/deferred_renderer.h"
 
 #include <iostream>
 #include <glm/glm.hpp>
@@ -36,11 +37,8 @@ public:
     void update(const float &dt);
     void processInput(GLFWwindow* window);
 private:
-    bool is_j_pressed = false;
     // App Field
     ImVec4 clear_color = ImVec4(0.45f, 0.55f,0.60f, 1.00f);
-    
     static App *_instance;
-    bool is_right_pressed = false;
-    bool is_left_pressed = false;
+    DeferredRenderer *_deferredRenderer = nullptr;
 };

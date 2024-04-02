@@ -1,6 +1,4 @@
 #pragma once
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 #include <iostream>
 
 #include "../external/ImGui/imgui.h"
@@ -12,7 +10,10 @@
 #include "texture.h"
 #include "shader_manager.h"
 #include "camera_manager.h"
-
+#include "callbacks.h"
+#include "io/keyboard.h"
+#include "io/mouse.h"
+#include <GLFW/glfw3.h>
 
 constexpr int SCREEN_WIDTH  = 1366;
 constexpr int SCREEN_HEIGHT = 768;

@@ -3,14 +3,16 @@
 #include "../external/glad/glad.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 #include <vector>
+
 // camera movement directions
-enum Camera_Movement{
+enum CameraDirection{
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+    UP,
+    DOWN
 };
 
 // default camera values
@@ -35,17 +37,15 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
-private:    
-    // fixme: due to last mouse position, camera switch works fine but it will not recognize last position
-    float lastX{}, lastY{};
-    bool m_firstMouse = true;
 
 public:
-    Camera(glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH   ) : Position(position), Front(glm::vec3(0.0f,0.0f,-1.0f)), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
+    Camera(glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH) :
+    Position(position), Front(glm::vec3(0.0f,0.0f,-1.0f)), WorldUp(up), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM){
         updateCameraVectors();
     };
 
-    Camera(float posX, float posY, float posZ, float upX ,float upY,float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f,0.0f,-1.0f)), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM) {
+    Camera(float posX, float posY, float posZ, float upX ,float upY,float upZ, float yaw, float pitch) :
+    Front(glm::vec3(0.0f,0.0f,-1.0f)), Yaw(yaw), Pitch(pitch), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM) {
         Position =  glm::vec3(posX,posY,posZ);
         WorldUp  =  glm::vec3(upX,upY,upZ);
         updateCameraVectors();
@@ -55,47 +55,46 @@ public:
         return glm::lookAt(Position, Position + Front, Up);
     }
 
-    void processKeyboard(Camera_Movement direction, float deltaTime){
+    void updateCameraPosition(CameraDirection direction, float deltaTime){
         float velocity = MovementSpeed * deltaTime;
-        if(direction == FORWARD)
+
+        switch (direction)
+        {
+        case FORWARD:
             Position += Front * velocity;
-        if(direction == BACKWARD)
+            break;
+        case BACKWARD:
             Position -= Front * velocity;
-        if(direction == RIGHT)
+            break;
+        case RIGHT:
             Position += Right * velocity;
-        if(direction == LEFT)
+            break;
+        case LEFT:
             Position -= Right * velocity;
+            break;
+        case UP:
+            Position += Up * velocity;
+            break;
+        case DOWN:
+            Position -= Right * velocity;
+            break;
+        }
     }
 
-    void processMouseMovement(double xpos, double ypos){
-        if (m_firstMouse)
-        {
-            lastX = xpos;
-            lastY = ypos;
-            m_firstMouse = false;
-        }
-        float xoffset = xpos - lastX;
-        float yoffset = lastY - ypos;
-
-        lastX = xpos;
-        lastY = ypos;
-
-        xoffset *= MouseSensitivity;
-        yoffset *= MouseSensitivity;
-        Yaw   += xoffset;
-        Pitch += yoffset;
+    void updateCameraDirection(double dx, double dy){
+        Yaw += MouseSensitivity * dx;
+        Pitch += MouseSensitivity * dy;
 
         if (Pitch > 89.0f)  Pitch =  89.0f;
         if (Pitch < -89.0f) Pitch = -89.0f;
         updateCameraVectors();
     }
 
-    void processMouseScroll(double xoffset, double yoffset){
-        Zoom -= (float)yoffset;
+    void updateCameraZoom(double dy){
+        Zoom -= (float)dy;
         if(Zoom < 1.0f) Zoom = 1.0f;
         if(Zoom > 45.0f) Zoom = 45.0f;
     }
-    void setLastMouse(bool set){m_firstMouse = set;}
 
 private:
     void updateCameraVectors(){

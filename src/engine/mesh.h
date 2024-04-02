@@ -46,19 +46,19 @@ public:
                 std::string name; 
                 switch (currentText->type)
                 {
-                case DIFFUSE:
+                case TextureType::DIFFUSE:
                     name = "texture_diffuse";
                     number = std::to_string(diffuseNr++);
                     break;
-                case SPECULAR:
+                case TextureType::SPECULAR:
                     name = "texture_specular";
                     number = std::to_string(specularNr++);
                     break;
-                case NORMAL:
+                case TextureType::NORMAL:
                     name = "texture_normal";
                     number = std::to_string(normalNr++);
                     break; 
-                case DEPTH:
+                case TextureType::DEPTH:
                     name = "texture_depth";
                     number = std::to_string(depthNr++);
                     break; 

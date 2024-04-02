@@ -117,13 +117,13 @@ private:
         if (mesh->mMaterialIndex >= 0)
         {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-            std::vector<std::string> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, DIFFUSE);
+            std::vector<std::string> diffuseMaps = loadMaterialTextures(material,aiTextureType_DIFFUSE, TextureType::DIFFUSE);
             texture_names.insert(texture_names.end(),diffuseMaps.begin(),diffuseMaps.end());
-            std::vector<std::string> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, SPECULAR);
+            std::vector<std::string> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, TextureType::SPECULAR);
             texture_names.insert(texture_names.end(), specularMaps.begin(), specularMaps.end());
-            std::vector<std::string> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, NORMAL);
+            std::vector<std::string> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, TextureType::NORMAL);
             texture_names.insert(texture_names.end(), normalMaps.begin(), normalMaps.end());
-            std::vector<std::string> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, HEIGHT);
+            std::vector<std::string> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, TextureType::HEIGHT);
             texture_names.insert(texture_names.end(), heightMap.begin(), heightMap.end());    
         }
         Mesh lastMesh(vertices, indices, texture_names, true, hasNormals, hasTexCoords);

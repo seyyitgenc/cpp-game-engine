@@ -33,23 +33,23 @@ bool gInitGlobals() {
     // glfw window creation
     // --------------------
     gWindow = glfwCreateWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Engine", NULL, NULL);
-    if (gWindow == NULL) {
+    if (gWindow == NULL){
         Log::write(Log::Fatal,"FATAL::INIT_GLOBALS Failed to create GLFW window\n");
         glfwTerminate();
         return false;
     }
     glfwMakeContextCurrent(gWindow);
     glfwSwapInterval(1); // on/off vscync
-    glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
-    glfwSetCursorPosCallback      (gWindow, mouse_callback);
-    glfwSetScrollCallback         (gWindow, scroll_callback);
     
+    glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
+    
+    glfwSetKeyCallback            (gWindow, Keyboard::keyCallback);
+    setNormalModeCallbacks(gWindow);    
     // tell GLFW to capture our mouse
     glfwSetInputMode              (gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     gEditModeEnabled = false;
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
         Log::write(
             Log::Debug,
             "FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
@@ -78,7 +78,7 @@ bool gInitGlobals() {
 }
 void InitTextures(){
     gTextureManager = TextureManager::getInstance(); 
-    gTextureManager->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), ICON);
+    gTextureManager->addTexture("file-icon",FileSystem::getPath("resources/textures/file-icon.png"), TextureType::ICON);
 }
 
 void InitShaders(){
@@ -117,9 +117,9 @@ void InitShaders(){
         FileSystem::getPath("shaders/basic_mesh.vs"),
         FileSystem::getPath("shaders/color.fs"));
     gShaderManager->addShader(
-        "shader_albedo",
-        FileSystem::getPath("shaders/albedo.vs"),
-        FileSystem::getPath("shaders/albedo.fs"));
+        "shader_gbuffer",
+        FileSystem::getPath("shaders/gbuffer.vs"),
+        FileSystem::getPath("shaders/gbuffer.fs"));
     gShaderManager->addShader(
         "shader_lighting_pass",
         FileSystem::getPath("shaders/lighting/lighting_pass.vs"),
@@ -128,6 +128,11 @@ void InitShaders(){
         "shader_depth_pass",
         FileSystem::getPath("shaders/lighting/depth_pass.vs"),
         FileSystem::getPath("shaders/lighting/depth_pass.fs"));
+    gShaderManager->addShader(
+        "shader_debug_depth_pass",
+        FileSystem::getPath("shaders/lighting/debug_depth_pass.vs"),
+        FileSystem::getPath("shaders/lighting/debug_depth_pass.fs"));
+
 }
 void InitCameras(){
     gCameraManager = CameraManager::getInstance();

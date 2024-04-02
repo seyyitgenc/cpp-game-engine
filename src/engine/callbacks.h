@@ -1,37 +1,27 @@
 #pragma once
+#include "io/mouse.h"
 #include "camera.h"
 #include "camera_manager.h"
+
 
 inline void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0,0,width,height);
 }
 
-// scroll callback for edit mode
-inline void scroll_callback_edit(GLFWwindow *window, double xpos, double ypos)
-{
-}
 
-// mouse position callback for edit mode
-inline void mouse_callback_edit(GLFWwindow *window, double xpos, double ypos)
-{
-}
-
-inline void scroll_callback(GLFWwindow *window, double xpos, double ypos)
-{
-	if (!gEditModeEnabled){
-		gCameraManager->getActiveCamera()->processMouseScroll(xpos, ypos);
-	}
-  
-}
-inline void mouse_callback(GLFWwindow *window, double xpos, double ypos)
-{
-	if (!gEditModeEnabled){
-		gCameraManager->getActiveCamera()->processMouseMovement(xpos, ypos);
-	}
-}
-
-inline  void glfw_error_callback(int error, const char* description)
+inline void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+inline void setNormalModeCallbacks(GLFWwindow *window){
+    glfwSetMouseButtonCallback    (window, Mouse::normalModeMouseButtonCallbaack);
+    glfwSetCursorPosCallback      (window, Mouse::normalModeCursorPosCallback);
+    glfwSetScrollCallback         (window, Mouse::normalModeMouseWheelCallback);
+}
+inline void setEditModeCallbacks(GLFWwindow *window){
+    glfwSetMouseButtonCallback    (window, Mouse::editModeMouseButtonCallbaack);
+    glfwSetCursorPosCallback      (window, Mouse::editModeCursorPosCallback);
+    glfwSetScrollCallback         (window, Mouse::editModeMouseWheelCallback);
 }
