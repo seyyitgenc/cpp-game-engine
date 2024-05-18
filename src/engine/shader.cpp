@@ -145,8 +145,11 @@ void Shader::reload(){
     Log::write(Log::Debug, BLUE_TEXT("-----------------------------------------------------\n"));
 }
 
-void Shader::use(){
+void Shader::bind(){
     glUseProgram(_info.ID);
+}
+void Shader::unbind(){
+    glUseProgram(0);
 }
 void Shader::setBool(const std::string &name, bool value) const{
     glUniform1i(glGetUniformLocation(_info.ID,name.c_str()), value);

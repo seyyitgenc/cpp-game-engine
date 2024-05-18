@@ -67,7 +67,8 @@ public: // uniform getter functions
 public:
     //  
     void reload();
-    void use();
+    void bind();
+    void unbind();
     std::string readFile(const std::string &path);
     bool compileShader(const char*  code, GLuint ID, GLenum type);
     bool buildShader();

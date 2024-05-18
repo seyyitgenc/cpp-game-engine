@@ -39,7 +39,7 @@ struct FrameBufferTexture{
 
 struct FrameBuffer{
     FrameBuffer();
-    void bind();
+    void bind(GLenum target);
     void attachTexture(int width, int height, FBTT type,GLenum attachment);
     void bindTextures();
     void attachRenderBuffer();

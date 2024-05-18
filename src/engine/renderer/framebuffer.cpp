@@ -60,8 +60,8 @@ FrameBuffer::FrameBuffer(){
 }
 
 // Sets current frame buffer to itself
-void FrameBuffer::bind(){
-    glBindFramebuffer(GL_FRAMEBUFFER, _framebuffer);
+void FrameBuffer::bind(GLenum target){
+    glBindFramebuffer(target, _framebuffer);
 }
 
 // Sets current frame buffer to default
@@ -71,7 +71,7 @@ void FrameBuffer::unbind(){
 
 // Attaches render buffer and configures it
 void FrameBuffer::attachRenderBuffer(){
-    bind();
+    bind(GL_FRAMEBUFFER);
     glGenRenderbuffers(1,&_renderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, _renderbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCREEN_WIDTH,SCREEN_HEIGHT);
@@ -89,7 +89,7 @@ void FrameBuffer::bindTextures(){
 
 // Attaches a texture to it's framebuffer
 void FrameBuffer::attachTexture(int width, int height, FBTT type,GLenum attachment){
-    bind();
+    bind(GL_FRAMEBUFFER);
     FrameBufferTexture bufferTexture(width, height, type, attachment);
     _boundTextures.push_back(bufferTexture);
     std::vector<GLenum> attachments;

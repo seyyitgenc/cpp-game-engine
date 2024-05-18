@@ -15,8 +15,10 @@
 #include "io/mouse.h"
 #include <GLFW/glfw3.h>
 
-constexpr int SCREEN_WIDTH  = 1366;
-constexpr int SCREEN_HEIGHT = 768;
+constexpr int SCREEN_WIDTH  = 1280;
+constexpr int SCREEN_HEIGHT = 720;
+constexpr int SHADOW_WIDTH = 2160;
+constexpr int SHADOW_HEIGHT = 2160;
 constexpr float THUMBNAIL_SIZE = 128.0f;
 constexpr int TILE_WIDTH  =  32;
 constexpr int TILE_HEIGHT = 32;

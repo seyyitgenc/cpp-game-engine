@@ -36,7 +36,7 @@ public:
                 LIGHT_RED_TEXT(" doesn't exist returning false\n"));
             return false;
         }
-        glUseProgram(_shaders[name]->getShaderInfo().ID);
+        _shaders[name]->bind();
         return true;
     }
     
