@@ -10,8 +10,8 @@
 
     mkdir build
     cd build
-    cmake .. -G "Ninja"
-    make
+    cmake ..
+    cmake --build .
 
 - Change this -G parameter according to your build preferences
 
@@ -39,7 +39,8 @@
 - [x] Spot Light
 - [x] Point Light
 - [ ] Multiple Point Lights (WIP)
-- [ ] Simple Shadows
+- [x] Directional Shadow Mapping
+- ![Shadows](/screenshots/directional_shadows.png)
 - [x] Framebuffers (gBuffer, colorBuffer etc...)
 - [x] Deferred Shading
 - [ ] Debugging Framebuffers

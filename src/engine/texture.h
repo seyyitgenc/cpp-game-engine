@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-enum struct TextureType{NONE = 0, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT};
+enum struct TextureType{NONE = 0, ICON, DIFFUSE, SPECULAR, NORMAL, DEPTH, HEIGHT, REFLECTION, DISPLACEMENT, ROUGNESS};
 
 struct Texture
 {

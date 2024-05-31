@@ -125,6 +125,12 @@ private:
             texture_names.insert(texture_names.end(), normalMaps.begin(), normalMaps.end());
             std::vector<std::string> heightMap = loadMaterialTextures(material, aiTextureType_AMBIENT, TextureType::HEIGHT);
             texture_names.insert(texture_names.end(), heightMap.begin(), heightMap.end());    
+            std::vector<std::string> reflectionMap = loadMaterialTextures(material, aiTextureType_REFLECTION, TextureType::REFLECTION);
+            texture_names.insert(texture_names.end(), reflectionMap.begin(), reflectionMap.end());    
+            std::vector<std::string> displacementMap = loadMaterialTextures(material, aiTextureType_DISPLACEMENT, TextureType::DISPLACEMENT);
+            texture_names.insert(texture_names.end(), displacementMap.begin(), displacementMap.end());    
+            std::vector<std::string> roughnessMap = loadMaterialTextures(material, aiTextureType_DIFFUSE_ROUGHNESS, TextureType::ROUGNESS);
+            texture_names.insert(texture_names.end(), roughnessMap.begin(), roughnessMap.end());    
         }
         Mesh lastMesh(vertices, indices, texture_names, true, hasNormals, hasTexCoords);
         return lastMesh;

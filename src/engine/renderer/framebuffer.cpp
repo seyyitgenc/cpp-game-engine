@@ -40,13 +40,19 @@ void FrameBufferTexture::Configure(){
         glReadBuffer(GL_NONE);
         break;
     case FBTT::SPECULAR:
-        Log::write(Log::Fatal, RED_TEXT("FRAMEBUFFERTEXTURE::CONFIGURE::FBTT::SPECULAR is not implemented\n"));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, _width, _height, 0, GL_RGB, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, _texture, 0);
         break;
     case FBTT::DISPLACEMENT:
         Log::write(Log::Fatal, RED_TEXT("FRAMEBUFFERTEXTURE::CONFIGURE::FBTT::DEPTH is not implemented\n"));
         break;
     case FBTT::ROUGHNESS:
-        Log::write(Log::Fatal, RED_TEXT("FRAMEBUFFERTEXTURE::CONFIGURE::FBTT::ROUGHNESS is not implemented\n"));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, _width, _height, 0, GL_RED, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, _attachment, GL_TEXTURE_2D, _texture, 0);
         break;
     default:
         Log::write(Log::Warning, RED_TEXT("Given Type Is Not Valid!\n"));

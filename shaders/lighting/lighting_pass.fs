@@ -6,6 +6,7 @@ in vec2 TexCoords;
 uniform sampler2D gAlbedoSpec;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler2D gRoughnessMap;
 uniform sampler2D gShadowMap;
 
 uniform vec3 lightPos;
@@ -40,18 +41,24 @@ void main()
     vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * light.Color;
     // specular
     vec3 halfwayDir = normalize(lightDir + viewDir);  
-    float spec = pow(max(dot(Normal, halfwayDir), 0.0), 128.0);
-    vec3 specular = light.Color * spec * Specular;
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
+    // vec3 specular = light.Color * spec * Specular;
+    float roughness = texture(gRoughnessMap, TexCoords).r;
+    vec3 specular = light.Color * spec * Specular * (1.0 - roughness);
     // attenuation
-    float distance = length(light.Position - FragPos);
+    // float distance = length(light.Position - FragPos);
     // float attenuation = 1.0 / (1.0 + light.Linear * distance + light.Quadratic * distance * distance);
     // diffuse *= attenuation;
     // specular *= attenuation;
     // lighting += diffuse + specular;        
     float shadow = ShadowCalculation(FragPosLightSpace);                      
     vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * light.Color;    
-
     FragColor = vec4(lighting, 1.0);
+
+    vec3 gamma = vec3(1.0 / 2.0);
+    vec3 corrected = pow(lighting, gamma);
+
+    FragColor = vec4(vec3(lighting), 1.0);
 }
 
 float ShadowCalculation(vec4 fragPosLightSpace)
@@ -67,7 +74,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // calculate bias (based on depth map resolution and slope)
     vec3 normal =  texture(gNormal, TexCoords).rgb;
     vec3 lightDir = normalize(lightPos -  texture(gPosition, TexCoords).rgb);
-    float bias = max(0.00001 * (1.0 - dot(normal, lightDir)), 0.001);
+    float bias = max(0.00009 * (1.0 - dot(normal, lightDir)), 0.0001);
     // check whether current frag pos is in shadow
     // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
     // PCF
@@ -78,7 +85,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
         for(int y = -1; y <= 1; ++y)
         {
             float pcfDepth = texture(gShadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
-            shadow += currentDepth - 0 > pcfDepth  ? 1.0 : 0.0;        
+            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
         }    
     }
     shadow /= 9.0;

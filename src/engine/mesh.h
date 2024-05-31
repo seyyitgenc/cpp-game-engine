@@ -38,6 +38,9 @@ public:
             unsigned int specularNr = 1;
             unsigned int normalNr = 1;
             unsigned int depthNr = 1;
+            unsigned int displacementNr = 1;
+            unsigned int rougnessNr = 1;
+            unsigned int reflectionNr = 1;
             for (int i = 0; i < texture_names.size(); i++)
             {
                 glActiveTexture(GL_TEXTURE0 + i);
@@ -62,8 +65,18 @@ public:
                     name = "texture_depth";
                     number = std::to_string(depthNr++);
                     break; 
-                default:
-                    break;
+                case TextureType::ROUGNESS:
+                    name = "texture_roughness";
+                    number = std::to_string(rougnessNr++);
+                    break; 
+                case TextureType::REFLECTION:
+                    name = "texture_reflection";
+                    number = std::to_string(reflectionNr++);
+                    break; 
+                case TextureType::DISPLACEMENT:
+                    name = "texture_displacement";
+                    number = std::to_string(displacementNr++);
+                    break; 
                 }
                 shader.setInt(name + number, i);
                 glBindTexture(GL_TEXTURE_2D, currentText->ID);

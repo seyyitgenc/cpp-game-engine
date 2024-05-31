@@ -128,10 +128,13 @@ void InitShaders(){
         FileSystem::getPath("shaders/lighting/depth_pass.vs"),
         FileSystem::getPath("shaders/lighting/depth_pass.fs"));
     gShaderManager->addShader(
+        "shader_debugging",
+        FileSystem::getPath("shaders/debugging.vs"),
+        FileSystem::getPath("shaders/debugging.fs"));
+    gShaderManager->addShader(
         "shader_debug_depth_pass",
         FileSystem::getPath("shaders/lighting/debug_depth_pass.vs"),
         FileSystem::getPath("shaders/lighting/debug_depth_pass.fs"));
-
 }
 void InitCameras(){
     gCameraManager = CameraManager::getInstance();
