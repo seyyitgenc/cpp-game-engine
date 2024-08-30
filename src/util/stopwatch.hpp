@@ -22,6 +22,6 @@ public:
     }
 
 private:
-    using time_point = clock::time_point;
-    time_point _startTime;
+    // using time_point = ;
+    typename clock::time_point _startTime;
 };

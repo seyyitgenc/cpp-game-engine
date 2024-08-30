@@ -22,7 +22,7 @@ public:
     // bool hasTextures;
     bool hasNormals;
     bool hasTexCoords;
-        unsigned int VAO, VBO, EBO;
+    unsigned int VAO, VBO, EBO;
     public:
         Mesh(std::vector<Vertex> verticies , std::vector<unsigned int> indices, std::vector<std::string> texture_names,
         bool hasIndices = false, bool hasNormals = false, bool hasTexCoords = false) 

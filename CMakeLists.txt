@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(engine)
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -33,6 +33,7 @@ message(STATUS "Found GLFW3 in ${glfw3_INCLUDE_DIRS}")
 set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
 # set me a LIBS for linux
 # set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
+set(LIBS glfw GL pthread freetype dl ${ASSIMP_LIBRARIES})
 
 # configure file to get root directory
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h)

@@ -84,6 +84,8 @@ void App::run() {
     Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
     Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
     Model cyborg(FileSystem::getPath("resources/objects/nanosuit/nanosuit.obj"));
+    Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
+
     // cube_transf[0].scale(1.0f, 3.0f, 1.0f);
     // cube_transf[0].translate(2.0f, 0.0f, 2.0f);
 
@@ -175,7 +177,9 @@ void App::run() {
                 model = glm::scale(model, glm::vec3(0.5f));
                 model = glm::translate(model, glm::vec3(0,0,0));
                 depthPassShader->setMat4("model", model);
-                cyborg.Draw(*depthPassShader);
+                earth.Draw(*depthPassShader);
+
+                // cyborg.Draw(*depthPassShader);
                 glCullFace(GL_BACK);
                 glDisable(GL_CULL_FACE);
 
@@ -198,10 +202,11 @@ void App::run() {
                 gBufferShader->setMat4("model", model);
                 sponza.Draw(*gBufferShader);
                 model = glm::mat4(1.0f);
-                model = glm::scale(model, glm::vec3(0.5f));
+                model = glm::scale(model, glm::vec3(1.0f));
                 model = glm::translate(model, glm::vec3(0,0,0));
                 gBufferShader->setMat4("model", model);
-                cyborg.Draw(*gBufferShader);
+                // cyborg.Draw(*gBufferShader);
+                earth.Draw(*gBufferShader);
 
                 for (auto &&i : *gCameraManager->getCameraList())
                 {

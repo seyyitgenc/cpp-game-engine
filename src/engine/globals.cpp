@@ -88,7 +88,7 @@ void InitShaders(){
         FileSystem::getPath("shaders/basic_model.fs"));
     gShaderManager->getShader("shader_model")->getShaderInfo().description = ("testing this thing .");
     gShaderManager->addShader(
-        "shader_texture that has extremely long name but it is very very looooong name",
+        "shader_texture",
         FileSystem::getPath("shaders/basic_texture.vs"),
         FileSystem::getPath("shaders/basic_texture.fs"));
     gShaderManager->addShader(
