@@ -61,7 +61,6 @@ bool gInitGlobals() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    
     // setup Dear ImGui style
     // ----------------------
     ImGui::StyleColorsDark();

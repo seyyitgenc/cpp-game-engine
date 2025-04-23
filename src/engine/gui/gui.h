@@ -31,7 +31,8 @@ namespace Gui{
                 
                 if (ImGui::BeginTable("tbl_shaders", columnCount))
                 {
-                    for (int index = 0; auto &&it : gShaderManager->getShaderList())
+                    int index = 0;
+                    for (auto &&it : gShaderManager->getShaderList())
                     {
                         ImGui::TableNextColumn();
                         ImVec2 pos = ImGui::GetCursorPos();

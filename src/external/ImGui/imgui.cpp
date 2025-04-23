@@ -7161,7 +7161,6 @@ void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
     g.CurrentItemFlags = item_flags;
     g.ItemFlagsStack.push_back(item_flags);
 }
-
 void ImGui::PopItemFlag()
 {
     ImGuiContext& g = *GImGui;

@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.22)
 # todo: set binary directory
 project(engine)
-
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,22 +17,29 @@ endif(NOT CMAKE_BUILD_TYPE)
 # OpenGL
 find_package(OpenGL REQUIRED)
 
-# GLM
-find_package(glm REQUIRED)
-message(STATUS "Found GLM in ${glm_INCLUDE_DIRS}")
-
 #assimp
-find_package(assimp REQUIRED)
 message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
 
 # GLFW3
 find_package(glfw3 REQUIRED)
-message(STATUS "Found GLFW3 in ${glfw3_INCLUDE_DIRS}")
+message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIRS}")
 
-set(LIBS glfw3 opengl32 freetype ${ASSIMP_LIBRARIES})
-# set me a LIBS for linux
-# set(LIBS glfw GL pthread freetype ${ASSIMP_LIBRARIES})
-set(LIBS glfw GL pthread freetype dl ${ASSIMP_LIBRARIES})
+# assimp
+add_subdirectory(src/external/assimp)
+
+if(WIN32)
+    # Windows
+    message(STATUS "Windows detected")
+    set(LIBS glfw GL pthread freetype dl ${ASSIMP_LIBRARIES})
+endif(WIN32)
+
+if(UNIX)
+    # Linux
+    message(STATUS "Linux detected")
+    set(LIBS glfw GL pthread freetype assimp)
+endif(UNIX)
+
+
 
 # configure file to get root directory
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h)
