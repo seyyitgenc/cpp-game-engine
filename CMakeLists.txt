@@ -96,3 +96,5 @@ elseif(CMAKE_BUILD_TYPE MATCHES Release)
     set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/release/")
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
     
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
+target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)

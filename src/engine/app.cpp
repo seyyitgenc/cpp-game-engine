@@ -1,22 +1,25 @@
 #include "app.h"
-#include "model.h"
-#include "camera.h"
-#include "shader.h"
-#include "gui/gui.h"
-#include "callbacks.h"
-#include "shader_manager.h"
 #include "../util/stopwatch.hpp"
+#include "callbacks.h"
+#include "camera.h"
+#include "model.h"
+#include "shader.h"
+#include "shader_manager.h"
 
+#include "gui/ImGuiLayerManager.hpp"
+#include "gui/ShadersGUI.hpp"
 // todo: rename some of the functions of Camera and CameraMananger.
 
-App* App::_instance = nullptr;
+App *App::_instance = nullptr;
 
 // fixme: this is not safe
 Camera *camRef = nullptr;
 
-App::App() { }
-App::~App() { this->clean(); }
- 
+App::App() {}
+App::~App() {
+    this->clean();
+}
+
 // void init_shader_values(const std::string &name){
 //     Shader shader = gShaderManager->get_shader(name);
 //     shader.bind();
@@ -38,10 +41,10 @@ float deltaTime = 0; // note: temporary solution
 // -----------------------------------------
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
-void renderQuad()
-{
-    if (quadVAO == 0)
-    {
+void renderQuad() {
+    if (quadVAO == 0) {
+
+        // clang-format off
         float quadVertices[] = {
             // positions        // texture Coords
             -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
@@ -49,6 +52,8 @@ void renderQuad()
              1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
              1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
         };
+        // clang-format on
+
         // setup plane VAO
         glGenVertexArrays(1, &quadVAO);
         glGenBuffers(1, &quadVBO);
@@ -56,21 +61,23 @@ void renderQuad()
         glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
     }
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
 bool perspectiveProjection = false;
-float x = 30.0f,y = 60.0f,z = -7.0f;
+float x = 30.0f, y = 60.0f, z = -7.0f;
 // ---------
 // main loop
 // ---------
 void App::run() {
     gInitGlobals();
+
+    ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
     auto modelShader = gShaderManager->getShader("shader_model");
     auto debugDepthPassShader = gShaderManager->getShader("shader_debug_depth_pass");
@@ -95,14 +102,15 @@ void App::run() {
     // cube_base_transf.translate(0.0f, -2.0f, 0.0f);
     // cube_base_transf.scale(20.0f, 1.0f, 20.0f);
 
-    std::vector<glm::vec3> cubeScales = {glm::vec3(1.0f, 3.0f, 1.0f),glm::vec3(1.0f, 5.0f, 1.0f),glm::vec3(20.0f, 1.0f, 20.0f)};
-    std::vector<glm::vec3> cubeTransfors = {glm::vec3(-2.0f, 0.0f, -2.0f),glm::vec3(2.0f, 0.0f, 2.0f),glm::vec3(0.0f, -2.0f, 0.0f)};
-    
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    std::vector<glm::vec3> cubeScales = { glm::vec3(1.0f, 3.0f, 1.0f), glm::vec3(1.0f, 5.0f, 1.0f), glm::vec3(20.0f, 1.0f, 20.0f) };
+    std::vector<glm::vec3> cubeTransfors = { glm::vec3(-2.0f, 0.0f, -2.0f), glm::vec3(2.0f, 0.0f, 2.0f), glm::vec3(0.0f, -2.0f, 0.0f) };
+
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
     glEnable(GL_DEPTH_TEST);
 
     gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
-    
+
     FrameBuffer shadowMap;
     shadowMap.bind(GL_FRAMEBUFFER);
     shadowMap.attachRenderBuffer();
@@ -121,12 +129,11 @@ void App::run() {
     gBuffer.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
     gBuffer.checkCompleteness();
     gBuffer.unbind();
-    
+
     float near_plane = 1.0f;
     float far_plane = 1000.0f;
 
-    while (!glfwWindowShouldClose(gWindow))
-    {
+    while (!glfwWindowShouldClose(gWindow)) {
         glm::vec3 lightPos(x, y, z);
         camRef = gCameraManager->getActiveCamera();
 
@@ -151,84 +158,82 @@ void App::run() {
 
         glm::mat4 lightProjection;
         if (perspectiveProjection)
-            lightProjection = glm::perspective(3.1415f/1.6f, (float)SHADOW_WIDTH/(float)SHADOW_HEIGHT, 1.0f, 1000.0f);
+            lightProjection = glm::perspective(3.1415f / 1.6f, (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.0f, 1000.0f);
         else
             lightProjection = glm::ortho(left, right, bottom, top, near_plane, far_plane);
 
-        glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,1.0f,0.0f));
+        glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         // ----------
         // DEPTH PASS
         // ----------
         shadowMap.bind(GL_FRAMEBUFFER);
-            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            glClearColor(0.0f ,0.0f ,0.0f, 1.0f);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            depthPassShader->bind();
-                model = glm::mat4(1.0f);
-                model = glm::scale(model, glm::vec3(0.02));
-                model = glm::translate(model, glm::vec3(0,0,0));
-                depthPassShader->setMat4("model", model);
-                depthPassShader->setMat4("projection", lightProjection);
-                depthPassShader->setMat4("view", lightView);
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_FRONT);
-                sponza.Draw(*depthPassShader);
-                model = glm::mat4(1.0f);
-                model = glm::scale(model, glm::vec3(0.5f));
-                model = glm::translate(model, glm::vec3(0,0,0));
-                depthPassShader->setMat4("model", model);
-                earth.Draw(*depthPassShader);
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        depthPassShader->bind();
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(0.02));
+        model = glm::translate(model, glm::vec3(0, 0, 0));
+        depthPassShader->setMat4("model", model);
+        depthPassShader->setMat4("projection", lightProjection);
+        depthPassShader->setMat4("view", lightView);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+        sponza.Draw(*depthPassShader);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(0.5f));
+        model = glm::translate(model, glm::vec3(0, 0, 0));
+        depthPassShader->setMat4("model", model);
+        earth.Draw(*depthPassShader);
 
-                // cyborg.Draw(*depthPassShader);
-                glCullFace(GL_BACK);
-                glDisable(GL_CULL_FACE);
+        // cyborg.Draw(*depthPassShader);
+        glCullFace(GL_BACK);
+        glDisable(GL_CULL_FACE);
 
-            depthPassShader->unbind();
+        depthPassShader->unbind();
         shadowMap.unbind();
         // -------------
         // GBUFFER PASS
         // -------------
         gBuffer.bind(GL_FRAMEBUFFER);
-            // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-            glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            gBufferShader->bind();
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        gBufferShader->bind();
+        gBufferShader->setMat4("projection", projection);
+        gBufferShader->setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(0.02));
+        model = glm::translate(model, glm::vec3(0, 0, 0));
+        gBufferShader->setMat4("model", model);
+        sponza.Draw(*gBufferShader);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(1.0f));
+        model = glm::translate(model, glm::vec3(0, 0, 0));
+        gBufferShader->setMat4("model", model);
+        // cyborg.Draw(*gBufferShader);
+        earth.Draw(*gBufferShader);
+
+        for (auto &&i : *gCameraManager->getCameraList()) {
+            if (i.second.get() != camRef) {
+                // todo : create function that sets these variables
                 gBufferShader->setMat4("projection", projection);
-                gBufferShader->setMat4("view", view);
-                model = glm::mat4(1.0f);
-                model = glm::scale(model, glm::vec3(0.02));
-                model = glm::translate(model, glm::vec3(0,0,0));
-                gBufferShader->setMat4("model", model);
-                sponza.Draw(*gBufferShader);
-                model = glm::mat4(1.0f);
-                model = glm::scale(model, glm::vec3(1.0f));
-                model = glm::translate(model, glm::vec3(0,0,0));
-                gBufferShader->setMat4("model", model);
-                // cyborg.Draw(*gBufferShader);
-                earth.Draw(*gBufferShader);
+                gBufferShader->setMat4("view", camRef->GetViewMatrix());
+                model = glm::inverse(i.second->GetViewMatrix());
 
-                for (auto &&i : *gCameraManager->getCameraList())
-                {
-                    if (i.second.get() != camRef)
-                    {
-                            // todo : create function that sets these variables
-                        gBufferShader->setMat4("projection", projection);
-                        gBufferShader->setMat4("view", camRef->GetViewMatrix());
-                        model = glm::inverse(i.second->GetViewMatrix());
+                model = glm::scale(model, glm::vec3(0.003f)); // it's a bit too big for our scene, so scale it down
+                model = glm::translate(model, i.second.get()->Position);
 
-                        model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
-                        model = glm::translate(model, i.second.get()->Position);
-                        
-                        // Create rotation matrices for pitch and yaw
-                        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
-                        model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
-                        
-                        gBufferShader->setMat4("model", model);
-                        camera.Draw(*gBufferShader);
-                    }
-                }
-            gBufferShader->unbind();
+                // Create rotation matrices for pitch and yaw
+                model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
+                model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
+
+                gBufferShader->setMat4("model", model);
+                camera.Draw(*gBufferShader);
+            }
+        }
+        gBufferShader->unbind();
         gBuffer.unbind();
         // -------------
         // LIGHTING PASS
@@ -237,35 +242,35 @@ void App::run() {
         glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         glScissor(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); // Limit the region affected by glClear
         glEnable(GL_SCISSOR_TEST); // Enable the Scissor Test
-            glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            lightingPassShader->bind();
-                lightingPassShader->setInt("gPosition", 0);
-                lightingPassShader->setInt("gNormal", 1);
-                lightingPassShader->setInt("gAlbedoSpec", 2);
-                lightingPassShader->setInt("gRoughnessMap", 3);
-                lightingPassShader->setInt("gShadowMap", 4);
-                gBuffer.bindTextures();
-                // FIXME: temporary solution.
-                glActiveTexture(GL_TEXTURE4);
-                glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
-                lightingPassShader->setVec3("light.Position", lightPos);
-                lightingPassShader->setVec3("light.Color", glm::vec3(1.0f,1.0f,1.0f));
-                // update attenuation parameters and calculate radius
-                const float linear = 0.7f;
-                const float quadratic = 1.8f;
-                lightingPassShader->setFloat("light.Linear", linear);
-                lightingPassShader->setFloat("light.Quadratic", quadratic);
-                lightingPassShader->setVec3("viewPos", camRef->Position);
-                lightingPassShader->setMat4("lightSpaceMatrix", lightProjection * lightView);
-                renderQuad();
-            lightingPassShader->unbind();
-        
+        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        lightingPassShader->bind();
+        lightingPassShader->setInt("gPosition", 0);
+        lightingPassShader->setInt("gNormal", 1);
+        lightingPassShader->setInt("gAlbedoSpec", 2);
+        lightingPassShader->setInt("gRoughnessMap", 3);
+        lightingPassShader->setInt("gShadowMap", 4);
+        gBuffer.bindTextures();
+        // FIXME: temporary solution.
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
+        lightingPassShader->setVec3("light.Position", lightPos);
+        lightingPassShader->setVec3("light.Color", glm::vec3(1.0f, 1.0f, 1.0f));
+        // update attenuation parameters and calculate radius
+        const float linear = 0.7f;
+        const float quadratic = 1.8f;
+        lightingPassShader->setFloat("light.Linear", linear);
+        lightingPassShader->setFloat("light.Quadratic", quadratic);
+        lightingPassShader->setVec3("viewPos", camRef->Position);
+        lightingPassShader->setMat4("lightSpaceMatrix", lightProjection * lightView);
+        renderQuad();
+        lightingPassShader->unbind();
+
         // ----------
         // DEBUG PASS
         // ----------
-        glViewport(0,0,320,180);
-        glScissor(0,0,320,180);
+        glViewport(0, 0, 320, 180);
+        glScissor(0, 0, 320, 180);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         debugDepthPassShader->bind();
         debugDepthPassShader->setFloat("near_plane", 1.0f);
@@ -275,32 +280,32 @@ void App::run() {
         glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
         renderQuad();
 
-        glViewport(320,0,320,180);
-        glScissor(320,0,320,180);
+        glViewport(320, 0, 320, 180);
+        glScissor(320, 0, 320, 180);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         debugShader->bind();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
         renderQuad();
 
-        glViewport(640,0,320,180);
-        glScissor(640,0,320,180);
+        glViewport(640, 0, 320, 180);
+        glScissor(640, 0, 320, 180);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         debugShader->bind();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
         renderQuad();
 
-        glViewport(960,0,320,180);
-        glScissor(960,0,320,180);
+        glViewport(960, 0, 320, 180);
+        glScissor(960, 0, 320, 180);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         debugShader->bind();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
         renderQuad();
 
-        glViewport(960,0,320,180);
-        glScissor(960,0,320,180);
+        glViewport(960, 0, 320, 180);
+        glScissor(960, 0, 320, 180);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         debugShader->bind();
         glActiveTexture(GL_TEXTURE0);
@@ -323,11 +328,11 @@ void App::run() {
 
         //             model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
         //             model = glm::translate(model, i.second.get()->Position);
-                    
+
         //             // Create rotation matrices for pitch and yaw
         //             model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
         //             model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
-                    
+
         //             gShaderManager->getShader("shader_model")->setMat4("model", model);
         //             camera.Draw(*gShaderManager->getShader("shader_model"));
         //             gShaderManager->unbind();
@@ -335,16 +340,17 @@ void App::run() {
         //     }
         // }
 
-        if (gEditModeEnabled){
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame();
-            ImGui::NewFrame();
-            Gui::Init();
-            
-            ImGui::ShowDemoWindow();
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        }
+        // if (gEditModeEnabled) {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        // Gui::Init();
+        ImGuiLayerManager::instance().draw();
+
+        ImGui::ShowDemoWindow();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // }
 
         glfwSwapBuffers(gWindow);
         glfwPollEvents();
@@ -353,11 +359,11 @@ void App::run() {
 // ----------
 // event loop
 // ----------
-void App::processInput(GLFWwindow* window) {
+void App::processInput(GLFWwindow *window) {
     if (Keyboard::key(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(gWindow, true);
 
-    if (!gEditModeEnabled){
+    if (!gEditModeEnabled) {
         camRef->handleEvents(deltaTime);
     }
     gCameraManager->handleEvents(deltaTime);
@@ -377,15 +383,14 @@ void App::processInput(GLFWwindow* window) {
         z -= 0.5;
     if (Keyboard::key(GLFW_KEY_E))
         z += 0.5;
-    
-    Gui::handleEvents(deltaTime);
-    if(Keyboard::keyWentDown(GLFW_KEY_J)){
+
+    // Gui::handleEvents(deltaTime);
+    if (Keyboard::keyWentDown(GLFW_KEY_J)) {
         gEditModeEnabled = !gEditModeEnabled;
-        if (gEditModeEnabled){
+        if (gEditModeEnabled) {
             glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             setEditModeCallbacks(gWindow);
-        }
-        else{
+        } else {
             glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             setNormalModeCallbacks(gWindow);
             Mouse::setFirstMouse(true);
@@ -396,14 +401,14 @@ void App::processInput(GLFWwindow* window) {
 // ------
 // update
 // ------
-void App::update(const float& dt) {
+void App::update(const float &dt) {
 }
 
 // ------
 // render
 // ------
 void App::render() {
-    glClearColor(0.1f,0.1f,0.1f,1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     // TODO: move rendering code here after simplifying it the render code
     // render stuff here
