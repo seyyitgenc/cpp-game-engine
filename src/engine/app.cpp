@@ -79,12 +79,13 @@ void App::run() {
 
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
-    auto modelShader = gShaderManager->getShader("shader_model");
-    auto debugDepthPassShader = gShaderManager->getShader("shader_debug_depth_pass");
-    auto depthPassShader = gShaderManager->getShader("shader_depth_pass");
-    auto gBufferShader = gShaderManager->getShader("shader_gbuffer");
-    auto lightingPassShader = gShaderManager->getShader("shader_lighting_pass");
-    auto debugShader = gShaderManager->getShader("shader_debugging");
+    auto shaderManager = ShaderManager::getInstance();
+    auto modelShader = shaderManager->getShader("shader_model");
+    auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
+    auto depthPassShader = shaderManager->getShader("shader_depth_pass");
+    auto gBufferShader = shaderManager->getShader("shader_gbuffer");
+    auto lightingPassShader = shaderManager->getShader("shader_lighting_pass");
+    auto debugShader = shaderManager->getShader("shader_debugging");
 
     Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
     Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
@@ -105,8 +106,6 @@ void App::run() {
     std::vector<glm::vec3> cubeScales = { glm::vec3(1.0f, 3.0f, 1.0f), glm::vec3(1.0f, 5.0f, 1.0f), glm::vec3(20.0f, 1.0f, 20.0f) };
     std::vector<glm::vec3> cubeTransfors = { glm::vec3(-2.0f, 0.0f, -2.0f), glm::vec3(2.0f, 0.0f, 2.0f), glm::vec3(0.0f, -2.0f, 0.0f) };
 
-    ImGuiIO &io = ImGui::GetIO();
-    (void)io;
     glEnable(GL_DEPTH_TEST);
 
     gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
@@ -341,15 +340,9 @@ void App::run() {
         // }
 
         // if (gEditModeEnabled) {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
         // Gui::Init();
         ImGuiLayerManager::instance().draw();
 
-        ImGui::ShowDemoWindow();
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         // }
 
         glfwSwapBuffers(gWindow);
@@ -367,7 +360,7 @@ void App::processInput(GLFWwindow *window) {
         camRef->handleEvents(deltaTime);
     }
     gCameraManager->handleEvents(deltaTime);
-    gShaderManager->handleEvents(deltaTime);
+    ShaderManager::getInstance()->handleEvents(deltaTime);
 
     if (Keyboard::keyWentDown(GLFW_KEY_P))
         perspectiveProjection = !perspectiveProjection;

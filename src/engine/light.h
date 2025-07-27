@@ -2,40 +2,38 @@
 
 #include "globals.h"
 
-#include <string>
 #include <iostream>
+#include <string>
 
-struct LightProperties{
-    glm::vec3 color = {1.0f, 1.0f, 1.0f}; // derive this color into ambient, diffuse, specular
-    float constant  = 1.0f;
-    float linear    = 0.09f;
+struct LightProperties {
+    glm::vec3 color = { 1.0f, 1.0f, 1.0f }; // derive this color into ambient, diffuse, specular
+    float constant = 1.0f;
+    float linear = 0.09f;
     float quadratic = 0.032f;
     float shininess = 64;
     virtual ~LightProperties() = default;
 };
 
-struct DirectionalLightProperties : public LightProperties{
-    glm::vec3 direction = {0.0f, -1.0f, 0.0f};
+struct DirectionalLightProperties : public LightProperties {
+    glm::vec3 direction = { 0.0f, -1.0f, 0.0f };
 };
 
-
-struct PointLightProperties : public LightProperties{
+struct PointLightProperties : public LightProperties {
     // todo: add radius
-    glm::vec3 position = {0.0f, 2.0f, 0.0f};
+    glm::vec3 position = { 0.0f, 2.0f, 0.0f };
 };
 
-struct SpotLightProperties : public LightProperties{
-    glm::vec3 position  = {0.0f, 5.0f, 0.0f};
-    glm::vec3 direction = {0.2f, -1.0f,0.0f};
-    float cutOff        = glm::cos(glm::radians(12.5f));
-    float outerCutOff   = glm::cos(glm::radians(17.5f));
+struct SpotLightProperties : public LightProperties {
+    glm::vec3 position = { 0.0f, 5.0f, 0.0f };
+    glm::vec3 direction = { 0.2f, -1.0f, 0.0f };
+    float cutOff = glm::cos(glm::radians(12.5f));
+    float outerCutOff = glm::cos(glm::radians(17.5f));
 };
-enum struct LightSpec{
+enum struct LightSpec {
     Point,
     Directional,
     Spot,
 };
-
 
 // TODO: Pointers to pass float variables here. ! MAYBE !
 // NOTE:
@@ -44,76 +42,80 @@ enum struct LightSpec{
 // // WORST ENGLISH EVER.
 
 template <LightSpec Spec>
-class Light
-{
+class Light {
 public:
-    Light(std::unique_ptr<LightProperties> lightProp) : lightProp(std::move(lightProp)) { isValid(); };
+    Light(std::unique_ptr<LightProperties> lightProp) :
+            lightProp(std::move(lightProp)) { isValid(); };
     // todo: add different constructors for each light type that takes float and glm::vec3 parameters
-    void setUniforms(const std::string &name){};
+    void setUniforms(const std::string &name) {};
     // todo: i can add getLightProp here
     ~Light() = default;
 
     // NOTE: THE TYPE YOU ARE CASTED IS IMPORTANT. MAKE SURE YOU ARE AWARE WHAT YOU ARE DOING!
-    template<typename T>
-    T* getProperties(){
-        return dynamic_cast<T*>(lightProp.get());
+    template <typename T>
+    T *getProperties() {
+        return dynamic_cast<T *>(lightProp.get());
     }
+
 private:
     std::unique_ptr<LightProperties> lightProp;
-    void isValid(){
+    void isValid() {
         static_assert(
-            Spec == LightSpec::Directional || 
-            Spec == LightSpec::Point || 
-            Spec == LightSpec::Spot,
-            "there is no implementation for this LightSpec");
+                Spec == LightSpec::Directional ||
+                        Spec == LightSpec::Point ||
+                        Spec == LightSpec::Spot,
+                "there is no implementation for this LightSpec");
     }
 };
-template<> inline void Light <LightSpec::Directional>::setUniforms(const std::string &name){
-    if (gShaderManager->bind(name)){
-        Shader* shader = gShaderManager->getShader(name);
-        auto prop = static_cast<DirectionalLightProperties*>(lightProp.get());
-        shader->setVec3("light.direction",  prop->direction);
-        shader->setVec3("light.color",      prop->color);
-        shader->setFloat("light.constant",  prop->constant);
-        shader->setFloat("light.linear",    prop->linear);
+template <>
+inline void Light<LightSpec::Directional>::setUniforms(const std::string &name) {
+    if (ShaderManager::getInstance()->bind(name)) {
+        Shader *shader = ShaderManager::getInstance()->getShader(name);
+        auto prop = static_cast<DirectionalLightProperties *>(lightProp.get());
+        shader->setVec3("light.direction", prop->direction);
+        shader->setVec3("light.color", prop->color);
+        shader->setFloat("light.constant", prop->constant);
+        shader->setFloat("light.linear", prop->linear);
         shader->setFloat("light.quadratic", prop->quadratic);
-        shader->setFloat("shininess",       prop->shininess);
+        shader->setFloat("shininess", prop->shininess);
     }
 }
 
-template<> inline void Light <LightSpec::Point>::setUniforms(const std::string &name){
-    if (gShaderManager->bind(name)){
-        Shader* shader = gShaderManager->getShader(name);
-        auto prop = static_cast<PointLightProperties*>(lightProp.get());
-        shader->setVec3("light.position",   prop->position);
-        shader->setVec3("light.color",      prop->color);
-        shader->setFloat("light.constant",  prop->constant);
-        shader->setFloat("light.linear",    prop->linear);
+template <>
+inline void Light<LightSpec::Point>::setUniforms(const std::string &name) {
+    if (ShaderManager::getInstance()->bind(name)) {
+        Shader *shader = ShaderManager::getInstance()->getShader(name);
+        auto prop = static_cast<PointLightProperties *>(lightProp.get());
+        shader->setVec3("light.position", prop->position);
+        shader->setVec3("light.color", prop->color);
+        shader->setFloat("light.constant", prop->constant);
+        shader->setFloat("light.linear", prop->linear);
         shader->setFloat("light.quadratic", prop->quadratic);
-        shader->setFloat("shininess",       prop->shininess);
+        shader->setFloat("shininess", prop->shininess);
     }
 }
-// TODO: take shader pointer as variable 
-template<> inline void Light <LightSpec::Spot>::setUniforms(const std::string &name){
-    if(gShaderManager->bind(name)){
-        Shader* shader = gShaderManager->getShader(name);
-        auto prop = static_cast<SpotLightProperties*>(lightProp.get());
-        shader->setVec3("light.position",       prop->position);
-        shader->setVec3("light.direction",      prop->direction);
-        shader->setVec3("light.color",          prop->color);
-        shader->setFloat("light.cutOff",        prop->cutOff);
-        shader->setFloat("light.outerCutOff",   prop->outerCutOff);
-        shader->setFloat("light.constant",      prop->constant);
-        shader->setFloat("light.linear",        prop->linear);
-        shader->setFloat("light.quadratic",     prop->quadratic);
-        shader->setFloat("shininess",           prop->shininess);
+// TODO: take shader pointer as variable
+template <>
+inline void Light<LightSpec::Spot>::setUniforms(const std::string &name) {
+    if (ShaderManager::getInstance()->bind(name)) {
+        Shader *shader = ShaderManager::getInstance()->getShader(name);
+        auto prop = static_cast<SpotLightProperties *>(lightProp.get());
+        shader->setVec3("light.position", prop->position);
+        shader->setVec3("light.direction", prop->direction);
+        shader->setVec3("light.color", prop->color);
+        shader->setFloat("light.cutOff", prop->cutOff);
+        shader->setFloat("light.outerCutOff", prop->outerCutOff);
+        shader->setFloat("light.constant", prop->constant);
+        shader->setFloat("light.linear", prop->linear);
+        shader->setFloat("light.quadratic", prop->quadratic);
+        shader->setFloat("shininess", prop->shininess);
     }
 }
 
-inline void testLights(){
+inline void testLights() {
     auto testingProp1 = std::make_unique<DirectionalLightProperties>();
-    testingProp1->color = glm::vec3{1,1,1};
-    testingProp1->direction = glm::vec3{1,0,2};
+    testingProp1->color = glm::vec3{ 1, 1, 1 };
+    testingProp1->direction = glm::vec3{ 1, 0, 2 };
     testingProp1->constant = 75.0f;
     testingProp1->linear = 43.0f;
     testingProp1->quadratic = 113.0f;

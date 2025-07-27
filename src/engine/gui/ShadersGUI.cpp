@@ -31,7 +31,7 @@ void ShadersGUI::draw() {
 
             if (ImGui::BeginTable("tbl_shaders", columnCount)) {
                 int index = 0;
-                for (auto &&it : gShaderManager->getShaderList()) {
+                for (auto &&it : ShaderManager::getInstance()->getShaderList()) {
                     ImGui::TableNextColumn();
                     ImVec2 pos = ImGui::GetCursorPos();
                     std::string itemid = "##" + it.first;
@@ -80,11 +80,11 @@ void ShadersGUI::draw() {
             ImGui::EndChild();
         }
         if (ImGui::Button("Reload")) {
-            gShaderManager->reloadShader(shaderName);
+            ShaderManager::getInstance()->reloadShader(shaderName);
         }
         ImGui::SameLine();
         if (ImGui::Button("Reload All Shaders")) {
-            gShaderManager->reloadAllShaders();
+            ShaderManager::getInstance()->reloadAllShaders();
         }
 
         ImGui::EndGroup();
