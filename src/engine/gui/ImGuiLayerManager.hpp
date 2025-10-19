@@ -50,7 +50,8 @@ public:
         ImGui::NewFrame();
 
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+        ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoDockingOverCentralNode |
+                                             ImGuiDockNodeFlags_PassthruCentralNode;
         ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(), dockspace_flags);
 
         if (ImGui::BeginMainMenuBar()) {
@@ -71,9 +72,18 @@ public:
                 }
             }
         }
+
         ImGui::ShowDemoWindow();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        auto centralNode = ImGui::DockBuilderGetCentralNode(dockspace_id);
+
+        auto &io = ImGui::GetIO();
+        gViewport.posx = centralNode->Pos.x;
+        gViewport.posy = io.DisplaySize.y - centralNode->Size.y - centralNode->Pos.y;
+        gViewport._width = centralNode->Size.x;
+        gViewport._height = centralNode->Size.y;
     }
 
     void setImGuiSetupFunction(const ImGuiSetupFunc &setupFunc) {

@@ -16,7 +16,6 @@ TextureManager *gTextureManager = nullptr;
 CameraManager *gCameraManager = nullptr;
 
 bool gInitGlobals() {
-    Log::setLevel(Log::Debug);
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);

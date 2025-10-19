@@ -29,4 +29,10 @@ extern bool gEditModeEnabled;
 extern TextureManager *gTextureManager;
 extern CameraManager *gCameraManager;
 
+struct Viewport {
+    int _width = SCREEN_WIDTH, _height = SCREEN_HEIGHT;
+    int posx = 0, posy = 0;
+};
+
+inline Viewport gViewport;
 extern bool gInitGlobals();

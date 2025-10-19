@@ -8,6 +8,8 @@
 
 #include "gui/ImGuiLayerManager.hpp"
 #include "gui/ShadersGUI.hpp"
+
+#include <thread>
 // todo: rename some of the functions of Camera and CameraMananger.
 
 App *App::_instance = nullptr;
@@ -41,6 +43,7 @@ float deltaTime = 0; // note: temporary solution
 // -----------------------------------------
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
+
 void renderQuad() {
     if (quadVAO == 0) {
 
@@ -92,7 +95,7 @@ void App::run() {
     Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
     Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
     Model cyborg(FileSystem::getPath("resources/objects/nanosuit/nanosuit.obj"));
-    Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
+    // Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
 
     // cube_transf[0].scale(1.0f, 3.0f, 1.0f);
     // cube_transf[0].translate(2.0f, 0.0f, 2.0f);
@@ -122,17 +125,28 @@ void App::run() {
     FrameBuffer gBuffer;
     gBuffer.bind(GL_FRAMEBUFFER);
     gBuffer.attachRenderBuffer();
-    gBuffer.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::POSITION, GL_COLOR_ATTACHMENT0);
-    gBuffer.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::NORMAL, GL_COLOR_ATTACHMENT1);
-    gBuffer.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::ALBEDO, GL_COLOR_ATTACHMENT2);
-    gBuffer.attachTexture(SCREEN_WIDTH, SCREEN_HEIGHT, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
+    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::POSITION, GL_COLOR_ATTACHMENT0);
+    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::NORMAL, GL_COLOR_ATTACHMENT1);
+    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ALBEDO, GL_COLOR_ATTACHMENT2);
+    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
     gBuffer.checkCompleteness();
     gBuffer.unbind();
 
     float near_plane = 1.0f;
     float far_plane = 1000.0f;
 
+    // Track previous viewport size for resize detection
+    int prevWidth = gViewport._width;
+    int prevHeight = gViewport._height;
+
     while (!glfwWindowShouldClose(gWindow)) {
+        // Check if viewport has changed and resize G-buffer if needed
+        if (gViewport._width != prevWidth || gViewport._height != prevHeight) {
+            gBuffer.resizeBuffer(gViewport._width, gViewport._height);
+            prevWidth = gViewport._width;
+            prevHeight = gViewport._height;
+        }
+
         glm::vec3 lightPos(x, y, z);
         camRef = gCameraManager->getActiveCamera();
 
@@ -148,7 +162,7 @@ void App::run() {
         // lightPos[2] = 16.0*sin(glfwGetTime()/2);
         processInput(gWindow);
         glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 projection = glm::perspective(glm::radians(camRef->Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 1000.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camRef->Zoom), (float)gViewport._width / (float)gViewport._height, 0.1f, 1000.0f);
         glm::mat4 view = camRef->GetViewMatrix();
         float left = -50.0f;
         float right = 50.0f;
@@ -166,7 +180,7 @@ void App::run() {
         // DEPTH PASS
         // ----------
         shadowMap.bind(GL_FRAMEBUFFER);
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
         depthPassShader->bind();
@@ -183,7 +197,6 @@ void App::run() {
         model = glm::scale(model, glm::vec3(0.5f));
         model = glm::translate(model, glm::vec3(0, 0, 0));
         depthPassShader->setMat4("model", model);
-        earth.Draw(*depthPassShader);
 
         // cyborg.Draw(*depthPassShader);
         glCullFace(GL_BACK);
@@ -196,8 +209,11 @@ void App::run() {
         // -------------
         gBuffer.bind(GL_FRAMEBUFFER);
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        // viewport->height() = centralNode->Size.y;
+        // centralNode->Pos.x, io.DisplaySize.y - centralNode->Size.y - centralNode->Pos.y, centralNode->Size.x, centralNode->Size.y
+
+        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
+        glClearColor(0, 0, 0, 255);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gBufferShader->bind();
         gBufferShader->setMat4("projection", projection);
@@ -212,7 +228,6 @@ void App::run() {
         model = glm::translate(model, glm::vec3(0, 0, 0));
         gBufferShader->setMat4("model", model);
         // cyborg.Draw(*gBufferShader);
-        earth.Draw(*gBufferShader);
 
         for (auto &&i : *gCameraManager->getCameraList()) {
             if (i.second.get() != camRef) {
@@ -238,10 +253,10 @@ void App::run() {
         // LIGHTING PASS
         // -------------
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        glScissor(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); // Limit the region affected by glClear
-        glEnable(GL_SCISSOR_TEST); // Enable the Scissor Test
-        glClearColor(clear_color.x / clear_color.w, clear_color.y / clear_color.w, clear_color.z / clear_color.w, clear_color.w);
+        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
+        // glScissor(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height); // Limit the region affected by glClear
+        // glEnable(GL_SCISSOR_TEST); // Enable the Scissor Test
+        glClearColor(0, 1.0, 0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         lightingPassShader->bind();
         lightingPassShader->setInt("gPosition", 0);
@@ -268,51 +283,51 @@ void App::run() {
         // ----------
         // DEBUG PASS
         // ----------
-        glViewport(0, 0, 320, 180);
-        glScissor(0, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugDepthPassShader->bind();
-        debugDepthPassShader->setFloat("near_plane", 1.0f);
-        debugDepthPassShader->setFloat("far_plane", 1000.0f);
-        debugDepthPassShader->setBool("isPerspective", perspectiveProjection);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
-        renderQuad();
+        // glViewport(0, 0, 320, 180);
+        // glScissor(0, 0, 320, 180);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // debugDepthPassShader->bind();
+        // debugDepthPassShader->setFloat("near_plane", 1.0f);
+        // debugDepthPassShader->setFloat("far_plane", 1000.0f);
+        // debugDepthPassShader->setBool("isPerspective", perspectiveProjection);
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
+        // renderQuad();
 
-        glViewport(320, 0, 320, 180);
-        glScissor(320, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
-        renderQuad();
+        // glViewport(320, 0, 320, 180);
+        // glScissor(320, 0, 320, 180);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // debugShader->bind();
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
+        // renderQuad();
 
-        glViewport(640, 0, 320, 180);
-        glScissor(640, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
-        renderQuad();
+        // glViewport(640, 0, 320, 180);
+        // glScissor(640, 0, 320, 180);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // debugShader->bind();
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
+        // renderQuad();
 
-        glViewport(960, 0, 320, 180);
-        glScissor(960, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
-        renderQuad();
+        // glViewport(960, 0, 320, 180);
+        // glScissor(960, 0, 320, 180);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // debugShader->bind();
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
+        // renderQuad();
 
-        glViewport(960, 0, 320, 180);
-        glScissor(960, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[3]._texture);
-        renderQuad();
-        debugShader->unbind();
+        // glViewport(960, 0, 320, 180);
+        // glScissor(960, 0, 320, 180);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // debugShader->bind();
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[3]._texture);
+        // renderQuad();
+        // debugShader->unbind();
 
-        glDisable(GL_SCISSOR_TEST);
+        // glDisable(GL_SCISSOR_TEST);
         // render the cameras
         // for (auto &&i : *gCameraManager->getCameraList())
         // {

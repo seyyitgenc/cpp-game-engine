@@ -9,7 +9,7 @@ stencil
 depth-stencil
 */
 
-typedef enum struct FrameBufferTextureType{
+typedef enum struct FrameBufferTextureType {
     NONE = 0,
     POSITION,
     NORMAL,
@@ -20,15 +20,24 @@ typedef enum struct FrameBufferTextureType{
     ROUGHNESS,
 } FBTT;
 
-struct FrameBufferTexture{
+struct FrameBufferTexture {
     // TODO : take these args as pointer to prevent extre copying
-    FrameBufferTexture(int width, int height, FBTT type,GLenum attachment){
-        _width  = width;
+    FrameBufferTexture(int width, int height, FBTT type, GLenum attachment) {
+        _width = width;
         _height = height;
-        _type   = type;
+        _type = type;
         _attachment = attachment;
         Configure();
     };
+
+    ~FrameBufferTexture();
+
+    void resize(int width, int height) {
+        _width = width;
+        _height = height;
+        Configure();
+    }
+
     void Configure();
     int _width = -1;
     int _height = -1;
@@ -37,14 +46,15 @@ struct FrameBufferTexture{
     GLuint _texture = -1;
 };
 
-struct FrameBuffer{
+struct FrameBuffer {
     FrameBuffer();
     void bind(GLenum target);
-    void attachTexture(int width, int height, FBTT type,GLenum attachment);
+    void attachTexture(int width, int height, FBTT type, GLenum attachment);
     void bindTextures();
     void attachRenderBuffer();
     void checkCompleteness();
     void unbind();
+    void resizeBuffer(int width, int height);
 
     std::vector<FrameBufferTexture> _boundTextures;
     int attachementsCount;

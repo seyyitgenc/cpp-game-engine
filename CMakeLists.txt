@@ -39,8 +39,6 @@ if(UNIX)
     set(LIBS glfw GL pthread freetype assimp)
 endif(UNIX)
 
-
-
 # configure file to get root directory
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h)
 include_directories(${CMAKE_SOURCE_DIR}/src/configuration)
