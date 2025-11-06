@@ -20,34 +20,44 @@ typedef enum struct FrameBufferTextureType {
     ROUGHNESS,
 } FBTT;
 
-struct FrameBufferTexture {
-    // TODO : take these args as pointer to prevent extre copying
-    FrameBufferTexture(int width, int height, FBTT type, GLenum attachment) {
-        _width = width;
-        _height = height;
-        _type = type;
-        _attachment = attachment;
+class FrameBufferTexture {
+public:
+    FrameBufferTexture(int width, int height, FBTT type, GLenum attachment)
+        : _width(width)
+        , _height(height)
+        , _type(type)
+        , _attachment(attachment)
+    {
         Configure();
-    };
+    }
 
-    ~FrameBufferTexture();
+    void cleanup()
+    {
+        if (_texture != 0 && glIsTexture(_texture)) {
+            glDeleteTextures(1, &_texture);
+            std::cout << "deleted" << std::endl;
+        }
+    }
 
-    void resize(int width, int height) {
+    void resize(int width, int height)
+    {
         _width = width;
         _height = height;
         Configure();
     }
 
     void Configure();
+
     int _width = -1;
     int _height = -1;
-    GLenum _attachment = GL_NONE;
     FBTT _type = FBTT::NONE;
-    GLuint _texture = -1;
+    GLenum _attachment = GL_NONE;
+    GLuint _texture = 0;
 };
 
 struct FrameBuffer {
     FrameBuffer();
+    ~FrameBuffer();
     void bind(GLenum target);
     void attachTexture(int width, int height, FBTT type, GLenum attachment);
     void bindTextures();

@@ -1,4 +1,4 @@
-#include "app.h"
+#include "app.hpp"
 #include "../util/stopwatch.hpp"
 #include "callbacks.h"
 #include "camera.h"
@@ -6,19 +6,22 @@
 #include "shader.h"
 #include "shader_manager.h"
 
+#include "renderer/framebuffer.h"
+
 #include "gui/ImGuiLayerManager.hpp"
 #include "gui/ShadersGUI.hpp"
 
 #include <thread>
 // todo: rename some of the functions of Camera and CameraMananger.
 
-App *App::_instance = nullptr;
+App* App::_instance = nullptr;
 
 // fixme: this is not safe
-Camera *camRef = nullptr;
+Camera* camRef = nullptr;
 
-App::App() {}
-App::~App() {
+App::App() { }
+App::~App()
+{
     this->clean();
 }
 
@@ -43,8 +46,8 @@ float deltaTime = 0; // note: temporary solution
 // -----------------------------------------
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
-
-void renderQuad() {
+void renderQuad()
+{
     if (quadVAO == 0) {
 
         // clang-format off
@@ -64,9 +67,9 @@ void renderQuad() {
         glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     }
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -77,18 +80,18 @@ float x = 30.0f, y = 60.0f, z = -7.0f;
 // ---------
 // main loop
 // ---------
-void App::run() {
+void App::run()
+{
     gInitGlobals();
 
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
     auto shaderManager = ShaderManager::getInstance();
-    auto modelShader = shaderManager->getShader("shader_model");
-    auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
+    // auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
     auto depthPassShader = shaderManager->getShader("shader_depth_pass");
     auto gBufferShader = shaderManager->getShader("shader_gbuffer");
     auto lightingPassShader = shaderManager->getShader("shader_lighting_pass");
-    auto debugShader = shaderManager->getShader("shader_debugging");
+    // auto debugShader = shaderManager->getShader("shader_debugging");
 
     Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
     Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
@@ -197,6 +200,7 @@ void App::run() {
         model = glm::scale(model, glm::vec3(0.5f));
         model = glm::translate(model, glm::vec3(0, 0, 0));
         depthPassShader->setMat4("model", model);
+        // earth.Draw(*depthPassShader);
 
         // cyborg.Draw(*depthPassShader);
         glCullFace(GL_BACK);
@@ -228,8 +232,9 @@ void App::run() {
         model = glm::translate(model, glm::vec3(0, 0, 0));
         gBufferShader->setMat4("model", model);
         // cyborg.Draw(*gBufferShader);
+        // earth.Draw(*gBufferShader);
 
-        for (auto &&i : *gCameraManager->getCameraList()) {
+        for (auto&& i : *gCameraManager->getCameraList()) {
             if (i.second.get() != camRef) {
                 // todo : create function that sets these variables
                 gBufferShader->setMat4("projection", projection);
@@ -367,7 +372,8 @@ void App::run() {
 // ----------
 // event loop
 // ----------
-void App::processInput(GLFWwindow *window) {
+void App::processInput([[maybe_unused]] GLFWwindow* window)
+{
     if (Keyboard::key(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(gWindow, true);
 
@@ -409,13 +415,15 @@ void App::processInput(GLFWwindow *window) {
 // ------
 // update
 // ------
-void App::update(const float &dt) {
+void App::update([[maybe_unused]] const float& dt)
+{
 }
 
 // ------
 // render
 // ------
-void App::render() {
+void App::render()
+{
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     // TODO: move rendering code here after simplifying it the render code
@@ -425,7 +433,8 @@ void App::render() {
     glfwPollEvents();
 }
 
-void App::clean() {
+void App::clean()
+{
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

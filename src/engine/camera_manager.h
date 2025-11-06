@@ -1,23 +1,27 @@
-#pragma once 
+#pragma once
+
+#include "util/helpers.hpp"
+#include "util/log.hpp"
 
 #include "camera.h"
-#include "../util/log.hpp"
+
+#include <algorithm>
 #include <map>
 #include <memory>
-#include <algorithm>
 
-class CameraManager
-{
+class CameraManager {
 public:
-    ~CameraManager(){
+    ~CameraManager()
+    {
         _cameras.clear();
     };
     CameraManager(CameraManager&) = delete;
     void operator=(const CameraManager&) = delete;
 
     // returns camera manager instance
-    [[nodiscard]] static CameraManager *getInstance(){
-        if (_instance == nullptr){
+    [[nodiscard]] static CameraManager* getInstance()
+    {
+        if (_instance == nullptr) {
             _instance = new CameraManager();
             Log::write(
                 Log::Info,
@@ -29,9 +33,9 @@ public:
     }
 
     // adds camera with given name and spec
-    void addCamera(const std::string& name, glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f), glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f), float yaw = YAW, float pitch = PITCH){
-        if (isCameraExist(name))
-        {
+    void addCamera(const std::string& name, glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH)
+    {
+        if (isCameraExist(name)) {
             Log::write(
                 Log::Fatal,
                 LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::ADD_CAMERA You tried to add camera that already exist. Key you provided is -> "),
@@ -44,9 +48,9 @@ public:
     // ! this function may return nullptr.
     // ! handling this is users responsibility
     // returns camera pointer with name
-    [[nodiscard]] Camera* getCamera(const std::string& name){
-        if (!isCameraExist(name))
-        {
+    [[nodiscard]] Camera* getCamera(const std::string& name)
+    {
+        if (!isCameraExist(name)) {
             Log::write(
                 Log::Fatal,
                 LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::GET_CAMERA You tried to get camera that doesn't exist. Key you provided is -> "),
@@ -58,19 +62,20 @@ public:
     }
 
     // returns list of cameras
-    std::map<std::string,std::unique_ptr<Camera>> *getCameraList(){
+    std::map<std::string, std::unique_ptr<Camera>>* getCameraList()
+    {
         return &_cameras;
     }
 
 public:
     // helper functions
-    Camera* getActiveCamera(){return activeCamera;}
-    Camera* setActiveCamera(Camera *newCam){return activeCamera = newCam;}
-    void setNextCamera(){
-        auto it = std::find_if(_cameras.begin(),_cameras.end(),[&](const auto& pair){return pair.second.get() == activeCamera;});
+    Camera* getActiveCamera() { return activeCamera; }
+    Camera* setActiveCamera(Camera* newCam) { return activeCamera = newCam; }
+    void setNextCamera()
+    {
+        auto it = std::find_if(_cameras.begin(), _cameras.end(), [&](const auto& pair) { return pair.second.get() == activeCamera; });
         it++;
-        if (it != _cameras.end())
-        {
+        if (it != _cameras.end()) {
             activeCamera = it->second.get();
             Mouse::setFirstMouse(true);
             Log::write(
@@ -78,17 +83,16 @@ public:
                 LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_NEXT_CAMERA Switched camera to -> "),
                 YELLOW_TEXT(it->first),
                 "\n");
-        }
-        else{
+        } else {
             Log::write(
                 Log::Warning,
                 LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_NEXT_CAMERA There is no camera on right\n"));
         }
     }
-    void setPrevCamera(){
-        auto it = std::find_if(_cameras.begin(),_cameras.end(),[&](const auto& pair){return pair.second.get() == activeCamera;});
-        if (it != _cameras.begin())
-        {
+    void setPrevCamera()
+    {
+        auto it = std::find_if(_cameras.begin(), _cameras.end(), [&](const auto& pair) { return pair.second.get() == activeCamera; });
+        if (it != _cameras.begin()) {
             it--;
             activeCamera = it->second.get();
             Mouse::setFirstMouse(true);
@@ -97,27 +101,32 @@ public:
                 LIGHT_CYAN_TEXT("INFO::CAMERA_MANAGER::SET_PREV_CAMERA Switched camera to -> "),
                 YELLOW_TEXT(it->first),
                 "\n");
-        }
-        else{
+        } else {
             Log::write(
                 Log::Warning,
                 LIGHT_RED_TEXT("WARNING::CAMERA_MANAGER::SET_PREV_CAMERA There is no camera on left\n"));
         }
     }
-    
-    void handleEvents(float dt){
-        if (Keyboard::keyWentDown(GLFW_KEY_LEFT)){
+
+    void handleEvents(float dt)
+    {
+        GNC_UNUSED(dt);
+
+        if (Keyboard::keyWentDown(GLFW_KEY_LEFT)) {
             setPrevCamera();
         }
-        if (Keyboard::keyWentDown(GLFW_KEY_RIGHT)){
+        if (Keyboard::keyWentDown(GLFW_KEY_RIGHT)) {
             setNextCamera();
         }
     }
+
 private:
-    [[nodiscard]] bool isCameraExist(const std::string& name){
-    return _cameras.find(name) != _cameras.end();
+    [[nodiscard]] bool isCameraExist(const std::string& name)
+    {
+        return _cameras.find(name) != _cameras.end();
     }
     CameraManager() = default;
+
 private:
     std::map<std::string, std::unique_ptr<Camera>> _cameras;
     static CameraManager* _instance;

@@ -2,12 +2,15 @@
 
 // TODO: i may use GLenum for texture type spec it can make my code simpler
 
-FrameBufferTexture::~FrameBufferTexture() {
-    glDeleteTextures(1, &_texture);
-}
+// FrameBufferTexture::~FrameBufferTexture()
+// {
+//     Log::writeFormatted(Log::Debug, " destructed texture with id %d", _texture);
+//     glDeleteTextures(1, &_texture);
+// }
 
 // Configures FrameBufferTexture Depending on it's own values
-void FrameBufferTexture::Configure() {
+void FrameBufferTexture::Configure()
+{
     glGenTextures(1, &_texture);
     glBindTexture(GL_TEXTURE_2D, _texture);
     // NOTE: for now this is commong spec
@@ -64,22 +67,31 @@ void FrameBufferTexture::Configure() {
 }
 
 // FrameBuffer constructor
-FrameBuffer::FrameBuffer() {
+FrameBuffer::FrameBuffer()
+{
     glGenFramebuffers(1, &_framebuffer);
 }
 
+FrameBuffer::~FrameBuffer()
+{
+    Log::writeFormatted(Log::Debug, " destructed framebuffer with id %d", _framebuffer);
+}
+
 // Sets current frame buffer to itself
-void FrameBuffer::bind(GLenum target) {
+void FrameBuffer::bind(GLenum target)
+{
     glBindFramebuffer(target, _framebuffer);
 }
 
 // Sets current frame buffer to default
-void FrameBuffer::unbind() {
+void FrameBuffer::unbind()
+{
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 // Attaches render buffer and configures it
-void FrameBuffer::attachRenderBuffer() {
+void FrameBuffer::attachRenderBuffer()
+{
     bind(GL_FRAMEBUFFER);
     glGenRenderbuffers(1, &_renderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, _renderbuffer);
@@ -89,7 +101,8 @@ void FrameBuffer::attachRenderBuffer() {
 
 // FIXME: make this bind textures useful for multiple frame buffers.
 // Binds all used textures used by this framebuffer. Starting from GL_TEXTURE_0.
-void FrameBuffer::bindTextures() {
+void FrameBuffer::bindTextures()
+{
     for (size_t i = 0; i < _boundTextures.size(); i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, _boundTextures[i]._texture);
@@ -97,36 +110,42 @@ void FrameBuffer::bindTextures() {
 }
 
 // Attaches a texture to it's framebuffer
-void FrameBuffer::attachTexture(int width, int height, FBTT type, GLenum attachment) {
+void FrameBuffer::attachTexture(int width, int height, FBTT type, GLenum attachment)
+{
     bind(GL_FRAMEBUFFER);
-    FrameBufferTexture bufferTexture(width, height, type, attachment);
-    _boundTextures.push_back(bufferTexture);
+    _boundTextures.emplace_back(width, height, type, attachment);
+    std::cout << "size ofd " << _boundTextures.size() << std::endl;
 
     std::vector<GLenum> attachments;
-    for (auto &&i : _boundTextures)
+    for (auto&& i : _boundTextures)
         attachments.push_back(i._attachment);
 
     glDrawBuffers(attachments.size(), attachments.data());
 }
 
-void FrameBuffer::resizeBuffer(int width, int height) {
+void FrameBuffer::resizeBuffer(int width, int height)
+{
     bind(GL_FRAMEBUFFER);
 
     std::vector<FrameBufferTexture> newTextures;
-    for (auto &texture : _boundTextures) {
-        newTextures.push_back(FrameBufferTexture(width, height, texture._type, texture._attachment));
+    for (auto& texture : _boundTextures) {
+        newTextures.emplace_back(width, height, texture._type, texture._attachment);
+        texture.cleanup();
     }
+
     _boundTextures = newTextures;
+    std::cout << "size of " << _boundTextures.size() << std::endl;
     std::vector<GLenum> attachments;
 
-    for (auto &&i : newTextures)
+    for (auto&& i : newTextures)
         attachments.push_back(i._attachment);
 
     glDrawBuffers(attachments.size(), attachments.data());
 }
 
 // Checks if generated framebuffer is complete or not.
-void FrameBuffer::checkCompleteness() {
+void FrameBuffer::checkCompleteness()
+{
     // tell opengl which color attachments we will use (of this framebuffer) for rendering
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         Log::write(Log::Fatal, LIGHT_RED_TEXT("FATAL::FRAMEBUFFER::CHECK_COMPLETENESS Framebuffer not complete! Application may crush or doesn't show expected results"));

@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 2.22)
+cmake_minimum_required(VERSION 3.10)
 # todo: set binary directory
 project(engine)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -24,20 +23,24 @@ message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
 find_package(glfw3 REQUIRED)
 message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIRS}")
 
-# assimp
-add_subdirectory(src/external/assimp)
 
 if(WIN32)
+    # assimp
+    find_package(assimp REQUIRED)
     # Windows
     message(STATUS "Windows detected")
-    set(LIBS glfw GL pthread freetype dl ${ASSIMP_LIBRARIES})
+    set(LIBS glfw pthread freetype ${ASSIMP_LIBRARIES})
 endif(WIN32)
 
 if(UNIX)
+    # assimp
+    add_subdirectory(src/external/assimp)
+
     # Linux
     message(STATUS "Linux detected")
     set(LIBS glfw GL pthread freetype assimp)
 endif(UNIX)
+
 
 # configure file to get root directory
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/configuration/config.h)
@@ -95,4 +98,5 @@ elseif(CMAKE_BUILD_TYPE MATCHES Release)
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
     
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
-target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)
+# target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)
+# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)
