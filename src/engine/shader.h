@@ -1,16 +1,7 @@
 #pragma once
 
-#include "../external/glad/glad.h"
-#include "../util/log.hpp"
+#include <glm/glm.hpp>
 
-#include "../external/ImGui/imgui.h"
-#include "../external/ImGui/imgui_impl_glfw.h"
-#include "../external/ImGui/imgui_impl_opengl3.h"
-
-#include <fstream>
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -19,21 +10,9 @@ struct ShaderInfo {
     std::string fragmentPath;
     std::string geometryPath;
     std::string description;
-    GLuint ID = UINT32_MAX;
+    unsigned int ID = UINT32_MAX;
 
-    void drawInfo()
-    {
-        if (ImGui::BeginTabItem("Details")) {
-            ImGui::Text("Shader ID : %d", ID);
-            ImGui::Text("Shader Vertex Path   : %s", vertexPath.c_str());
-            ImGui::Text("Shader Fragment Path : %s", fragmentPath.c_str());
-            ImGui::Text("Shader Geometry Path : %s", geometryPath.c_str());
-            static float test[3] = { 0, 1, 1 };
-            ImGui::SliderFloat3("testing", test, 0, 100);
-            ImGui::TextWrapped("Description : %s", description.c_str());
-            ImGui::EndTabItem();
-        }
-    }
+    void drawInfo();
 };
 
 class Shader {
@@ -72,7 +51,7 @@ public:
     void bind();
     void unbind();
     std::string readFile(const std::string& path);
-    bool compileShader(const char* code, GLuint ID, GLenum type);
+    bool compileShader(const char* code, unsigned int ID, unsigned int type);
     bool buildShader();
 
 private:

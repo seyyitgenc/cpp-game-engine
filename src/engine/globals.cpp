@@ -1,21 +1,24 @@
-#include "globals.h"
+#include "glad/glad.h"
+
 #include "callbacks.h"
-#include <glad/glad.h>
+#include "globals.h"
+
+#include "shader.h"
+
+#include "shader_manager.h"
+
 #include <stb_image.h>
 
-GLFWwindow *gWindow;
+GLFWwindow* gWindow;
 
 bool gEditModeEnabled;
 bool gInitGlobals();
 void InitShaders();
 void InitTextures();
 void InitCameras();
-// Global variable initalization and backend setup
 
-TextureManager *gTextureManager = nullptr;
-CameraManager *gCameraManager = nullptr;
-
-bool gInitGlobals() {
+bool gInitGlobals()
+{
     // glfw: initialize and configure
     // ------------------------------
     glfwSetErrorCallback(glfw_error_callback);
@@ -48,8 +51,8 @@ bool gInitGlobals() {
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         Log::write(
-                Log::Debug,
-                "FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
+            Log::Debug,
+            "FATAL::GLAD_LOAD_GL_LOADER Failed to create GLFW window\n");
         return false;
     }
     // // setup Dear ImGui context
@@ -72,72 +75,75 @@ bool gInitGlobals() {
     InitCameras();
     return true;
 }
-void InitTextures() {
-    gTextureManager = TextureManager::getInstance();
-    gTextureManager->addTexture("file-icon", FileSystem::getPath("resources/textures/file-icon.png"), TextureType::ICON);
+
+void InitTextures()
+{
+    TextureManager::instance()->addTexture("file-icon", FileSystem::getPath("resources/textures/file-icon.png"), TextureType::ICON);
 }
 
-void InitShaders() {
-    auto shaderManager = ShaderManager::getInstance();
+void InitShaders()
+{
+    auto shaderManager = ShaderManager::instance();
     shaderManager->addShader(
-            "shader_model",
-            FileSystem::getPath("shaders/basic_model.vs"),
-            FileSystem::getPath("shaders/basic_model.fs"));
+        "shader_model",
+        FileSystem::getPath("shaders/basic_model.vs"),
+        FileSystem::getPath("shaders/basic_model.fs"));
     shaderManager->getShader("shader_model")->getShaderInfo().description = ("testing this thing .");
     shaderManager->addShader(
-            "shader_texture",
-            FileSystem::getPath("shaders/basic_texture.vs"),
-            FileSystem::getPath("shaders/basic_texture.fs"));
+        "shader_texture",
+        FileSystem::getPath("shaders/basic_texture.vs"),
+        FileSystem::getPath("shaders/basic_texture.fs"));
     shaderManager->addShader(
-            "shader_white_box",
-            FileSystem::getPath("shaders/basic_mesh.vs"),
-            FileSystem::getPath("shaders/white.fs"));
+        "shader_white_box",
+        FileSystem::getPath("shaders/basic_mesh.vs"),
+        FileSystem::getPath("shaders/white.fs"));
     shaderManager->addShader(
-            "shader_red_box",
-            FileSystem::getPath("shaders/basic_mesh.vs"),
-            FileSystem::getPath("shaders/red.fs"));
+        "shader_red_box",
+        FileSystem::getPath("shaders/basic_mesh.vs"),
+        FileSystem::getPath("shaders/red.fs"));
     shaderManager->addShader(
-            "shader_point_light",
-            FileSystem::getPath("shaders/lighting/light.vs"),
-            FileSystem::getPath("shaders/lighting/point_light.fs"));
+        "shader_point_light",
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/point_light.fs"));
     shaderManager->addShader(
-            "shader_spot_light",
-            FileSystem::getPath("shaders/lighting/light.vs"),
-            FileSystem::getPath("shaders/lighting/spot_light.fs"));
+        "shader_spot_light",
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/spot_light.fs"));
     shaderManager->addShader(
-            "shader_directional_light",
-            FileSystem::getPath("shaders/lighting/light.vs"),
-            FileSystem::getPath("shaders/lighting/directional_light.fs"));
+        "shader_directional_light",
+        FileSystem::getPath("shaders/lighting/light.vs"),
+        FileSystem::getPath("shaders/lighting/directional_light.fs"));
     shaderManager->addShader(
-            "shader_light_cube",
-            FileSystem::getPath("shaders/basic_mesh.vs"),
-            FileSystem::getPath("shaders/color.fs"));
+        "shader_light_cube",
+        FileSystem::getPath("shaders/basic_mesh.vs"),
+        FileSystem::getPath("shaders/color.fs"));
     shaderManager->addShader(
-            "shader_gbuffer",
-            FileSystem::getPath("shaders/gbuffer.vs"),
-            FileSystem::getPath("shaders/gbuffer.fs"));
+        "shader_gbuffer",
+        FileSystem::getPath("shaders/gbuffer.vs"),
+        FileSystem::getPath("shaders/gbuffer.fs"));
     shaderManager->addShader(
-            "shader_lighting_pass",
-            FileSystem::getPath("shaders/lighting/lighting_pass.vs"),
-            FileSystem::getPath("shaders/lighting/lighting_pass.fs"));
+        "shader_lighting_pass",
+        FileSystem::getPath("shaders/lighting/lighting_pass.vs"),
+        FileSystem::getPath("shaders/lighting/lighting_pass.fs"));
     shaderManager->addShader(
-            "shader_depth_pass",
-            FileSystem::getPath("shaders/lighting/depth_pass.vs"),
-            FileSystem::getPath("shaders/lighting/depth_pass.fs"));
+        "shader_depth_pass",
+        FileSystem::getPath("shaders/lighting/depth_pass.vs"),
+        FileSystem::getPath("shaders/lighting/depth_pass.fs"));
     shaderManager->addShader(
-            "shader_debugging",
-            FileSystem::getPath("shaders/debugging.vs"),
-            FileSystem::getPath("shaders/debugging.fs"));
+        "shader_debugging",
+        FileSystem::getPath("shaders/debugging.vs"),
+        FileSystem::getPath("shaders/debugging.fs"));
     shaderManager->addShader(
-            "shader_debug_depth_pass",
-            FileSystem::getPath("shaders/lighting/debug_depth_pass.vs"),
-            FileSystem::getPath("shaders/lighting/debug_depth_pass.fs"));
+        "shader_debug_depth_pass",
+        FileSystem::getPath("shaders/lighting/debug_depth_pass.vs"),
+        FileSystem::getPath("shaders/lighting/debug_depth_pass.fs"));
 }
-void InitCameras() {
-    gCameraManager = CameraManager::getInstance();
-    gCameraManager->addCamera("scene_cam", glm::vec3{ 0.0f, 0.0f, 2.0f });
-    gCameraManager->addCamera("test_cam", glm::vec3{ 1.0f, 1.0f, 1.0f });
-    gCameraManager->addCamera("test_cam2", glm::vec3{ -1.0f, -1.0f, -1.0f });
-    gCameraManager->addCamera("test_cam3", glm::vec3{ -4.0f, 0.0f, 5.0f });
-    gCameraManager->addCamera("test_cam4", glm::vec3{ -3.0f, 2.0f, 2.0f });
+void InitCameras()
+{
+    auto manager = CameraManager::instance();
+    manager->addCamera("scene_cam", glm::vec3 { 0.0f, 0.0f, 2.0f });
+    manager->addCamera("test_cam", glm::vec3 { 1.0f, 1.0f, 1.0f });
+    manager->addCamera("test_cam2", glm::vec3 { -1.0f, -1.0f, -1.0f });
+    manager->addCamera("test_cam3", glm::vec3 { -4.0f, 0.0f, 5.0f });
+    manager->addCamera("test_cam4", glm::vec3 { -3.0f, 2.0f, 2.0f });
 }

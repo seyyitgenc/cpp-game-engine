@@ -1,19 +1,16 @@
 #pragma once
 
-#include "../../external/glad/glad.h"
-#include <GLFW/glfw3.h>
+struct GLFWwindow;
 
-class Mouse
-{
+class Mouse {
 public:
-    static void normalModeCursorPosCallback(GLFWwindow *window, double x, double y);
-    static void normalModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
-    static void normalModeMouseWheelCallback(GLFWwindow *window, double dx, double dy);
+    static void normalModeCursorPosCallback(GLFWwindow* window, double x, double y);
+    static void normalModeMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+    static void normalModeMouseWheelCallback(GLFWwindow* window, double dx, double dy);
 
-    static void editModeCursorPosCallback(GLFWwindow *window, double x, double y);
-    static void editModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
-    static void editModeMouseWheelCallback(GLFWwindow *window, double dx, double dy);
-
+    static void editModeCursorPosCallback(GLFWwindow* window, double x, double y);
+    static void editModeMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+    static void editModeMouseWheelCallback(GLFWwindow* window, double dx, double dy);
 
     static double getMouseX();
     static double getMouseY();

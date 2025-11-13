@@ -1,5 +1,31 @@
 #include "shader.h"
 
+#include "util/log.hpp"
+
+#include "ImGui/imgui.h"
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_opengl3.h"
+
+#include "glad/glad.h"
+
+#include <fstream>
+
+#include <glm/gtc/type_ptr.hpp>
+
+void ShaderInfo::drawInfo()
+{
+    if (ImGui::BeginTabItem("Details")) {
+        ImGui::Text("Shader ID : %d", ID);
+        ImGui::Text("Shader Vertex Path   : %s", vertexPath.c_str());
+        ImGui::Text("Shader Fragment Path : %s", fragmentPath.c_str());
+        ImGui::Text("Shader Geometry Path : %s", geometryPath.c_str());
+        static float test[3] = { 0, 1, 1 };
+        ImGui::SliderFloat3("testing", test, 0, 100);
+        ImGui::TextWrapped("Description : %s", description.c_str());
+        ImGui::EndTabItem();
+    }
+}
+
 //! input is like tihs vertex shader, fragment shader
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
     : Shader(vertexPath, "", fragmentPath)

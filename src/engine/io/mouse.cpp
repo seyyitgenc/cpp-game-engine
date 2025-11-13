@@ -1,7 +1,11 @@
 #include "mouse.h"
+#include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
-#include "ImGui/imgui.h"
+
+#include "util/helpers.hpp"
+
+#include <GLFW/glfw3.h>
 
 double Mouse::_x = 0;
 double Mouse::_y = 0;
@@ -15,71 +19,82 @@ double Mouse::_scrollDX = 0;
 double Mouse::_scrollDY = 0;
 bool Mouse::_firstMouse = true;
 
-bool Mouse::_buttons[GLFW_MOUSE_BUTTON_LAST] = {0};
-bool Mouse::_buttonsChanged[GLFW_MOUSE_BUTTON_LAST] = {0};
+bool Mouse::_buttons[GLFW_MOUSE_BUTTON_LAST] = { 0 };
+bool Mouse::_buttonsChanged[GLFW_MOUSE_BUTTON_LAST] = { 0 };
 
 // mouse button event
-bool Mouse::button(int button){
+bool Mouse::button(int button)
+{
     return _buttons[button];
 }
 
 // mouse button changed event
-bool Mouse::buttonChanged(int button){
+bool Mouse::buttonChanged(int button)
+{
     bool ret = _buttonsChanged[button];
     _buttonsChanged[button] = false;
     return ret;
 }
 
 // mouse button released event
-bool Mouse::buttonWentUp(int button){
+bool Mouse::buttonWentUp(int button)
+{
     return !_buttons[button] && buttonChanged(button);
 }
 
 // mouse button pressed event
-bool Mouse::buttonWentDown(int button){
+bool Mouse::buttonWentDown(int button)
+{
     return _buttons[button] && buttonChanged(button);
 }
 
 // getter for mouse X
-double Mouse::getMouseX(){
+double Mouse::getMouseX()
+{
     return _x;
 }
 
 // getter for mouse Y
-double Mouse::getMouseY(){
+double Mouse::getMouseY()
+{
     return _y;
 }
 
 // getter for mouse DX
-double Mouse::getDX(){
+double Mouse::getDX()
+{
     double dx = _dx;
     _dx = 0;
     return dx;
 }
 
 // getter for mouse DY
-double Mouse::getDY(){
+double Mouse::getDY()
+{
     double dy = _dy;
     _dy = 0;
     return dy;
 }
 
 // getter for scroll DX
-double Mouse::getScrollDX(){
+double Mouse::getScrollDX()
+{
     double dx = _scrollDX;
     _scrollDX = 0;
     return dx;
 }
 
 // getter for scroll DY
-double Mouse::getScrollDY(){
-    double dy =_scrollDY;
-   _scrollDY = 0;
+double Mouse::getScrollDY()
+{
+    double dy = _scrollDY;
+    _scrollDY = 0;
     return dy;
 }
 
 // setter for firstMouse
-void Mouse::setFirstMouse(bool firstMouse){
+void Mouse::setFirstMouse(bool firstMouse)
+{
     _firstMouse = firstMouse;
 }
 
@@ -88,25 +103,32 @@ void Mouse::setFirstMouse(bool firstMouse){
 // ---------
 
 // edit mode mouse cursor callback
-void Mouse::editModeCursorPosCallback(GLFWwindow *window, double x, double y){
-    ImGui_ImplGlfw_CursorPosCallback(window, x,y);
+void Mouse::editModeCursorPosCallback(GLFWwindow* window, double x, double y)
+{
+    ImGui_ImplGlfw_CursorPosCallback(window, x, y);
 }
 
 // edit mode mouse button callback
-void Mouse::editModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods){
+void Mouse::editModeMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 // edit mode mouse wheel callback
-void Mouse::editModeMouseWheelCallback(GLFWwindow *window, double dx, double dy){
+void Mouse::editModeMouseWheelCallback(GLFWwindow* window, double dx, double dy)
+{
     ImGui_ImplGlfw_ScrollCallback(window, dx, dy);
 }
 
+// TODO: check this code out again, maybe i can do something better
 // normal mode mouse cursor callback
-void Mouse::normalModeCursorPosCallback(GLFWwindow *window, double x, double y){
+void Mouse::normalModeCursorPosCallback(GLFWwindow* window, double x, double y)
+{
+    GNC_UNUSED(window);
+
     _x = x;
     _y = y;
-    if (_firstMouse){
+    if (_firstMouse) {
         _lastX = _x;
         _lastY = _y;
         _firstMouse = false;
@@ -118,20 +140,25 @@ void Mouse::normalModeCursorPosCallback(GLFWwindow *window, double x, double y){
 }
 
 // edit mode mouse button callback
-void Mouse::normalModeMouseButtonCallback(GLFWwindow *window, int button, int action, int mods){
-    if (action != GLFW_RELEASE){
+void Mouse::normalModeMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    GNC_UNUSED(window);
+    GNC_UNUSED(mods);
+
+    if (action != GLFW_RELEASE) {
         if (_buttons[button])
             _buttons[button] = true;
-    }
-    else{
+    } else {
         _buttons[button] = false;
     }
     _buttonsChanged[button] = action != GLFW_REPEAT;
 }
 
 // edit mode mouse wheel callback
-void Mouse::normalModeMouseWheelCallback(GLFWwindow *window, double dx, double dy){
+void Mouse::normalModeMouseWheelCallback(GLFWwindow* window, double dx, double dy)
+{
+    GNC_UNUSED(window);
+
     _scrollDX = dx;
     _scrollDY = dy;
 }
-

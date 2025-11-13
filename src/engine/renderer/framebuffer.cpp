@@ -1,3 +1,5 @@
+#include "glad/glad.h"
+
 #include "framebuffer.h"
 
 // TODO: i may use GLenum for texture type spec it can make my code simpler
@@ -114,7 +116,6 @@ void FrameBuffer::attachTexture(int width, int height, FBTT type, GLenum attachm
 {
     bind(GL_FRAMEBUFFER);
     _boundTextures.emplace_back(width, height, type, attachment);
-    std::cout << "size ofd " << _boundTextures.size() << std::endl;
 
     std::vector<GLenum> attachments;
     for (auto&& i : _boundTextures)

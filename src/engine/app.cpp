@@ -1,15 +1,22 @@
+#include "glad/glad.h"
+
 #include "app.hpp"
-#include "../util/stopwatch.hpp"
+
 #include "callbacks.h"
 #include "camera.h"
+#include "globals.h"
 #include "model.h"
 #include "shader.h"
 #include "shader_manager.h"
+
+#include "util/stopwatch.hpp"
 
 #include "renderer/framebuffer.h"
 
 #include "gui/ImGuiLayerManager.hpp"
 #include "gui/ShadersGUI.hpp"
+
+#include <glm/gtc/type_ptr.hpp>
 
 #include <thread>
 // todo: rename some of the functions of Camera and CameraMananger.
@@ -19,7 +26,25 @@ App* App::_instance = nullptr;
 // fixme: this is not safe
 Camera* camRef = nullptr;
 
-App::App() { }
+App& App::instance()
+{
+    if (_instance == nullptr) {
+        _instance = new App();
+        Log::writeFormatted(
+            Log::Info,
+            GREEN_TEXT(
+                "INFO::APP::GET_INSTANCE App Initialized with mem address -> %p")
+                .c_str(),
+            &_instance);
+    }
+    return *_instance;
+}
+
+App::App()
+    : clear_color(ImVec4(0.45f, 0.55f, 0.60f, 1.00f))
+{
+}
+
 App::~App()
 {
     this->clean();
@@ -86,7 +111,7 @@ void App::run()
 
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
-    auto shaderManager = ShaderManager::getInstance();
+    auto shaderManager = ShaderManager::instance();
     // auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
     auto depthPassShader = shaderManager->getShader("shader_depth_pass");
     auto gBufferShader = shaderManager->getShader("shader_gbuffer");
@@ -114,7 +139,7 @@ void App::run()
 
     glEnable(GL_DEPTH_TEST);
 
-    gCameraManager->setActiveCamera(gCameraManager->getCamera("scene_cam"));
+    CameraManager::instance()->setActiveCamera(CameraManager::instance()->getCamera("scene_cam"));
 
     FrameBuffer shadowMap;
     shadowMap.bind(GL_FRAMEBUFFER);
@@ -151,7 +176,7 @@ void App::run()
         }
 
         glm::vec3 lightPos(x, y, z);
-        camRef = gCameraManager->getActiveCamera();
+        camRef = CameraManager::instance()->getActiveCamera();
 
         // per-frame time logic
         // --------------------
@@ -234,7 +259,7 @@ void App::run()
         // cyborg.Draw(*gBufferShader);
         // earth.Draw(*gBufferShader);
 
-        for (auto&& i : *gCameraManager->getCameraList()) {
+        for (auto&& i : *CameraManager::instance()->getCameraList()) {
             if (i.second.get() != camRef) {
                 // todo : create function that sets these variables
                 gBufferShader->setMat4("projection", projection);
@@ -270,7 +295,7 @@ void App::run()
         lightingPassShader->setInt("gRoughnessMap", 3);
         lightingPassShader->setInt("gShadowMap", 4);
         gBuffer.bindTextures();
-        // FIXME: temporary solution.
+        // FIXME: temporary solution.o
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
         lightingPassShader->setVec3("light.Position", lightPos);
@@ -334,7 +359,7 @@ void App::run()
 
         // glDisable(GL_SCISSOR_TEST);
         // render the cameras
-        // for (auto &&i : *gCameraManager->getCameraList())
+        // for (auto &&i : *CameraManager::instance()->getCameraList())
         // {
         //     if (i.second.get() != camRef)
         //     {
@@ -380,8 +405,8 @@ void App::processInput([[maybe_unused]] GLFWwindow* window)
     if (!gEditModeEnabled) {
         camRef->handleEvents(deltaTime);
     }
-    gCameraManager->handleEvents(deltaTime);
-    ShaderManager::getInstance()->handleEvents(deltaTime);
+    CameraManager::instance()->handleEvents(deltaTime);
+    ShaderManager::instance()->handleEvents(deltaTime);
 
     if (Keyboard::keyWentDown(GLFW_KEY_P))
         perspectiveProjection = !perspectiveProjection;

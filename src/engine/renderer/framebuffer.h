@@ -35,7 +35,6 @@ public:
     {
         if (_texture != 0 && glIsTexture(_texture)) {
             glDeleteTextures(1, &_texture);
-            std::cout << "deleted" << std::endl;
         }
     }
 

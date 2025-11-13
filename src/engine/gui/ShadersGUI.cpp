@@ -1,22 +1,27 @@
 #include "ShadersGUI.hpp"
 
-#include "../globals.h"
+#include "../globals.h" // TODO: i am only including for 1 FUCKING VARIBALE!! THUMBNAIL_SIZE
+#include "../shader.h"
+#include "../shader_manager.h"
 #include "../texture.h"
 
 #include "ImGui/imgui.h"
 
-ShadersGUI::ShadersGUI() :
-        ImGuiLayer("Shaders") {
+ShadersGUI::ShadersGUI()
+    : ImGuiLayer("Shaders")
+{
 }
-ShadersGUI::~ShadersGUI() {
+ShadersGUI::~ShadersGUI()
+{
 }
 
-void ShadersGUI::draw() {
+void ShadersGUI::draw()
+{
     ImGui::SetNextWindowSize(ImVec2(800, 440), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Shaders")) {
         // Left
         static int selected = 0;
-        static Shader *selectedShader = nullptr; // note: don't forget to free this pointer
+        static Shader* selectedShader = nullptr; // note: don't forget to free this pointer
         static std::string shaderName;
         {
             float windowWidth = ImGui::GetContentRegionAvail().x;
@@ -31,7 +36,7 @@ void ShadersGUI::draw() {
 
             if (ImGui::BeginTable("tbl_shaders", columnCount)) {
                 int index = 0;
-                for (auto &&it : ShaderManager::getInstance()->getShaderList()) {
+                for (auto&& it : ShaderManager::instance()->getShaderList()) {
                     ImGui::TableNextColumn();
                     ImVec2 pos = ImGui::GetCursorPos();
                     std::string itemid = "##" + it.first;
@@ -45,7 +50,7 @@ void ShadersGUI::draw() {
                     // note: temporary solution
                     ImGui::SetCursorPos({ pos.x + padding / 2, pos.y + padding / 2 });
 
-                    ImGui::Image((void *)(intptr_t)gTextureManager->getTextureId("file-icon"), { THUMBNAIL_SIZE, THUMBNAIL_SIZE });
+                    ImGui::Image((void*)(intptr_t)TextureManager::instance()->getTextureId("file-icon"), { THUMBNAIL_SIZE, THUMBNAIL_SIZE });
 
                     ImGui::SetCursorPos({ pos.x, pos.y + cellSize + 2 });
                     ImGui::TextWrapped("%s", it.first.c_str());
@@ -70,7 +75,7 @@ void ShadersGUI::draw() {
                     // pos =  selectedShader->getVec3("light.direction");
                     // static float test[3] = {pos.x,pos.y,pos.z};
                     // ImGui::SliderFloat3("direction",test,-1,1);
-                    // auto zibap = App::getInstance().dLight->getProperties<DirectionalLightProperties>();
+                    // auto zibap = App::instance().dLight->getProperties<DirectionalLightProperties>();
                     // zibap->direction = glm::make_vec3(test);
                     ImGui::EndTabItem();
                 }
@@ -80,11 +85,11 @@ void ShadersGUI::draw() {
             ImGui::EndChild();
         }
         if (ImGui::Button("Reload")) {
-            ShaderManager::getInstance()->reloadShader(shaderName);
+            ShaderManager::instance()->reloadShader(shaderName);
         }
         ImGui::SameLine();
         if (ImGui::Button("Reload All Shaders")) {
-            ShaderManager::getInstance()->reloadAllShaders();
+            ShaderManager::instance()->reloadAllShaders();
         }
 
         ImGui::EndGroup();
