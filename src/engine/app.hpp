@@ -4,6 +4,10 @@
 
 struct GLFWwindow;
 
+namespace GNC {
+
+class Scene;
+
 class App {
 public:
     App();
@@ -25,4 +29,8 @@ private:
     // App Field
     ImVec4 clear_color;
     static App* _instance;
+
+    Scene* scene = nullptr;
 };
+
+} // namespace GNC

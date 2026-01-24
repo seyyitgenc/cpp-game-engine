@@ -68,6 +68,47 @@ void FrameBufferTexture::Configure()
     }
 }
 
+void FrameBufferTexture::resize(int width, int height)
+{
+    if (!glIsTexture) {
+        Log::writeFormatted(Log::Error, "Existing target is not texture %d", _texture);
+        return;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, _texture);
+
+    switch (_type) {
+    // - position color buffer
+    case FBTT::POSITION:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, _width, _height, 0, GL_RGBA, GL_FLOAT, NULL);
+        break;
+    // - normal color buffer
+    case FBTT::NORMAL:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, _width, _height, 0, GL_RGBA, GL_FLOAT, NULL);
+        break;
+    // - color buffer
+    case FBTT::ALBEDO:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        break;
+    case FBTT::SHADOW:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+        break;
+    case FBTT::SPECULAR:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, _width, _height, 0, GL_RGB, GL_FLOAT, NULL);
+        break;
+    case FBTT::DISPLACEMENT:
+        Log::write(Log::Fatal, RED_TEXT("FRAMEBUFFERTEXTURE::CONFIGURE::FBTT::DEPTH is not implemented\n"));
+        break;
+    case FBTT::ROUGHNESS:
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, _width, _height, 0, GL_RED, GL_FLOAT, NULL);
+        break;
+    default:
+        Log::write(Log::Warning, RED_TEXT("Given Type Is Not Valid!\n"));
+        break;
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 // FrameBuffer constructor
 FrameBuffer::FrameBuffer()
 {
@@ -130,18 +171,8 @@ void FrameBuffer::resizeBuffer(int width, int height)
 
     std::vector<FrameBufferTexture> newTextures;
     for (auto& texture : _boundTextures) {
-        newTextures.emplace_back(width, height, texture._type, texture._attachment);
-        texture.cleanup();
+        texture.resize(width, height);
     }
-
-    _boundTextures = newTextures;
-    std::cout << "size of " << _boundTextures.size() << std::endl;
-    std::vector<GLenum> attachments;
-
-    for (auto&& i : newTextures)
-        attachments.push_back(i._attachment);
-
-    glDrawBuffers(attachments.size(), attachments.data());
 }
 
 // Checks if generated framebuffer is complete or not.

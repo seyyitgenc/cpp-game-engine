@@ -9,6 +9,11 @@
 #include "shader.h"
 #include "shader_manager.h"
 
+#include "entity/dummy.hpp"
+#include "scene/scene.hpp"
+
+#include "io/gamepad.hpp"
+
 #include "util/stopwatch.hpp"
 
 #include "renderer/framebuffer.h"
@@ -20,6 +25,8 @@
 
 #include <thread>
 // todo: rename some of the functions of Camera and CameraMananger.
+
+namespace GNC {
 
 App* App::_instance = nullptr;
 
@@ -102,12 +109,26 @@ void renderQuad()
 }
 bool perspectiveProjection = false;
 float x = 30.0f, y = 60.0f, z = -7.0f;
+
 // ---------
 // main loop
 // ---------
 void App::run()
 {
     gInitGlobals();
+
+    scene = new Scene();
+
+    std::unique_ptr<Dummy> dummyEntity1 = std::make_unique<Dummy>(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
+    dummyEntity1->setPosition(glm::vec3(0.0f));
+    dummyEntity1->setScale(glm::vec3(0.02f));
+
+    std::unique_ptr<Dummy> dummyEntity2 = std::make_unique<Dummy>(FileSystem::getPath("resources/objects/nanosuit/nanosuit.obj"));
+    dummyEntity2->setPosition(glm::vec3(0.0f));
+    dummyEntity2->setScale(glm::vec3(1.0f));
+
+    scene->addEntity(std::move(dummyEntity1));
+    scene->addEntity(std::move(dummyEntity2));
 
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
@@ -118,18 +139,16 @@ void App::run()
     auto lightingPassShader = shaderManager->getShader("shader_lighting_pass");
     // auto debugShader = shaderManager->getShader("shader_debugging");
 
-    Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
-    Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
-    Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
-    Model sponza(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
-    Model cyborg(FileSystem::getPath("resources/objects/nanosuit/nanosuit.obj"));
+    // Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
+    // Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
+    // Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
     // Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
 
     // cube_transf[0].scale(1.0f, 3.0f, 1.0f);
     // cube_transf[0].translate(2.0f, 0.0f, 2.0f);
 
     // cube_transf[1].scale(1.0f, 5.0f, 1.0f);
-    // cube_transf[1].translate(-2.0f, 0.0f, -2.0f);
+    // cube_tra`nsf[1].translate(-2.0f, 0.0f, -2.0f);
 
     // cube_base_transf.translate(0.0f, -2.0f, 0.0f);
     // cube_base_transf.scale(20.0f, 1.0f, 20.0f);
@@ -173,6 +192,8 @@ void App::run()
             gBuffer.resizeBuffer(gViewport._width, gViewport._height);
             prevWidth = gViewport._width;
             prevHeight = gViewport._height;
+
+            gBuffer.attachRenderBuffer();
         }
 
         glm::vec3 lightPos(x, y, z);
@@ -211,21 +232,13 @@ void App::run()
         glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
-        depthPassShader->bind();
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(0.02));
-        model = glm::translate(model, glm::vec3(0, 0, 0));
-        depthPassShader->setMat4("model", model);
-        depthPassShader->setMat4("projection", lightProjection);
-        depthPassShader->setMat4("view", lightView);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
-        sponza.Draw(*depthPassShader);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(0.5f));
-        model = glm::translate(model, glm::vec3(0, 0, 0));
-        depthPassShader->setMat4("model", model);
-        // earth.Draw(*depthPassShader);
+        depthPassShader->bind();
+        depthPassShader->setMat4("projection", lightProjection);
+        depthPassShader->setMat4("view", lightView);
+
+        scene->draw(*depthPassShader);
 
         // cyborg.Draw(*depthPassShader);
         glCullFace(GL_BACK);
@@ -242,41 +255,40 @@ void App::run()
         // centralNode->Pos.x, io.DisplaySize.y - centralNode->Size.y - centralNode->Pos.y, centralNode->Size.x, centralNode->Size.y
 
         glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
-        glClearColor(0, 0, 0, 255);
+        glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gBufferShader->bind();
         gBufferShader->setMat4("projection", projection);
         gBufferShader->setMat4("view", view);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(0.02));
-        model = glm::translate(model, glm::vec3(0, 0, 0));
-        gBufferShader->setMat4("model", model);
-        sponza.Draw(*gBufferShader);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(1.0f));
-        model = glm::translate(model, glm::vec3(0, 0, 0));
-        gBufferShader->setMat4("model", model);
+
+        scene->draw(*gBufferShader);
+        // gBufferShader->setMat4("model", model);
+        // sponza.Draw(*gBufferShader);
+        // model = glm::mat4(1.0f);
+        // model = glm::scale(model, glm::vec3(1.0f));
+        // model = glm::translate(model, glm::vec3(0, 0, 0));
+        // gBufferShader->setMat4("model", model);
         // cyborg.Draw(*gBufferShader);
         // earth.Draw(*gBufferShader);
 
-        for (auto&& i : *CameraManager::instance()->getCameraList()) {
-            if (i.second.get() != camRef) {
-                // todo : create function that sets these variables
-                gBufferShader->setMat4("projection", projection);
-                gBufferShader->setMat4("view", camRef->GetViewMatrix());
-                model = glm::inverse(i.second->GetViewMatrix());
+        // for (auto&& i : *CameraManager::instance()->getCameraList()) {
+        //     if (i.second.get() != camRef) {
+        //         // todo : create function that sets these variables
+        //         gBufferShader->setMat4("projection", projection);
+        //         gBufferShader->setMat4("view", camRef->GetViewMatrix());
+        //         model = glm::inverse(i.second->GetViewMatrix());
 
-                model = glm::scale(model, glm::vec3(0.003f)); // it's a bit too big for our scene, so scale it down
-                model = glm::translate(model, i.second.get()->Position);
+        //         model = glm::scale(model, glm::vec3(0.003f)); // it's a bit too big for our scene, so scale it down
+        //         model = glm::translate(model, i.second.get()->Position);
 
-                // Create rotation matrices for pitch and yaw
-                model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
-                model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
+        //         // Create rotation matrices for pitch and yaw
+        //         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
+        //         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
 
-                gBufferShader->setMat4("model", model);
-                camera.Draw(*gBufferShader);
-            }
-        }
+        //         gBufferShader->setMat4("model", model);
+        //         camera.Draw(*gBufferShader);
+        //     }
+        // }
         gBufferShader->unbind();
         gBuffer.unbind();
         // -------------
@@ -467,3 +479,5 @@ void App::clean()
     glfwDestroyWindow(gWindow);
     glfwTerminate();
 }
+
+} // namespace GNC

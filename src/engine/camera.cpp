@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include "io/gamepad.hpp"
+
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <GLFW/glfw3.h>
@@ -79,16 +81,16 @@ void Camera::updateCameraZoom(double dy)
 
 void Camera::handleEvents(float dt)
 {
-    if (Keyboard::key(GLFW_KEY_W)) {
+    if (Keyboard::key(GLFW_KEY_W) || Gamepad::isButtonPushed(GLFW_JOYSTICK_1, 12)) {
         updateCameraPosition(FORWARD, dt);
     }
-    if (Keyboard::key(GLFW_KEY_S)) {
+    if (Keyboard::key(GLFW_KEY_S) || Gamepad::isButtonPushed(GLFW_JOYSTICK_1, 14)) {
         updateCameraPosition(BACKWARD, dt);
     }
-    if (Keyboard::key(GLFW_KEY_A)) {
+    if (Keyboard::key(GLFW_KEY_A) || Gamepad::isButtonPushed(GLFW_JOYSTICK_1, 15)) {
         updateCameraPosition(LEFT, dt);
     }
-    if (Keyboard::key(GLFW_KEY_D)) {
+    if (Keyboard::key(GLFW_KEY_D) || Gamepad::isButtonPushed(GLFW_JOYSTICK_1, 13)) {
         updateCameraPosition(RIGHT, dt);
     }
 

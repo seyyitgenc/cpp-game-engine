@@ -38,14 +38,9 @@ public:
         }
     }
 
-    void resize(int width, int height)
-    {
-        _width = width;
-        _height = height;
-        Configure();
-    }
-
     void Configure();
+
+    void resize(int width, int height);
 
     int _width = -1;
     int _height = -1;

@@ -17,6 +17,11 @@ void InitShaders();
 void InitTextures();
 void InitCameras();
 
+void joystick_callback(int jid, int event)
+{
+    Log::writeFormatted(Log::Info, "Joystick event %d event, with given joystick %d", event, jid);
+}
+
 bool gInitGlobals()
 {
     // glfw: initialize and configure
@@ -26,6 +31,8 @@ bool gInitGlobals()
         Log::write(Log::Fatal, "FATAL::INIT_GLOBALS Failed to init GLFW\n");
         return false;
     }
+    glfwSetJoystickCallback(joystick_callback);
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -73,6 +80,7 @@ bool gInitGlobals()
     InitTextures();
     InitShaders();
     InitCameras();
+
     return true;
 }
 

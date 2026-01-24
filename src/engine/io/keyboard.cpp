@@ -10,7 +10,6 @@ bool Keyboard::_keysChanged[GLFW_KEY_LAST] = { 0 };
 // keyboard default key callback
 void Keyboard::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-
     GNC_UNUSED(window);
 
     if (action != GLFW_RELEASE) {

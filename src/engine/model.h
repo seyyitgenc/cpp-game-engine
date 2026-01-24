@@ -18,15 +18,17 @@
 class Model {
 public:
     // model constructor for pre-defined models
-    Model(const std::string path)
+    Model(const std::string& path)
     {
         loadModel(path);
     };
+
     // draws the model, and thus all its meshes
     void Draw(const Shader& shader) const
     {
-        for (unsigned int i = 0; i < meshes.size(); i++)
+        for (unsigned int i = 0; i < meshes.size(); i++) {
             meshes[i].Draw(shader);
+        }
     }
 
 private:
