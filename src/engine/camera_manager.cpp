@@ -23,7 +23,7 @@ CameraManager::~CameraManager()
 }
 
 // adds camera with given name and spec
-void CameraManager::addCamera(const std::string& name, glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+Camera* CameraManager::addCamera(const std::string& name, glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 {
     if (isCameraExist(name)) {
         Log::write(
@@ -31,9 +31,10 @@ void CameraManager::addCamera(const std::string& name, glm::vec3 position, glm::
             LIGHT_RED_TEXT("FATAL::CAMERA_MANAGER::ADD_CAMERA You tried to add camera that already exist. Key you provided is -> "),
             YELLOW_TEXT(name),
             "\n");
-        return;
+        return nullptr;
     }
     _cameras[name] = std::make_unique<Camera>(position, up, yaw, pitch);
+    return _cameras[name].get();
 }
 
 Camera* CameraManager::getCamera(const std::string& name)

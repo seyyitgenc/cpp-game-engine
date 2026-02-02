@@ -107,7 +107,7 @@ void renderQuad()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
-bool perspectiveProjection = false;
+
 float x = 30.0f, y = 60.0f, z = -7.0f;
 
 // ---------
@@ -133,14 +133,14 @@ void App::run()
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
     auto shaderManager = ShaderManager::instance();
-    // auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
+    auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
     auto depthPassShader = shaderManager->getShader("shader_depth_pass");
     auto gBufferShader = shaderManager->getShader("shader_gbuffer");
     auto lightingPassShader = shaderManager->getShader("shader_lighting_pass");
-    // auto debugShader = shaderManager->getShader("shader_debugging");
+    auto debugShader = shaderManager->getShader("shader_debugging");
 
     // Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
-    // Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
+    Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
     // Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
     // Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
 
@@ -179,9 +179,6 @@ void App::run()
     gBuffer.checkCompleteness();
     gBuffer.unbind();
 
-    float near_plane = 1.0f;
-    float far_plane = 1000.0f;
-
     // Track previous viewport size for resize detection
     int prevWidth = gViewport._width;
     int prevHeight = gViewport._height;
@@ -210,33 +207,27 @@ void App::run()
         // lightPos[1] = 10;
         // lightPos[2] = 16.0*sin(glfwGetTime()/2);
         processInput(gWindow);
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 projection = glm::perspective(glm::radians(camRef->Zoom), (float)gViewport._width / (float)gViewport._height, 0.1f, 1000.0f);
+        glm::mat4 projection = camRef->Projection;
+        // TODO: add nullptr check
+        glm::mat4 lightProjection = CameraManager::instance()->getCamera("light_cam")->Projection;
+
         glm::mat4 view = camRef->GetViewMatrix();
-        float left = -50.0f;
-        float right = 50.0f;
-        float bottom = -50.0f;
-        float top = 50.0f;
-
-        glm::mat4 lightProjection;
-        if (perspectiveProjection)
-            lightProjection = glm::perspective(3.1415f / 1.6f, (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.0f, 1000.0f);
-        else
-            lightProjection = glm::ortho(left, right, bottom, top, near_plane, far_plane);
-
+        // TODO: add nullptr check
         glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
         // ----------
         // DEPTH PASS
         // ----------
         shadowMap.bind(GL_FRAMEBUFFER);
-        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
         depthPassShader->bind();
         depthPassShader->setMat4("projection", lightProjection);
         depthPassShader->setMat4("view", lightView);
+
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
 
         scene->draw(*depthPassShader);
 
@@ -262,6 +253,12 @@ void App::run()
         gBufferShader->setMat4("view", view);
 
         scene->draw(*gBufferShader);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(5.0f));
+        model = glm::translate(model, lightPos);
+        gBufferShader->setMat4("model", model);
+        cube.Draw(*gBufferShader);
         // gBufferShader->setMat4("model", model);
         // sponza.Draw(*gBufferShader);
         // model = glm::mat4(1.0f);
@@ -325,51 +322,52 @@ void App::run()
         // ----------
         // DEBUG PASS
         // ----------
-        // glViewport(0, 0, 320, 180);
-        // glScissor(0, 0, 320, 180);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // debugDepthPassShader->bind();
-        // debugDepthPassShader->setFloat("near_plane", 1.0f);
-        // debugDepthPassShader->setFloat("far_plane", 1000.0f);
-        // debugDepthPassShader->setBool("isPerspective", perspectiveProjection);
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
-        // renderQuad();
+        glEnable(GL_SCISSOR_TEST);
+        glViewport(0, 0, 320, 180);
+        glScissor(0, 0, 320, 180);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        debugDepthPassShader->bind();
+        debugDepthPassShader->setFloat("near_plane", 1.0f);
+        debugDepthPassShader->setFloat("far_plane", 1000.0f);
+        debugDepthPassShader->setBool("isPerspective", false);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
+        renderQuad();
 
-        // glViewport(320, 0, 320, 180);
-        // glScissor(320, 0, 320, 180);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // debugShader->bind();
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
-        // renderQuad();
+        glViewport(320, 0, 320, 180);
+        glScissor(320, 0, 320, 180);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        debugShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
+        renderQuad();
 
-        // glViewport(640, 0, 320, 180);
-        // glScissor(640, 0, 320, 180);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // debugShader->bind();
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
-        // renderQuad();
+        glViewport(640, 0, 320, 180);
+        glScissor(640, 0, 320, 180);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        debugShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
+        renderQuad();
 
-        // glViewport(960, 0, 320, 180);
-        // glScissor(960, 0, 320, 180);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // debugShader->bind();
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
-        // renderQuad();
+        glViewport(960, 0, 320, 180);
+        glScissor(960, 0, 320, 180);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        debugShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
+        renderQuad();
 
-        // glViewport(960, 0, 320, 180);
-        // glScissor(960, 0, 320, 180);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // debugShader->bind();
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[3]._texture);
-        // renderQuad();
-        // debugShader->unbind();
+        glViewport(960, 0, 320, 180);
+        glScissor(960, 0, 320, 180);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        debugShader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[3]._texture);
+        renderQuad();
+        debugShader->unbind();
 
-        // glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_SCISSOR_TEST);
         // render the cameras
         // for (auto &&i : *CameraManager::instance()->getCameraList())
         // {
@@ -406,6 +404,7 @@ void App::run()
         glfwPollEvents();
     }
 }
+
 // ----------
 // event loop
 // ----------
@@ -417,11 +416,19 @@ void App::processInput([[maybe_unused]] GLFWwindow* window)
     if (!gEditModeEnabled) {
         camRef->handleEvents(deltaTime);
     }
+
     CameraManager::instance()->handleEvents(deltaTime);
     ShaderManager::instance()->handleEvents(deltaTime);
 
-    if (Keyboard::keyWentDown(GLFW_KEY_P))
+    if (Keyboard::keyWentDown(GLFW_KEY_P)) {
+        static bool perspectiveProjection = false;
         perspectiveProjection = !perspectiveProjection;
+        if (perspectiveProjection) {
+            CameraManager::instance()->getCamera("light_cam")->setProjectionMatrixAsPerspective(glm::radians(45.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.0f, 1000.0f);
+        } else {
+            CameraManager::instance()->getCamera("light_cam")->setProjectionMatrixAsOrtho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 100.0f);
+        }
+    }
     if (Keyboard::key(GLFW_KEY_O))
         y += 0.5;
     if (Keyboard::key(GLFW_KEY_L))

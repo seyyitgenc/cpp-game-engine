@@ -15,6 +15,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     , MovementSpeed(SPEED)
     , MouseSensitivity(SENSITIVITY)
     , Zoom(ZOOM)
+    , Projection(glm::mat4(1.0f))
 {
     updateCameraVectors();
 };
@@ -26,6 +27,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     , MovementSpeed(SPEED)
     , MouseSensitivity(SENSITIVITY)
     , Zoom(ZOOM)
+    , Projection(glm::mat4(1.0f))
 {
     Position = glm::vec3(posX, posY, posZ);
     WorldUp = glm::vec3(upX, upY, upZ);
@@ -113,6 +115,16 @@ void Camera::updateCameraVectors()
     Front = glm::normalize(front);
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
+}
+
+void Camera::setProjectionMatrixAsOrtho(float left, float right, float bottom, float top, float nearPlane, float farPlane)
+{
+    Projection = glm::ortho(left, right, bottom, top, nearPlane, farPlane);
+}
+
+void Camera::setProjectionMatrixAsPerspective(float fovY, float aspectRatio, float nearPlane, float farPlane)
+{
+    Projection = glm::perspective(glm::radians(fovY), aspectRatio, nearPlane, farPlane);
 }
 
 glm::mat4 Camera::GetViewMatrix() { return glm::lookAt(Position, Position + Front, Up); }

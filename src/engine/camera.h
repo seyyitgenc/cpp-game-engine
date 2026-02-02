@@ -31,6 +31,8 @@ public:
     glm::vec3 Right {};
     glm::vec3 WorldUp {};
 
+    glm::mat4 Projection {};
+
     float Yaw;
     float Pitch;
 
@@ -41,6 +43,9 @@ public:
 public:
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
     Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
+
+    void setProjectionMatrixAsOrtho(float left, float right, float bottom, float top, float nearPlane, float farPlane);
+    void setProjectionMatrixAsPerspective(float fovY, float aspectRatio, float nearPlane, float farPlane);
 
     glm::mat4 GetViewMatrix();
 

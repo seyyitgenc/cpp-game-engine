@@ -149,9 +149,37 @@ void InitShaders()
 void InitCameras()
 {
     auto manager = CameraManager::instance();
-    manager->addCamera("scene_cam", glm::vec3 { 0.0f, 0.0f, 2.0f });
-    manager->addCamera("test_cam", glm::vec3 { 1.0f, 1.0f, 1.0f });
-    manager->addCamera("test_cam2", glm::vec3 { -1.0f, -1.0f, -1.0f });
-    manager->addCamera("test_cam3", glm::vec3 { -4.0f, 0.0f, 5.0f });
-    manager->addCamera("test_cam4", glm::vec3 { -3.0f, 2.0f, 2.0f });
+
+    float near_plane = 0.1f;
+    float far_plane = 1000.0f;
+
+    auto sceneCam = manager->addCamera("scene_cam", glm::vec3 { 0.0f, 0.0f, 2.0f });
+    if (sceneCam) {
+        sceneCam->setProjectionMatrixAsPerspective(45.0f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, near_plane, far_plane);
+    }
+
+    auto testCam = manager->addCamera("test_cam", glm::vec3 { 1.0f, 1.0f, 1.0f });
+    if (testCam) {
+        testCam->setProjectionMatrixAsPerspective(45.0f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, near_plane, far_plane);
+    }
+
+    auto testCam2 = manager->addCamera("test_cam2", glm::vec3 { -1.0f, -1.0f, -1.0f });
+    if (testCam2) {
+        testCam2->setProjectionMatrixAsPerspective(45.0f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, near_plane, far_plane);
+    }
+
+    auto testCam3 = manager->addCamera("test_cam3", glm::vec3 { -4.0f, 0.0f, 5.0f });
+    if (testCam3) {
+        testCam3->setProjectionMatrixAsPerspective(45.0f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, near_plane, far_plane);
+    }
+
+    auto testCam4 = manager->addCamera("test_cam4", glm::vec3 { -3.0f, 2.0f, 2.0f });
+    if (testCam4) {
+        testCam4->setProjectionMatrixAsPerspective(112.0f, (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+    }
+
+    auto lightCam = manager->addCamera("light_cam", glm::vec3 { 0.0f, 10.0f, 0.0f });
+    if (lightCam) {
+        lightCam->setProjectionMatrixAsOrtho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
+    }
 }
