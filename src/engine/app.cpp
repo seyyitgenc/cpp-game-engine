@@ -9,9 +9,6 @@
 #include "shader.h"
 #include "shader_manager.h"
 
-#include "entity/dummy.hpp"
-#include "scene/scene.hpp"
-
 #include "io/gamepad.hpp"
 
 #include "util/stopwatch.hpp"
@@ -117,19 +114,6 @@ void App::run()
 {
     gInitGlobals();
 
-    scene = new Scene();
-
-    std::unique_ptr<Dummy> dummyEntity1 = std::make_unique<Dummy>(FileSystem::getPath("resources/objects/Sponza/glTF/Sponza.gltf"));
-    dummyEntity1->setPosition(glm::vec3(0.0f));
-    dummyEntity1->setScale(glm::vec3(0.02f));
-
-    std::unique_ptr<Dummy> dummyEntity2 = std::make_unique<Dummy>(FileSystem::getPath("resources/objects/nanosuit/nanosuit.obj"));
-    dummyEntity2->setPosition(glm::vec3(0.0f));
-    dummyEntity2->setScale(glm::vec3(1.0f));
-
-    scene->addEntity(std::move(dummyEntity1));
-    scene->addEntity(std::move(dummyEntity2));
-
     ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
 
     auto shaderManager = ShaderManager::instance();
@@ -229,8 +213,6 @@ void App::run()
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
 
-        scene->draw(*depthPassShader);
-
         // cyborg.Draw(*depthPassShader);
         glCullFace(GL_BACK);
         glDisable(GL_CULL_FACE);
@@ -251,8 +233,6 @@ void App::run()
         gBufferShader->bind();
         gBufferShader->setMat4("projection", projection);
         gBufferShader->setMat4("view", view);
-
-        scene->draw(*gBufferShader);
 
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(5.0f));

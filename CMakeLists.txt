@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 # todo: set binary directory
 project(engine)
 
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -22,6 +23,10 @@ message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
 # GLFW3
 find_package(glfw3 REQUIRED)
 message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIRS}")
+
+# Vulkan
+find_package(Vulkan REQUIRED)
+message(STATUS "Found Vulkan in ${Vulkan_INCLUDE_DIR}")
 
 
 if(WIN32)
@@ -63,11 +68,11 @@ file(GLOB_RECURSE SOURCE
     src/engine/*.cpp
     src/engine/*.hpp
     src/engine/*.h
-    
+
     src/external/ImGui/*.cpp
     src/external/ImGui/*.h
     src/external/ImGui/*.hpp
-    
+
     src/util/*.cpp
     src/util/*.hpp
     src/util/*.h
@@ -75,17 +80,20 @@ file(GLOB_RECURSE SOURCE
     src/renderer/*.cpp
     src/renderer/*.hpp
     src/renderer/*.h
-    
+
     src/io/*.cpp
     src/io/*.hpp
     src/io/*.h
-    )
+)
 
 #include directories
 set (INC_DIRECTORIES
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/external
+    ${Vulkan_INCLUDE_DIR}
 )
+
+set(LIBS ${LIBS} Vulkan::Vulkan)
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 include_directories(${PROJECT_NAME}  ${INC_DIRECTORIES})

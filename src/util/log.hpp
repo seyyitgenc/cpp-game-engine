@@ -46,7 +46,7 @@ public:
             auto local_time = std::localtime(&time_t_now);
             std::stringstream ss;
             ss << "[" << std::put_time(local_time, "%H:%M:%S") << "] ";
-            (std::cout << ss.str() << ... << args);
+            ((std::cout << ss.str()) << ... << args);
         }
     }
 
