@@ -4,6 +4,9 @@
 
 #include <string>
 #include <utility>
+#include <vector>
+
+namespace GNC {
 
 // Base resource class
 // Every resource is an id plus a loaded/unloaded state. Load() and Unload() are
@@ -48,6 +51,13 @@ public:
         loaded = false;
     }
 
+    // Files this resource was built from, for the hot-reload watcher to stat.
+    // The resource reports them rather than the watcher deriving them, because
+    // the id -> path mapping is one-way: Shader folds its stage into the name,
+    // so "shaders/blinn.frag.spv" cannot be turned back into ("blinn", eFragment)
+    // without guessing. A resource that returns nothing is simply never watched.
+    virtual std::vector<std::string> GetSourcePaths() const { return {}; }
+
 protected:
     const ResourceContext& GetContext() const { return *context; }
     const vk::raii::Device& GetDevice() const { return *context->device; }
@@ -55,3 +65,5 @@ protected:
     virtual bool doLoad() = 0;
     virtual void doUnload() = 0;
 };
+
+} // namespace GNC

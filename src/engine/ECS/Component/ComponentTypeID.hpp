@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace GNC {
+
 using ComponentTypeID = std::uint32_t;
 
 // Component type identification
@@ -20,3 +22,5 @@ public:
         return typeID;
     }
 };
+
+} // namespace GNC

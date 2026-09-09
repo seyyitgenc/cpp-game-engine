@@ -5,6 +5,8 @@
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
 
+namespace GNC {
+
 // Texture resource
 // Owns the four GPU objects a sampled texture needs. Each one is a vk::raii
 // handle, so the only thing doUnload() has to get right is the order.
@@ -30,10 +32,11 @@ public:
     int GetHeight() const { return height; }
     int GetChannels() const { return channels; }
 
+    std::vector<std::string> GetSourcePaths() const override { return {SourcePath()}; }
+
 protected:
     bool doLoad() override {
-        // TODO: discorver extensions automatically, then fetch the loader for it.
-        const std::string filePath = "textures/" + GetId() + ".ktx";
+        const std::string filePath = SourcePath();
 
         unsigned char* data = LoadImageData(filePath, &width, &height, &channels);
         if (!data) return false;
@@ -58,6 +61,9 @@ protected:
     }
 
 private:
+    // TODO: discorver extensions automatically, then fetch the loader for it.
+    std::string SourcePath() const { return "textures/" + GetId() + ".ktx"; }
+
     // TODO: implement these out (stb_image for png/jpg, libktx for .ktx)
     unsigned char* LoadImageData(const std::string& /*filePath*/,
                                  int* /*outWidth*/, int* /*outHeight*/, int* /*outChannels*/) {
@@ -72,3 +78,5 @@ private:
     void CreateVulkanImage(const unsigned char* /*data*/,
                            int /*imageWidth*/, int /*imageHeight*/, int /*imageChannels*/) {}
 };
+
+} // namespace GNC

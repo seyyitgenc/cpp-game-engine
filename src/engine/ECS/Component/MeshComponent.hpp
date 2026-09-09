@@ -2,13 +2,9 @@
 
 #include "TransformsComponent.hpp"
 #include "../Entity/Entity.hpp"
+#include "../../Resource/Types/Mesh.hpp"
 
-
-// TODO: implement these out
-class Mesh {
-public:
-    void Render() { }
-};
+namespace GNC {
 
 // TODO: implement these out
 class Material {
@@ -44,6 +40,11 @@ public:
         // Render mesh with material and transform
         material->Bind();
         material->SetUniform("modelMatrix", transform->GetTransformMatrix());
-        mesh->Render();
+
+        // TODO: the mesh cannot draw itself under Vulkan. This wants a command
+        // buffer to record into: bind the pipeline, bind mesh->GetVertexBuffer()
+        // and mesh->GetIndexBuffer(), then drawIndexed(mesh->GetIndexCount()).
     }
 };
+
+} // namespace GNC

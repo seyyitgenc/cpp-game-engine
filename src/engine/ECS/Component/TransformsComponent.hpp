@@ -6,6 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+namespace GNC {
+
 // Transform component
 // Handles the position, rotation, and scale of an entity in 3D space
 // AffineTransform or "Pose" matrix.
@@ -52,3 +54,5 @@ public:
         return transformMatrix;
     }
 };
+
+} // namespace GNC

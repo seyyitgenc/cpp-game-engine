@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+namespace GNC {
+
 // Entity class
 // An entity is just a name plus a bag of components. It owns its components
 // through the vector, and keeps a type id -> component map alongside it so
@@ -139,3 +141,5 @@ public:
         return false;
     }
 };
+
+} // namespace GNC

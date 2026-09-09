@@ -4,12 +4,16 @@
 #include "ResourceContext.hpp"
 #include "ResourceHandle.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
+
+namespace GNC {
 
 // Resource manager
 // Owns every resource in the engine, keyed by type and then by id. The two
@@ -27,6 +31,12 @@ private:
     struct ResourceData {
         std::shared_ptr<Resource> resource;
         int refCount = 0;
+
+        // Rebuilds this resource from scratch with the same constructor
+        // arguments it was first loaded with. Stored because the table is type
+        // erased: by reload time the manager no longer knows what T was, and
+        // Shader in particular cannot be reconstructed from its id alone.
+        std::function<std::shared_ptr<Resource>()> factory;
     };
 
     using ResourceTable = std::unordered_map<std::string, ResourceData>;
@@ -38,7 +48,8 @@ public:
     ResourceManager() = default;
     explicit ResourceManager(const ResourceContext& ctx) : context(ctx) {}
 
-    ~ResourceManager() { UnloadAll(); }
+    // Virtual so HotReloadResourceManager can be owned through a base pointer.
+    virtual ~ResourceManager() { UnloadAll(); }
 
     ResourceManager(const ResourceManager&) = delete;
     ResourceManager& operator=(const ResourceManager&) = delete;
@@ -59,7 +70,17 @@ public:
             return ResourceHandle<T>(resourceId, this);
         }
 
-        auto resource = std::make_shared<T>(resourceId, std::forward<Args>(args)...);
+        // Built once and kept, so a later reload can construct an identical
+        // replacement without knowing T. Arguments are copied into the closure
+        // rather than forwarded, since they have to survive for the manager's
+        // lifetime and be usable more than once.
+        std::function<std::shared_ptr<Resource>()> factory =
+            [id = resourceId, saved = std::make_tuple(args...)]() -> std::shared_ptr<Resource> {
+                return std::apply(
+                    [&id](const auto&... a) { return std::make_shared<T>(id, a...); }, saved);
+            };
+
+        auto resource = factory();
         resource->SetContext(&context);
 
         // A failed load leaves nothing in the cache, so the next Load() is free
@@ -69,7 +90,7 @@ public:
             return ResourceHandle<T>();
         }
 
-        table.emplace(resourceId, ResourceData{std::move(resource), 1});
+        table.emplace(resourceId, ResourceData{std::move(resource), 1, std::move(factory)});
         return ResourceHandle<T>(resourceId, this);
     }
 
@@ -145,6 +166,35 @@ public:
         }
         resources.clear();
     }
+
+protected:
+    // Rebuild one resource in place. Used by the hot-reload watcher, which knows
+    // the type only as a type_index by the time a file changes.
+    //
+    // The replacement is built and loaded *before* the old one is touched, so a
+    // shader with a typo in it leaves the last good module running instead of
+    // taking the renderer down. Only on success does the slot change hands.
+    //
+    // Every ResourceHandle survives this: handles store an id, not a pointer, so
+    // the next Get() resolves to whatever is in the slot now.
+    //
+    // Destroys GPU objects, so the caller owns the synchronisation: no command
+    // buffer still referencing this resource may be in flight.
+    bool ReloadEntry(std::type_index type, const std::string& resourceId) {
+        auto table = resources.find(type);
+        if (table == resources.end()) return false;
+
+        auto it = table->second.find(resourceId);
+        if (it == table->second.end() || !it->second.factory) return false;
+
+        auto replacement = it->second.factory();
+        replacement->SetContext(&context);
+        if (!replacement->Load()) return false;
+
+        it->second.resource->Unload();
+        it->second.resource = std::move(replacement);
+        return true;
+    }
 };
 
 template<typename T>
@@ -152,3 +202,5 @@ T* ResourceHandle<T>::Get() const {
     if (!resourceManager) return nullptr;
     return resourceManager->GetResource<T>(resourceId);
 }
+
+} // namespace GNC

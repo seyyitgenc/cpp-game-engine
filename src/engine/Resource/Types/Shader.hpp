@@ -9,6 +9,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+namespace GNC {
+
 // Shader resource
 // Wraps one SPIR-V module. The stage is part of the resource's identity because
 // the same base name usually exists once per stage on disk.
@@ -24,9 +26,11 @@ public:
     const vk::raii::ShaderModule& GetShaderModule() const { return shaderModule; }
     vk::ShaderStageFlagBits GetStage() const { return stage; }
 
+    std::vector<std::string> GetSourcePaths() const override { return {SourcePath()}; }
+
 protected:
     bool doLoad() override {
-        const std::string filePath = "shaders/" + GetId() + StageExtension(stage) + ".spv";
+        const std::string filePath = SourcePath();
 
         std::vector<char> code;
         if (!ReadFile(filePath, code)) return false;
@@ -42,6 +46,8 @@ protected:
     void doUnload() override { shaderModule = nullptr; }
 
 private:
+    std::string SourcePath() const { return "shaders/" + GetId() + StageExtension(stage) + ".spv"; }
+
     static const char* StageExtension(vk::ShaderStageFlagBits shaderStage) {
         switch (shaderStage) {
             case vk::ShaderStageFlagBits::eVertex:                 return ".vert";
@@ -77,3 +83,5 @@ private:
         shaderModule = vk::raii::ShaderModule(GetDevice(), createInfo);
     }
 };
+
+} // namespace GNC

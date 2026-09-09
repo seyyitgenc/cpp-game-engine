@@ -3,6 +3,8 @@
 #include <string>
 #include <utility>
 
+namespace GNC {
+
 // Forward declarations
 class ResourceManager;
 
@@ -40,3 +42,5 @@ public:
     T& operator*() const { return *Get(); }
     explicit operator bool() const { return IsValid(); }
 };
+
+} // namespace GNC

@@ -9,6 +9,8 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
+namespace GNC {
+
 // TODO: this will want binding/attribute descriptions once there is a pipeline to feed.
 struct Vertex {
     glm::vec3 position;
@@ -38,9 +40,11 @@ public:
     std::uint32_t GetVertexCount() const { return vertexCount; }
     std::uint32_t GetIndexCount() const { return indexCount; }
 
+    std::vector<std::string> GetSourcePaths() const override { return {SourcePath()}; }
+
 protected:
     bool doLoad() override {
-        const std::string filePath = "models/" + GetId() + ".gltf";
+        const std::string filePath = SourcePath();
 
         // Parse into CPU vectors first: it is the only place where the data can
         // still be validated cheaply before it is committed to the GPU.
@@ -67,6 +71,8 @@ protected:
     }
 
 private:
+    std::string SourcePath() const { return "models/" + GetId() + ".gltf"; }
+
     // TODO: implement these out (assimp is already in the build, tinygltf if
     // this ends up staying glTF-only)
     bool LoadMeshData(const std::string& /*filePath*/,
@@ -82,3 +88,5 @@ private:
     // TODO: same again with eIndexBuffer
     void CreateIndexBuffer(const std::vector<std::uint32_t>& /*indices*/) {}
 };
+
+} // namespace GNC

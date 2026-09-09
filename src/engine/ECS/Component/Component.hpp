@@ -1,5 +1,7 @@
 #pragma once
 
+namespace GNC {
+
 // Forward declarations
 class Entity;
 
@@ -62,3 +64,5 @@ public:
     void SetOwner(Entity* entity) { owner = entity; }
     Entity* GetOwner() const { return owner; }
 };
+
+} // namespace GNC

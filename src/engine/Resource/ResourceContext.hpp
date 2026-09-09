@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+namespace GNC {
+
 // Resource context
 // The manager holds one context and hands a pointer to it to every
 // resource it creates, so nothing here has to know about a global device.
@@ -17,3 +19,5 @@ struct ResourceContext {
 
     bool IsValid() const { return device != nullptr && physicalDevice != nullptr; }
 };
+
+} // namespace GNC
