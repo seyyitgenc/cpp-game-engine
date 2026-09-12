@@ -1,8 +1,12 @@
 #pragma once
 
-#include "TransformsComponent.hpp"
 #include "../Entity/Entity.hpp"
+
+#include "TransformsComponent.hpp"
+
 #include "../../Resource/Types/Mesh.hpp"
+
+#include "../../BoundingBox.hpp"
 
 namespace GNC {
 
@@ -29,6 +33,11 @@ public:
 
     Mesh* GetMesh() const { return mesh; }
     Material* GetMaterial() const { return material; }
+
+    // FIXME: later on calculate the bounding box properly, bounding box can be, spherical, square, etc...
+    // min has to stay the small corner and max the big one, otherwise Center()
+    // and Extents() come out inverted and the box never passes the frustum test.
+    AABBBoundingBox3D GetBoundingBox() const { return {{-32, -32, -32}, {32, 32, 32}}; }
 
     void Render() override {
         if (!mesh || !material) return;

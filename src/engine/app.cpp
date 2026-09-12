@@ -9,18 +9,13 @@
 #include "shader.h"
 #include "shader_manager.h"
 
-#include "io/gamepad.hpp"
-
 #include "util/stopwatch.hpp"
-
-#include "renderer/framebuffer.h"
 
 #include "gui/ImGuiLayerManager.hpp"
 #include "gui/ShadersGUI.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include <thread>
 // todo: rename some of the functions of Camera and CameraMananger.
 
 namespace GNC {
@@ -144,241 +139,30 @@ void App::run()
 
     CameraManager::instance()->setActiveCamera(CameraManager::instance()->getCamera("scene_cam"));
 
-    FrameBuffer shadowMap;
-    shadowMap.bind(GL_FRAMEBUFFER);
-    shadowMap.attachRenderBuffer();
-    shadowMap.attachTexture(SHADOW_WIDTH, SHADOW_HEIGHT, FBTT::SHADOW, GL_DEPTH_ATTACHMENT);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    shadowMap.checkCompleteness();
-    shadowMap.unbind();
-    // renderer instance
-    FrameBuffer gBuffer;
-    gBuffer.bind(GL_FRAMEBUFFER);
-    gBuffer.attachRenderBuffer();
-    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::POSITION, GL_COLOR_ATTACHMENT0);
-    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::NORMAL, GL_COLOR_ATTACHMENT1);
-    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ALBEDO, GL_COLOR_ATTACHMENT2);
-    gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
-    gBuffer.checkCompleteness();
-    gBuffer.unbind();
+    // FrameBuffer shadowMap;
+    // shadowMap.bind(GL_FRAMEBUFFER);
+    // shadowMap.attachRenderBuffer();
+    // shadowMap.attachTexture(SHADOW_WIDTH, SHADOW_HEIGHT, FBTT::SHADOW, GL_DEPTH_ATTACHMENT);
+    // glDrawBuffer(GL_NONE);
+    // glReadBuffer(GL_NONE);
+    // shadowMap.checkCompleteness();
+    // shadowMap.unbind();
+    // // renderer instance
+    // FrameBuffer gBuffer;
+    // gBuffer.bind(GL_FRAMEBUFFER);
+    // gBuffer.attachRenderBuffer();
+    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::POSITION, GL_COLOR_ATTACHMENT0);
+    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::NORMAL, GL_COLOR_ATTACHMENT1);
+    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ALBEDO, GL_COLOR_ATTACHMENT2);
+    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
+    // gBuffer.checkCompleteness();
+    // gBuffer.unbind();
 
     // Track previous viewport size for resize detection
     int prevWidth = gViewport._width;
     int prevHeight = gViewport._height;
 
     while (!glfwWindowShouldClose(gWindow)) {
-        // Check if viewport has changed and resize G-buffer if needed
-        if (gViewport._width != prevWidth || gViewport._height != prevHeight) {
-            gBuffer.resizeBuffer(gViewport._width, gViewport._height);
-            prevWidth = gViewport._width;
-            prevHeight = gViewport._height;
-
-            gBuffer.attachRenderBuffer();
-        }
-
-        glm::vec3 lightPos(x, y, z);
-        camRef = CameraManager::instance()->getActiveCamera();
-
-        // per-frame time logic
-        // --------------------
-        auto dts = t1.getElapsedTime<float>();
-        deltaTime = dts;
-        // std::cout << "dtMs : " << dts << std::endl;
-        // update(deltaTime);
-        t1.reset();
-        // lightPos[0] = 16.0*cos(glfwGetTime()/2);
-        // lightPos[1] = 10;
-        // lightPos[2] = 16.0*sin(glfwGetTime()/2);
-        processInput(gWindow);
-        glm::mat4 projection = camRef->Projection;
-        // TODO: add nullptr check
-        glm::mat4 lightProjection = CameraManager::instance()->getCamera("light_cam")->Projection;
-
-        glm::mat4 view = camRef->GetViewMatrix();
-        // TODO: add nullptr check
-        glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-        // ----------
-        // DEPTH PASS
-        // ----------
-        shadowMap.bind(GL_FRAMEBUFFER);
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        depthPassShader->bind();
-        depthPassShader->setMat4("projection", lightProjection);
-        depthPassShader->setMat4("view", lightView);
-
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
-
-        // cyborg.Draw(*depthPassShader);
-        glCullFace(GL_BACK);
-        glDisable(GL_CULL_FACE);
-
-        depthPassShader->unbind();
-        shadowMap.unbind();
-        // -------------
-        // GBUFFER PASS
-        // -------------
-        gBuffer.bind(GL_FRAMEBUFFER);
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        // viewport->height() = centralNode->Size.y;
-        // centralNode->Pos.x, io.DisplaySize.y - centralNode->Size.y - centralNode->Pos.y, centralNode->Size.x, centralNode->Size.y
-
-        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        gBufferShader->bind();
-        gBufferShader->setMat4("projection", projection);
-        gBufferShader->setMat4("view", view);
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(5.0f));
-        model = glm::translate(model, lightPos);
-        gBufferShader->setMat4("model", model);
-        cube.Draw(*gBufferShader);
-        // gBufferShader->setMat4("model", model);
-        // sponza.Draw(*gBufferShader);
-        // model = glm::mat4(1.0f);
-        // model = glm::scale(model, glm::vec3(1.0f));
-        // model = glm::translate(model, glm::vec3(0, 0, 0));
-        // gBufferShader->setMat4("model", model);
-        // cyborg.Draw(*gBufferShader);
-        // earth.Draw(*gBufferShader);
-
-        // for (auto&& i : *CameraManager::instance()->getCameraList()) {
-        //     if (i.second.get() != camRef) {
-        //         // todo : create function that sets these variables
-        //         gBufferShader->setMat4("projection", projection);
-        //         gBufferShader->setMat4("view", camRef->GetViewMatrix());
-        //         model = glm::inverse(i.second->GetViewMatrix());
-
-        //         model = glm::scale(model, glm::vec3(0.003f)); // it's a bit too big for our scene, so scale it down
-        //         model = glm::translate(model, i.second.get()->Position);
-
-        //         // Create rotation matrices for pitch and yaw
-        //         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
-        //         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
-
-        //         gBufferShader->setMat4("model", model);
-        //         camera.Draw(*gBufferShader);
-        //     }
-        // }
-        gBufferShader->unbind();
-        gBuffer.unbind();
-        // -------------
-        // LIGHTING PASS
-        // -------------
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glViewport(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height);
-        // glScissor(gViewport.posx, gViewport.posy, gViewport._width, gViewport._height); // Limit the region affected by glClear
-        // glEnable(GL_SCISSOR_TEST); // Enable the Scissor Test
-        glClearColor(0, 1.0, 0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        lightingPassShader->bind();
-        lightingPassShader->setInt("gPosition", 0);
-        lightingPassShader->setInt("gNormal", 1);
-        lightingPassShader->setInt("gAlbedoSpec", 2);
-        lightingPassShader->setInt("gRoughnessMap", 3);
-        lightingPassShader->setInt("gShadowMap", 4);
-        gBuffer.bindTextures();
-        // FIXME: temporary solution.o
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
-        lightingPassShader->setVec3("light.Position", lightPos);
-        lightingPassShader->setVec3("light.Color", glm::vec3(1.0f, 1.0f, 1.0f));
-        // update attenuation parameters and calculate radius
-        const float linear = 0.7f;
-        const float quadratic = 1.8f;
-        lightingPassShader->setFloat("light.Linear", linear);
-        lightingPassShader->setFloat("light.Quadratic", quadratic);
-        lightingPassShader->setVec3("viewPos", camRef->Position);
-        lightingPassShader->setMat4("lightSpaceMatrix", lightProjection * lightView);
-        renderQuad();
-        lightingPassShader->unbind();
-
-        // ----------
-        // DEBUG PASS
-        // ----------
-        glEnable(GL_SCISSOR_TEST);
-        glViewport(0, 0, 320, 180);
-        glScissor(0, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugDepthPassShader->bind();
-        debugDepthPassShader->setFloat("near_plane", 1.0f);
-        debugDepthPassShader->setFloat("far_plane", 1000.0f);
-        debugDepthPassShader->setBool("isPerspective", false);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, shadowMap._boundTextures[0]._texture);
-        renderQuad();
-
-        glViewport(320, 0, 320, 180);
-        glScissor(320, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[0]._texture);
-        renderQuad();
-
-        glViewport(640, 0, 320, 180);
-        glScissor(640, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[1]._texture);
-        renderQuad();
-
-        glViewport(960, 0, 320, 180);
-        glScissor(960, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[2]._texture);
-        renderQuad();
-
-        glViewport(960, 0, 320, 180);
-        glScissor(960, 0, 320, 180);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        debugShader->bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gBuffer._boundTextures[3]._texture);
-        renderQuad();
-        debugShader->unbind();
-
-        glDisable(GL_SCISSOR_TEST);
-        // render the cameras
-        // for (auto &&i : *CameraManager::instance()->getCameraList())
-        // {
-        //     if (i.second.get() != camRef)
-        //     {
-        //         if (gShaderManager->bind("shader_model"))
-        //         {
-        //             // todo : create function that sets these variables
-        //             gShaderManager->getShader("shader_model")->setMat4("projection", projection);
-        //             gShaderManager->getShader("shader_model")->setMat4("view", camRef->GetViewMatrix());
-        //             model = glm::inverse(i.second->GetViewMatrix());
-
-        //             model = glm::scale(model, glm::vec3(0.003f));	// it's a bit too big for our scene, so scale it down
-        //             model = glm::translate(model, i.second.get()->Position);
-
-        //             // Create rotation matrices for pitch and yaw
-        //             model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // these are for rotation correction
-        //             model = glm::rotate(model,glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // these are for rotation correction
-
-        //             gShaderManager->getShader("shader_model")->setMat4("model", model);
-        //             camera.Draw(*gShaderManager->getShader("shader_model"));
-        //             gShaderManager->unbind();
-        //         }
-        //     }
-        // }
-
-        // if (gEditModeEnabled) {
-        // Gui::Init();
-        ImGuiLayerManager::instance().draw();
-
-        // }
 
         glfwSwapBuffers(gWindow);
         glfwPollEvents();

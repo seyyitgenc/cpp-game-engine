@@ -64,7 +64,7 @@ add_library(IMGUI "src/external/ImGui/imgui.cpp")
 set(LIBS ${LIBS} IMGUI)
 
 #add all executables
-file(GLOB_RECURSE SOURCE 
+file(GLOB_RECURSE SOURCE
     src/engine/*.cpp
     src/engine/*.hpp
     src/engine/*.h
@@ -89,6 +89,7 @@ file(GLOB_RECURSE SOURCE
 #include directories
 set (INC_DIRECTORIES
     ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/engine
     ${PROJECT_SOURCE_DIR}/src/external
     ${Vulkan_INCLUDE_DIR}
 )
@@ -97,14 +98,15 @@ set(LIBS ${LIBS} Vulkan::Vulkan)
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 include_directories(${PROJECT_NAME}  ${INC_DIRECTORIES})
-target_link_libraries(${PROJECT_NAME} ${LIBS}) 
+target_link_libraries(${PROJECT_NAME} ${LIBS})
+target_compile_definitions(${PROJECT_NAME} PRIVATE VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/debug/")
 elseif(CMAKE_BUILD_TYPE MATCHES Release)
     set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/release/")
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
-    
+
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
 # target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)
