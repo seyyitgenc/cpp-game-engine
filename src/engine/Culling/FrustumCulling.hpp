@@ -6,7 +6,7 @@
 #include "../ECS/Component/TransformsComponent.hpp"
 
 #include "../BoundingBox.hpp"
-#include "camera.h"
+#include "../Camera/Camera.hpp"
 
 #include <glm/glm.hpp>
 
@@ -47,9 +47,12 @@ struct Frustum {
         frustum.planes[Right]  = MakePlane(rowW - rowX);
         frustum.planes[Bottom] = MakePlane(rowW + rowY);
         frustum.planes[Top]    = MakePlane(rowW - rowY);
-        // glm defaults to the OpenGL depth range (-1..1). With
-        // GLM_FORCE_DEPTH_ZERO_TO_ONE (Vulkan) the near plane is just rowZ.
-        frustum.planes[Near]   = MakePlane(rowW + rowZ);
+        // Camera builds its projection with Vulkan's 0..1 depth range, so
+        // the near plane is z >= 0, i.e. just rowZ. (OpenGL's -1..1 range
+        // would make it rowW + rowZ.) The Y flip in the projection only
+        // swaps which plane is Bottom and which is Top; the volume is the
+        // same.
+        frustum.planes[Near]   = MakePlane(rowZ);
         frustum.planes[Far]    = MakePlane(rowW - rowZ);
         return frustum;
     }
@@ -95,7 +98,7 @@ public:
 
         if (!camera) return;
 
-        const Frustum frustum = Frustum::FromViewProjection(camera->Projection * camera->GetViewMatrix());
+        const Frustum frustum = Frustum::FromViewProjection(camera->GetViewProjectionMatrix());
 
         for (auto entity : allEntities) {
             if (!entity->IsActive()) continue;

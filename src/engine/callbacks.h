@@ -1,6 +1,4 @@
 #pragma once
-#include "camera.h"
-#include "camera_manager.h"
 #include "io/mouse.h"
 
 #include "util/helpers.hpp"

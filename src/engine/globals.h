@@ -9,7 +9,6 @@
 #include "util/log.hpp"
 
 #include "callbacks.h"
-#include "camera_manager.h"
 #include "io/keyboard.h"
 #include "io/mouse.h"
 #include "texture.h"

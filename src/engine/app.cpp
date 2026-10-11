@@ -3,7 +3,6 @@
 #include "app.hpp"
 
 #include "callbacks.h"
-#include "camera.h"
 #include "globals.h"
 #include "model.h"
 #include "shader.h"
@@ -16,14 +15,9 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-// todo: rename some of the functions of Camera and CameraMananger.
-
 namespace GNC {
 
 App* App::_instance = nullptr;
-
-// fixme: this is not safe
-Camera* camRef = nullptr;
 
 App& App::instance()
 {
@@ -137,8 +131,6 @@ void App::run()
 
     glEnable(GL_DEPTH_TEST);
 
-    CameraManager::instance()->setActiveCamera(CameraManager::instance()->getCamera("scene_cam"));
-
     // FrameBuffer shadowMap;
     // shadowMap.bind(GL_FRAMEBUFFER);
     // shadowMap.attachRenderBuffer();
@@ -177,22 +169,8 @@ void App::processInput([[maybe_unused]] GLFWwindow* window)
     if (Keyboard::key(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(gWindow, true);
 
-    if (!gEditModeEnabled) {
-        camRef->handleEvents(deltaTime);
-    }
-
-    CameraManager::instance()->handleEvents(deltaTime);
     ShaderManager::instance()->handleEvents(deltaTime);
 
-    if (Keyboard::keyWentDown(GLFW_KEY_P)) {
-        static bool perspectiveProjection = false;
-        perspectiveProjection = !perspectiveProjection;
-        if (perspectiveProjection) {
-            CameraManager::instance()->getCamera("light_cam")->setProjectionMatrixAsPerspective(glm::radians(45.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.0f, 1000.0f);
-        } else {
-            CameraManager::instance()->getCamera("light_cam")->setProjectionMatrixAsOrtho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 100.0f);
-        }
-    }
     if (Keyboard::key(GLFW_KEY_O))
         y += 0.5;
     if (Keyboard::key(GLFW_KEY_L))
