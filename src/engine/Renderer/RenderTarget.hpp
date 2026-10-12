@@ -6,6 +6,7 @@
 
 namespace GNC {
 
+// Non-owning. The device must outlive every RenderTarget built from it.
 struct RenderTargetContext {
     const vk::raii::Device* device = nullptr;
     const vk::raii::PhysicalDevice* physicalDevice = nullptr;
@@ -14,7 +15,7 @@ struct RenderTargetContext {
 // Render target class
 class RenderTarget {
 private:
-    const RenderTargetContext* m_context = nullptr;
+    RenderTargetContext m_context;
 
     vk::raii::Image colorImage = nullptr;
     vk::raii::DeviceMemory colorMemory = nullptr;
@@ -28,7 +29,7 @@ private:
     uint32_t height;
 
 public:
-    RenderTarget(uint32_t w, uint32_t h) : width(w), height(h) {
+    RenderTarget(const RenderTargetContext& context, uint32_t w, uint32_t h) : m_context(context), width(w), height(h) {
         // Create color and depth images
         CreateColorResources();
         CreateDepthResources();
@@ -38,12 +39,6 @@ public:
         // image views that will be used directly with vkCmdBeginRendering.
     }
 
-    void SetContext(const RenderTargetContext* context) {
-        m_context = context;
-    }
-
-    // No need for explicit destructor with RAII objects
-
     vk::ImageView GetColorImageView() const { return *colorImageView; }
     vk::ImageView GetDepthImageView() const { return *depthImageView; }
 
@@ -52,11 +47,11 @@ public:
 
 private:
     void CreateColorResources() {
-        createImage(*m_context->device, *m_context->physicalDevice, 1920, 1080,
+        createImage(*m_context.device, *m_context.physicalDevice, width, height,
             vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
              vk::MemoryPropertyFlagBits::eDeviceLocal, colorImage, colorMemory);
 
-        colorImageView = createImageView(*m_context->device, colorImage, vk::Format::eR8G8B8A8Srgb);
+        colorImageView = createImageView(*m_context.device, colorImage, vk::Format::eR8G8B8A8Srgb);
     }
 
     void CreateDepthResources() {

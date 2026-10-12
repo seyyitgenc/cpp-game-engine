@@ -25,9 +25,9 @@ public:
     void RemoveLight(Light* light);
 
 protected:
-    void BeginPass(vk::raii::CommandBuffer& commandBuffer) override;
-    void Render(vk::raii::CommandBuffer& commandBuffer) override;
-    void EndPass(vk::raii::CommandBuffer& commandBuffer) override;
+    void BeginPass(const FrameContext& frame) override;
+    void Render(const FrameContext& frame) override;
+    void EndPass(const FrameContext& frame) override;
 };
 
 } // namespace GNC

@@ -16,7 +16,7 @@ class LightingPass;
 class PostProcessEffect {
 public:
     virtual ~PostProcessEffect() = default;
-    virtual void Apply(vk::raii::CommandBuffer& commandBuffer) = 0;
+    virtual void Apply(const FrameContext& frame) = 0;
 };
 
 // Post-processing pass
@@ -32,7 +32,7 @@ public:
     void RemoveEffect(PostProcessEffect* effect);
 
 protected:
-    void BeginPass(vk::raii::CommandBuffer& commandBuffer) override  {
+    void BeginPass(const FrameContext& frame) override  {
         // Begin rendering with dynamic rendering
         vk::RenderingInfoKHR renderingInfo;
 
@@ -51,20 +51,20 @@ protected:
                      .setPColorAttachments(&colorAttachment);
 
         // Begin dynamic rendering
-        commandBuffer.beginRendering(renderingInfo);
+        frame.commandBuffer.beginRendering(renderingInfo);
     }
-    void Render(vk::raii::CommandBuffer& commandBuffer) override {
+    void Render(const FrameContext& frame) override {
         // With dynamic rendering, each effect can set up its own rendering state
         // and access input textures directly as shader resources
 
         // Apply each post-process effect
         for (auto effect : effects) {
-            effect->Apply(commandBuffer);
+            effect->Apply(frame);
         }
     }
-    void EndPass(vk::raii::CommandBuffer& commandBuffer) override {
+    void EndPass(const FrameContext& frame) override {
         // End dynamic rendering
-        commandBuffer.endRendering();
+        frame.commandBuffer.endRendering();
     }
 };
 

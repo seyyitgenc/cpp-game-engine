@@ -21,14 +21,14 @@ void RenderPassManager::RemoveRenderPass(const std::string& name) {
     }
 }
 
-void RenderPassManager::Execute(vk::raii::CommandBuffer& commandBuffer) {
+void RenderPassManager::Execute(const FrameContext& frame) {
     if (dirty) {
         SortPasses();
         dirty = false;
     }
 
     for (auto pass : sortedPasses) {
-        pass->Execute(commandBuffer);
+        pass->Execute(frame);
     }
 }
 

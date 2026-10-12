@@ -13,6 +13,7 @@ namespace GNC {
 // Forward declarations
 class RenderPass;
 class RenderTarget;
+struct FrameContext;
 
 // Render pass manager
 class RenderPassManager {
@@ -41,7 +42,7 @@ public:
 
     RenderPass* GetRenderPass(const std::string& name);
     void RemoveRenderPass(const std::string& name);
-    void Execute(vk::raii::CommandBuffer& commandBuffer);
+    void Execute(const FrameContext& frame);
 
 private:
     void SortPasses();

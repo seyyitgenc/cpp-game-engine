@@ -12,4 +12,8 @@ void createImage(const vk::raii::Device& device, const vk::raii::PhysicalDevice&
     vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties, vk::raii::Image& image,
     vk::raii::DeviceMemory& imageMemory);
 
+void createBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice& physicalDevice, vk::DeviceSize size,
+    vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::raii::Buffer& buffer,
+    vk::raii::DeviceMemory& bufferMemory);
+
 } // namespace GNC

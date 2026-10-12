@@ -5,6 +5,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "FrameData.hpp"
+
 namespace GNC {
 
 class RenderTarget;
@@ -47,22 +49,22 @@ public:
         return enabled;
     }
 
-    virtual void Execute(vk::raii::CommandBuffer& commandBuffer) {
+    virtual void Execute(const FrameContext& frame) {
         if (!enabled) return;
 
-        BeginPass(commandBuffer);
-        Render(commandBuffer);
-        EndPass(commandBuffer);
+        BeginPass(frame);
+        Render(frame);
+        EndPass(frame);
     }
 
 protected:
     // With dynamic rendering, BeginPass typically calls vkCmdBeginRendering
     // instead of vkCmdBeginRenderPass
-    virtual void BeginPass(vk::raii::CommandBuffer& commandBuffer) = 0;
-    virtual void Render(vk::raii::CommandBuffer& commandBuffer) = 0;
+    virtual void BeginPass(const FrameContext& frame) = 0;
+    virtual void Render(const FrameContext& frame) = 0;
     // With dynamic rendering, EndPass typically calls vkCmdEndRendering
     // instead of vkCmdEndRenderPass
-    virtual void EndPass(vk::raii::CommandBuffer& commandBuffer) = 0;
+    virtual void EndPass(const FrameContext& frame) = 0;
 };
 
 } // namespace GNC

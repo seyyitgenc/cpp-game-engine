@@ -53,6 +53,8 @@ struct CameraUniform {
 //
 // The camera does not read input itself. Whoever owns it (a controller,
 // later the event system) translates input into the Process*() calls.
+
+// TODO: implement third person camera
 class Camera {
 public:
     static constexpr float DefaultYaw = -90.0f;
