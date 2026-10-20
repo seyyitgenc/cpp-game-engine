@@ -1,0 +1,112 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project state
+
+A C++23 game engine being ported from OpenGL to Vulkan, following the Khronos Vulkan Tutorial's "Building a Simple Engine" series but adapted to this engine's own design. Active work happens on the `vulkan` branch; `opengl-develop` holds the old OpenGL engine. `ReadME.md` still describes the OpenGL engine and is out of date.
+
+## Working conventions
+
+- **Answers:** if you are unsure about something, say so plainly instead of guessing or presenting a guess as fact.
+- **Section comments:** separate logical sections of a file or function with a banner comment, the title in between two dash lines as long as the title:
+
+  ```cpp
+  // --------------------
+  // Orbiting Point Light
+  // --------------------
+  ```
+
+## Build and run
+
+The toolchain is Windows + MSYS2 MinGW64 (g++ 15) + CMake (Unix Makefiles) + the Vulkan SDK (`VULKAN_SDK` must be set; `slangc` comes from it). In Git Bash, put MinGW on PATH first:
+
+```sh
+export PATH="/c/msys64/mingw64/bin:$PATH"
+cmake -S . -B build                      # Debug by default; -DCMAKE_BUILD_TYPE=Release for bin/release
+cmake --build build -j8
+cd bin/debug && ./engine.exe             # or ./run.sh
+```
+
+- Output goes to `bin/debug/` (or `bin/release/`). The `shaders` CMake target compiles every `shaders/*.slang` into `bin/<config>/shaders/<name>.vert.spv` and `<name>.frag.spv`.
+- **Resource paths resolve against the exe's directory**, not the working directory. `main()` calls `FileSystem::init(argv[0])` (`src/engine/Utils/FileSystem.hpp`), and resources build their paths with `FileSystem::getPath("shaders/...")`. A bare name from a PATH lookup in `argv[0]` would resolve to the working directory instead.
+- **Re-run the configure step after adding a `.cpp` or `.slang` file.** Sources and shaders are collected with `file(GLOB)`, which only picks up new files when CMake reconfigures.
+- Warnings are `-Wall -Wextra -Wpedantic`; keep the build warning-free.
+- There are no tests and no lint step. `.clang-format` (WebKit based) exists, but existing files are not uniformly formatted with it, so do not reformat code you are not changing.
+- **Debug builds enable `VK_LAYER_KHRONOS_validation`** when it is installed. Messages print to stdout as `[Vulkan] ...`. A clean run prints no validation output; treat any as a bug.
+- **Commit messages** follow `feat(Scope): summary`, written in Turkish, with a bulleted body (see `git log`).
+
+## Architecture
+
+### Ownership and the frame loop
+
+`App` (`src/engine/app.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
+
+`App::Run()` per frame:
+
+1. `window.PollEvents()`, then compute the frame time, capped at `App::MaxDeltaTime`.
+2. Unless minimized, enqueue a `FrameEvent(dt)` behind the frame's input. Then `eventBus.Flush()`: every event listener runs here and nowhere else.
+3. While minimized (framebuffer 0x0), wait for events and skip the frame.
+4. `renderer.Resize(extent)` if a `WindowResizeEvent` arrived or the last `Render()` returned false (swapchain out of date). `Resize` rebuilds the swapchain *and every render pass*.
+5. `cameraController.Update(dt)` and `scene.Update(dt)` (which calls each component's `Update`).
+6. `renderer.Render(scene.GetEntities())`.
+
+### Events and input (`src/engine/Event/`, `Platform/Window`)
+
+- **Publishing:** GLFW callbacks in `Window.cpp` only enqueue events onto the `EventBus`. Resize uses `EnqueueCoalesced`, so a drag yields one event.
+- **Subscribing:** listeners use `bus.Subscribe<E>(lambda, priority)` and must keep the returned `EventSubscription`; dropping it unsubscribes. Owners store tokens in a `std::vector<EventSubscription>` member.
+- **Handled events:** returning true from a listener stops delivery to lower-priority listeners. This is how a future UI layer would swallow input before the camera sees it.
+- **Event kinds:** each kind is its own class, following OSG's GUIEventAdapter set. The mapping is PUSH/RELEASE → `MouseButtonPressed/ReleasedEvent`, DOUBLECLICK → `MouseDoubleClickEvent`, MOVE → `MouseMovedEvent`, DRAG → `MouseDraggedEvent`, KEYDOWN/KEYUP → `KeyPressed/ReleasedEvent`, SCROLL → `MouseScrolledEvent`, RESIZE → `WindowResizeEvent`, CLOSE_WINDOW → `WindowCloseEvent`, FRAME → `FrameEvent` and QUIT_APPLICATION → `QuitApplicationEvent`. Game-defined events use `GNC_EVENT_TYPE` with `EventCategory::User`.
+  - Unlike OSG, `Window` sends DOUBLECLICK *after* the second press, and DRAG *alongside* MOVE, never in place of them.
+- **Held keys come from events:** track `KeyPressed`/`KeyReleased` (ignoring repeats) and clear on focus loss, as `CameraController` does. `Window::IsKeyDown` bypasses the bus, so a UI layer could not swallow the key. Never return true for a release event. Key codes are GLFW's, untranslated.
+
+### Vulkan setup
+
+- **`Renderer/VulkanContext`** creates the instance, surface, GPU choice and device. It requires Vulkan 1.3 with `dynamicRendering` and `synchronization2`. One queue family does graphics, present and uploads.
+- **Vulkan-Hpp style:** all objects are `vk::raii`, and `VULKAN_HPP_NO_STRUCT_CONSTRUCTORS` is defined, so structs use designated initializers.
+  - GCC warns when a designated initializer skips a field with no default value, such as the deprecated `DeviceCreateInfo` layer fields; use the setters for those structs.
+  - `vk::OutOfDateKHRError` is caught in `Swapchain` and turned into "recreate".
+- **`Renderer/Renderer`** owns the swapchain, the per-frame data and the render passes:
+  - `MaxFramesInFlight = 2`. Each `FrameData` holds a command buffer, a fence, an image-available semaphore, mapped camera and light uniform buffers, and its descriptor set 0.
+  - Render-finished semaphores live in `Swapchain`, one per swapchain image, not per frame.
+- **Load-time uploads** go through `uploadBuffer()` in `Utils/VulkanHelpers`: staging buffer, copy, then wait for the queue.
+
+### Deferred pipeline
+
+`RenderPassManager` orders passes by declared dependencies. **Passes must call `AddDependency`**; without it, order follows `unordered_map` iteration and is effectively random.
+
+1. **GeometryPass** draws every visible `MeshComponent` into the G-buffer: base color, octahedral-encoded normal, occlusion/roughness/metallic, emissive, and D32 depth. The formats live in the `GBuffer` struct (`GeometryPass.hpp`) and must match `shaders/common/gbuffer.slang`.
+2. **LightingPass** runs a fullscreen triangle. It rebuilds world position from depth with `inverseViewProjection`, loops over every light with the Cook-Torrance BRDF (`shaders/common/brdf.slang`), adds flat ambient and emissive, and writes linear HDR (`R16G16B16A16_SFLOAT`).
+3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into the swapchain image (taken from `FrameContext::targetImage`/`targetView`), then leaves it in `ePresentSrcKHR`. If the swapchain format is not sRGB, it applies the sRGB encoding itself.
+
+How passes work together:
+- **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers.
+- **Descriptor sets:** set 0 is always the global set (binding 0 camera, binding 1 lights) and every pipeline layout includes it. Set 1 holds the pass's inputs, which shaders read with `Texture2D.Load()`: sampled images, no samplers.
+- **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix plus material factors, which must stay ≤128 bytes).
+- **Shader modules** are loaded in `Renderer::SetupRenderPasses()` by constructing `Shader` objects directly, not through `ResourceManager`. The manager caches by id only, so the vertex and fragment stages of the same shader would collide in its cache.
+
+### C++ ↔ shader contract
+
+- **Shared structs** are mirrored in `Renderer/ShaderTypes.hpp` (`GpuLight`, `LightsUniform`, push constants), plus `CameraUniform` in `Camera/Camera.hpp`. Each mirror has `static_assert`s on offsets and size. Change both sides together.
+  - Layout rule: every `vec3` is followed by a 4-byte scalar, so std140 and C++ agree without hidden padding.
+  - To check the shader side, compile with `slangc ... -reflection-json out.json` and compare the offsets.
+- **Slang conventions:** each `shaders/*.slang` file has `vertMain`/`fragMain`. `shaders/common/*.slang` are modules (`import common.frame;`, built with `-I shaders`).
+  - The SPIR-V entry point name is `main`.
+  - Use `SV_VulkanVertexID`. Plain `SV_VertexID` pulls in `gl_BaseVertex`, which needs a device feature that is not enabled.
+- **Matrices:** upload glm matrices unchanged and multiply with `mul(M, v)`. In shaders, `m[row][col]` indexes the mathematical matrix.
+- **Coordinate conventions:**
+  - `Camera`'s projection already flips Y and uses 0..1 depth, so never flip again in a UBO or viewport.
+  - Front faces are counter-clockwise. Depth clears to 1 with `LESS`.
+  - Lights shine down their entity's local -Z axis.
+
+### ECS, scene and resources
+
+- **`Entity`** owns its components. A component counts as active only after `Initialize()`; the renderer skips light components that are not active.
+  - `Scene::CreateEntity` initializes the entity immediately, so components added afterwards are initialized as they are added.
+  - `Scene` owns materials behind `unique_ptr`, because `MeshComponent` holds raw `Material*` pointers.
+- **Lights:** `LightComponent` uses glTF `KHR_lights_punctual` semantics and physical units: candela for point and spot lights, lux for directional. Exposure is 1.
+  - The renderer collects lights from *all* entities each frame (lights are not culled), up to `MaxLights = 64`.
+- **Culling:** `FrustumCulling` uses `MeshComponent::GetBoundingBox()`, which is still a fixed ±32 placeholder.
+- **Resources:** `ResourceManager` caches resources by (type, id). A `Resource` implements `doLoad`/`doUnload`.
+  - `Mesh` can be procedural: pass `MeshData` as the extra `Load` argument, e.g. `resources.Load<Mesh>("sphere", CreateSphere(...))` (see `Resource/Primitives.hpp`). Uploads need the transfer queue and pool in `ResourceContext`.
+  - `HotReloadResourceManager` exists but is not used, and pipelines are not rebuilt when a shader reloads.

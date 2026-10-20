@@ -14,9 +14,6 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # find required libs
 
-# OpenGL
-find_package(OpenGL REQUIRED)
-
 #assimp
 message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
 
@@ -34,7 +31,7 @@ if(WIN32)
     find_package(assimp REQUIRED)
     # Windows
     message(STATUS "Windows detected")
-    set(LIBS glfw pthread freetype ${ASSIMP_LIBRARIES})
+    set(LIBS glfw pthread ${ASSIMP_LIBRARIES})
 endif(WIN32)
 
 if(UNIX)
@@ -43,7 +40,7 @@ if(UNIX)
 
     # Linux
     message(STATUS "Linux detected")
-    set(LIBS glfw GL pthread freetype assimp)
+    set(LIBS glfw pthread assimp)
 endif(UNIX)
 
 
@@ -55,35 +52,14 @@ include_directories(${CMAKE_SOURCE_DIR}/src/configuration)
 add_library(STB_IMAGE "src/external/stb_image.cpp")
 set(LIBS ${LIBS} STB_IMAGE)
 
-# glad
-add_library(GLAD "src/external/glad/glad.c")
-set(LIBS ${LIBS} GLAD)
-
-# ImGui
-add_library(IMGUI "src/external/ImGui/imgui.cpp")
-set(LIBS ${LIBS} IMGUI)
+# ImGui (src/external/ImGui) is kept but not built until there is a GUI again;
+# it will need its Vulkan backend then.
 
 #add all executables
 file(GLOB_RECURSE SOURCE
     src/engine/*.cpp
     src/engine/*.hpp
     src/engine/*.h
-
-    src/external/ImGui/*.cpp
-    src/external/ImGui/*.h
-    src/external/ImGui/*.hpp
-
-    src/util/*.cpp
-    src/util/*.hpp
-    src/util/*.h
-
-    src/renderer/*.cpp
-    src/renderer/*.hpp
-    src/renderer/*.h
-
-    src/io/*.cpp
-    src/io/*.hpp
-    src/io/*.h
 )
 
 #include directories
@@ -101,11 +77,59 @@ include_directories(${PROJECT_NAME}  ${INC_DIRECTORIES})
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1)
 
+set(ENGINE_OUTPUT_DIR ${CMAKE_BINARY_DIR})
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/debug/")
+    set(ENGINE_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/debug")
 elseif(CMAKE_BUILD_TYPE MATCHES Release)
-    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/release/")
+    set(ENGINE_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/release")
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ENGINE_OUTPUT_DIR}/")
+
+# Shaders
+# Every shaders/*.slang file holds a vertMain and a fragMain entry point, and
+# compiles to <name>.vert.spv and <name>.frag.spv, which is what
+# Resource/Types/Shader.hpp loads. shaders/common/ holds modules the others
+# import; they are not compiled on their own. Output goes next to the
+# executable, because Shader loads "shaders/..." relative to the working
+# directory.
+find_program(SLANGC slangc HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
+if(NOT SLANGC)
+    message(FATAL_ERROR "slangc not found. It ships with the Vulkan SDK; check that VULKAN_SDK is set.")
+endif()
+
+set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+set(SHADER_OUTPUT_DIR ${ENGINE_OUTPUT_DIR}/shaders)
+file(GLOB SHADER_SOURCES ${SHADER_SOURCE_DIR}/*.slang)
+file(GLOB SHADER_MODULES ${SHADER_SOURCE_DIR}/common/*.slang)
+
+set(SHADER_BINARIES)
+foreach(SHADER ${SHADER_SOURCES})
+    get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
+    foreach(STAGE vert frag)
+        if(STAGE STREQUAL "vert")
+            set(ENTRY_POINT vertMain)
+            set(SLANG_STAGE vertex)
+        else()
+            set(ENTRY_POINT fragMain)
+            set(SLANG_STAGE fragment)
+        endif()
+
+        set(SHADER_BINARY ${SHADER_OUTPUT_DIR}/${SHADER_NAME}.${STAGE}.spv)
+        add_custom_command(
+            OUTPUT ${SHADER_BINARY}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUTPUT_DIR}
+            COMMAND ${SLANGC} ${SHADER} -target spirv -profile spirv_1_4
+                    -entry ${ENTRY_POINT} -stage ${SLANG_STAGE}
+                    -I ${SHADER_SOURCE_DIR} -o ${SHADER_BINARY}
+            DEPENDS ${SHADER} ${SHADER_MODULES}
+            COMMENT "Compiling shader ${SHADER_NAME}.${STAGE}.spv"
+            VERBATIM)
+        list(APPEND SHADER_BINARIES ${SHADER_BINARY})
+    endforeach()
+endforeach()
+
+add_custom_target(shaders ALL DEPENDS ${SHADER_BINARIES})
+add_dependencies(${PROJECT_NAME} shaders)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
 # target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)

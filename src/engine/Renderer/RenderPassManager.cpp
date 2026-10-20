@@ -21,6 +21,13 @@ void RenderPassManager::RemoveRenderPass(const std::string& name) {
     }
 }
 
+void RenderPassManager::Clear() {
+    // sortedPasses points into renderPasses, so it goes first.
+    sortedPasses.clear();
+    renderPasses.clear();
+    dirty = true;
+}
+
 void RenderPassManager::Execute(const FrameContext& frame) {
     if (dirty) {
         SortPasses();

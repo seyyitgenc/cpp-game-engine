@@ -6,61 +6,30 @@
 
 namespace GNC {
 
-// Non-owning. The device must outlive every RenderTarget built from it.
+// Non-owning. The device must outlive every render target built from it.
 struct RenderTargetContext {
     const vk::raii::Device* device = nullptr;
     const vk::raii::PhysicalDevice* physicalDevice = nullptr;
 };
 
-// Render target class
-class RenderTarget {
-private:
-    RenderTargetContext m_context;
+// One image a pass renders into and a later pass reads: device local memory,
+// the image, and a view over all of it (the G-buffer, the HDR lighting output).
+struct Attachment {
+    // Declared memory first so it is released last, after the image bound to it.
+    vk::raii::DeviceMemory memory = nullptr;
+    vk::raii::Image image = nullptr;
+    vk::raii::ImageView view = nullptr;
+    vk::Format format = vk::Format::eUndefined;
 
-    vk::raii::Image colorImage = nullptr;
-    vk::raii::DeviceMemory colorMemory = nullptr;
-    vk::raii::ImageView colorImageView = nullptr;
+    Attachment() = default;
 
-    vk::raii::Image depthImage = nullptr;
-    vk::raii::DeviceMemory depthMemory = nullptr;
-    vk::raii::ImageView depthImageView = nullptr;
-
-    uint32_t width;
-    uint32_t height;
-
-public:
-    RenderTarget(const RenderTargetContext& context, uint32_t w, uint32_t h) : m_context(context), width(w), height(h) {
-        // Create color and depth images
-        CreateColorResources();
-        CreateDepthResources();
-
-        // Note: With dynamic rendering, we don't need to create VkRenderPass
-        // or VkFramebuffer objects. Instead, we just create the images and
-        // image views that will be used directly with vkCmdBeginRendering.
+    Attachment(const RenderTargetContext& context, vk::Extent2D extent, vk::Format imageFormat,
+               vk::ImageUsageFlags usage, vk::ImageAspectFlags aspect)
+        : format(imageFormat) {
+        createImage(*context.device, *context.physicalDevice, extent.width, extent.height,
+            format, vk::ImageTiling::eOptimal, usage, vk::MemoryPropertyFlagBits::eDeviceLocal, image, memory);
+        view = createImageView(*context.device, image, format, aspect);
     }
-
-    vk::ImageView GetColorImageView() const { return *colorImageView; }
-    vk::ImageView GetDepthImageView() const { return *depthImageView; }
-
-    uint32_t GetWidth() const { return width; }
-    uint32_t GetHeight() const { return height; }
-
-private:
-    void CreateColorResources() {
-        createImage(*m_context.device, *m_context.physicalDevice, width, height,
-            vk::Format::eR8G8B8A8Srgb, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-             vk::MemoryPropertyFlagBits::eDeviceLocal, colorImage, colorMemory);
-
-        colorImageView = createImageView(*m_context.device, colorImage, vk::Format::eR8G8B8A8Srgb);
-    }
-
-    void CreateDepthResources() {
-        // Implementation to create depth image, memory, and view
-        // With dynamic rendering, we just need to create the image and image view
-        // that will be used with vkCmdBeginRendering
-        // ...
-    }
-
 };
 
 } // namespace GNC

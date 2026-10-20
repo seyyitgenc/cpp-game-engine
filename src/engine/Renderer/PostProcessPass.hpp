@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -12,60 +11,48 @@ namespace GNC {
 
 class LightingPass;
 
-// Post-process effect base class
-class PostProcessEffect {
-public:
-    virtual ~PostProcessEffect() = default;
-    virtual void Apply(const FrameContext& frame) = 0;
-};
-
 // Post-processing pass
+// The last pass of the frame: exposure and tonemapping from the lighting pass's
+// linear HDR output into the swapchain image (FrameContext::targetView), which
+// it leaves ready to present. shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
 private:
+    RenderTargetContext context;
+    vk::Extent2D extent;
     LightingPass* lightingPass;
-    std::vector<PostProcessEffect*> effects;
+
+    // Without an sRGB swapchain format the shader applies the sRGB transfer
+    // function itself.
+    bool encodeSrgb;
+
+    // Scales scene radiance before tonemapping. 1 suits the current scene;
+    // physically based light units will want it driven by a camera exposure
+    // model (EV100) later.
+    float exposure = 1.0f;
+
+    // Set 1: the lighting output. The pool is declared before the set, so it
+    // outlives it.
+    vk::raii::DescriptorSetLayout inputSetLayout = nullptr;
+    vk::raii::DescriptorPool descriptorPool = nullptr;
+    vk::raii::DescriptorSet inputSet = nullptr;
+
+    vk::raii::PipelineLayout pipelineLayout = nullptr;
+    vk::raii::Pipeline pipeline = nullptr;
 
 public:
-    PostProcessPass(const std::string& name, LightingPass* lPass);
-
-    void AddEffect(PostProcessEffect* effect);
-    void RemoveEffect(PostProcessEffect* effect);
+    // targetFormat is the swapchain's; targetIsSrgb whether it encodes on write.
+    PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
+                    vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass,
+                    vk::Format targetFormat, bool targetIsSrgb);
 
 protected:
-    void BeginPass(const FrameContext& frame) override  {
-        // Begin rendering with dynamic rendering
-        vk::RenderingInfoKHR renderingInfo;
+    void BeginPass(const FrameContext& frame) override;
+    void Render(const FrameContext& frame) override;
+    void EndPass(const FrameContext& frame) override;
 
-        // Set up color attachment for the post-processing pass
-        vk::RenderingAttachmentInfoKHR colorAttachment;
-        colorAttachment.setImageView(GetRenderTarget()->GetColorImageView())
-                       .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
-                       .setLoadOp(vk::AttachmentLoadOp::eClear)
-                       .setStoreOp(vk::AttachmentStoreOp::eStore)
-                       .setClearValue(vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}));
-
-        // Configure rendering info
-        renderingInfo.setRenderArea(vk::Rect2D({0, 0}, {GetRenderTarget()->GetWidth(), GetRenderTarget()->GetHeight()}))
-                     .setLayerCount(1)
-                     .setColorAttachmentCount(1)
-                     .setPColorAttachments(&colorAttachment);
-
-        // Begin dynamic rendering
-        frame.commandBuffer.beginRendering(renderingInfo);
-    }
-    void Render(const FrameContext& frame) override {
-        // With dynamic rendering, each effect can set up its own rendering state
-        // and access input textures directly as shader resources
-
-        // Apply each post-process effect
-        for (auto effect : effects) {
-            effect->Apply(frame);
-        }
-    }
-    void EndPass(const FrameContext& frame) override {
-        // End dynamic rendering
-        frame.commandBuffer.endRendering();
-    }
+private:
+    void CreateDescriptorSet();
+    void CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, vk::Format targetFormat);
 };
 
 } // namespace GNC

@@ -148,7 +148,9 @@ public:
     EventBus(const EventBus&) = delete;
     EventBus& operator=(const EventBus&) = delete;
 
-    // ---- subscribing --------------------------------------------------
+    // -----------
+    // Subscribing
+    // -----------
 
     // Registers a listener for events of exactly type E. The listener returns
     // true to mark the event handled and stop further delivery, false to let
@@ -188,7 +190,9 @@ public:
         return Subscribe<E>(std::function<bool(E&)>(std::forward<F>(listener)), priority);
     }
 
-    // ---- publishing ---------------------------------------------------
+    // ----------
+    // Publishing
+    // ----------
 
     // Constructs an E in place and queues it. Safe from any thread.
     template<typename E, typename... Args>
@@ -224,7 +228,9 @@ public:
         }
     }
 
-    // ---- delivering ---------------------------------------------------
+    // ----------
+    // Delivering
+    // ----------
 
     // Delivers everything queued so far and returns how many events were
     // dispatched. Main thread only; call once per frame.
@@ -261,7 +267,9 @@ public:
         return queue.size();
     }
 
-    // ---- configuration ------------------------------------------------
+    // -------------
+    // Configuration
+    // -------------
 
     void SetDeliverHandled(bool deliver) { deliverHandled = deliver; }
     bool GetDeliverHandled() const { return deliverHandled; }

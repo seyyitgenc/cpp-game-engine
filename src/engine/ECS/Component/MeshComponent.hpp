@@ -1,25 +1,19 @@
 #pragma once
 
-#include "../Entity/Entity.hpp"
-
-#include "TransformsComponent.hpp"
+#include "Component.hpp"
 
 #include "../../Resource/Types/Mesh.hpp"
+#include "../../Renderer/Material.hpp"
 
 #include "../../BoundingBox.hpp"
 
 namespace GNC {
 
-// TODO: implement these out
-class Material {
-public:
-
-    void Bind() { }
-    void SetUniform(const std::string&, glm::mat4 matrix) {}
-};
-
 // Mesh component
-// Manages the visual representation of an entity by handling its 3D mesh and material
+// Manages the visual representation of an entity by handling its 3D mesh and material.
+// It only describes what to draw: GeometryPass records the actual draw for
+// every visible entity that has one. A null material draws with Material's
+// defaults.
 class MeshComponent : public Component {
 private:
     Mesh* mesh = nullptr;
@@ -38,22 +32,6 @@ public:
     // min has to stay the small corner and max the big one, otherwise Center()
     // and Extents() come out inverted and the box never passes the frustum test.
     AABBBoundingBox3D GetBoundingBox() const { return {{-32, -32, -32}, {32, 32, 32}}; }
-
-    void Render() override {
-        if (!mesh || !material) return;
-
-        // Get transform component
-        auto transform = GetOwner()->GetComponent<TransformComponent>();
-        if (!transform) return;
-
-        // Render mesh with material and transform
-        material->Bind();
-        material->SetUniform("modelMatrix", transform->GetTransformMatrix());
-
-        // TODO: the mesh cannot draw itself under Vulkan. This wants a command
-        // buffer to record into: bind the pipeline, bind mesh->GetVertexBuffer()
-        // and mesh->GetIndexBuffer(), then drawIndexed(mesh->GetIndexCount()).
-    }
 };
 
 } // namespace GNC

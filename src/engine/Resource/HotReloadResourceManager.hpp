@@ -2,7 +2,7 @@
 
 #include "ResourceManager.hpp"
 
-#include "util/log.hpp"
+#include "Utils/Log.hpp"
 
 #include <atomic>
 #include <chrono>

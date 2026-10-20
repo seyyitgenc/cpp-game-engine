@@ -48,6 +48,31 @@ public:
     bool IsFocused() const { return focused; }
 };
 
+// Enqueued by App::Run() once per frame that will be drawn (not while
+// minimized), after the window's input for that frame, so its listeners see
+// that input already applied. deltaTime in seconds, capped at
+// App::MaxDeltaTime.
+class FrameEvent : public Event {
+private:
+    float deltaTime;
+
+public:
+    GNC_EVENT_TYPE(FrameEvent, EventCategory::Application)
+
+    explicit FrameEvent(float dt) : deltaTime(dt) {}
+
+    float GetDeltaTime() const { return deltaTime; }
+};
+
+// A request to quit, from anything that wants the application to end (the
+// Esc binding, later a menu). App's listener closes the window; the loop
+// exits before the next frame. WindowCloseEvent is the window's close button,
+// which GLFW already acts on by itself.
+class QuitApplicationEvent : public Event {
+public:
+    GNC_EVENT_TYPE(QuitApplicationEvent, EventCategory::Application)
+};
+
 // Fired from HotReloadResourceManager::ApplyPendingReloads() on the main
 // thread, once per resource that was actually rebuilt. Anything that cached
 // a Vulkan object derived from the resource (a pipeline built from a shader

@@ -39,6 +39,7 @@ enum class EventCategory : std::uint32_t {
     Gamepad     = 1u << 5,
     Resource    = 1u << 6, // asset (re)loads
     Scene       = 1u << 7, // entity lifecycle and the like
+    User        = 1u << 8, // game-defined events, declared outside the engine
 };
 
 constexpr EventCategory operator|(EventCategory a, EventCategory b) {

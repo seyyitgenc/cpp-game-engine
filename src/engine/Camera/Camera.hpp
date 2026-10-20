@@ -26,13 +26,18 @@ enum class ProjectionType {
 
 // What a shader needs to know about the camera, laid out for std140.
 // vec3 position is padded to a vec4 on purpose: std140 aligns a vec3 to 16
-// bytes anyway, and spelling it out keeps the C++ and GLSL sizes identical.
+// bytes anyway, and spelling it out keeps the C++ and shader sizes identical.
+// Shader side: CameraData in shaders/common/frame.slang.
 struct CameraUniform {
     glm::mat4 view {1.0f};
     glm::mat4 projection {1.0f};
     glm::mat4 viewProjection {1.0f};
+    // Clip space back to world space: the deferred lighting pass rebuilds each
+    // pixel's position from depth with it.
+    glm::mat4 inverseViewProjection {1.0f};
     glm::vec4 position {0.0f, 0.0f, 0.0f, 1.0f};
 };
+static_assert(sizeof(CameraUniform) == 272);
 
 // Camera
 // A free-look (FPS style) camera driven by yaw and pitch. Roll is left out on
@@ -152,6 +157,7 @@ public:
         uniform.view = GetViewMatrix();
         uniform.projection = GetProjectionMatrix();
         uniform.viewProjection = uniform.projection * uniform.view;
+        uniform.inverseViewProjection = glm::inverse(uniform.viewProjection);
         uniform.position = glm::vec4(position, 1.0f);
         return uniform;
     }

@@ -3,11 +3,14 @@
 #include "../Resource.hpp"
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
+
+#include "Utils/FileSystem.hpp"
 
 namespace GNC {
 
@@ -26,11 +29,11 @@ public:
     const vk::raii::ShaderModule& GetShaderModule() const { return shaderModule; }
     vk::ShaderStageFlagBits GetStage() const { return stage; }
 
-    std::vector<std::string> GetSourcePaths() const override { return {SourcePath()}; }
+    std::vector<std::string> GetSourcePaths() const override { return {SourcePath().string()}; }
 
 protected:
     bool doLoad() override {
-        const std::string filePath = SourcePath();
+        const std::filesystem::path filePath = SourcePath();
 
         std::vector<char> code;
         if (!ReadFile(filePath, code)) return false;
@@ -46,7 +49,9 @@ protected:
     void doUnload() override { shaderModule = nullptr; }
 
 private:
-    std::string SourcePath() const { return "shaders/" + GetId() + StageExtension(stage) + ".spv"; }
+    std::filesystem::path SourcePath() const {
+        return FileSystem::getPath("shaders/" + GetId() + StageExtension(stage) + ".spv");
+    }
 
     static const char* StageExtension(vk::ShaderStageFlagBits shaderStage) {
         switch (shaderStage) {
@@ -60,7 +65,9 @@ private:
         }
     }
 
-    bool ReadFile(const std::string& filePath, std::vector<char>& buffer) {
+    // Takes a path rather than a string: on Windows ifstream then opens it
+    // through the wide API, so a non-ASCII directory name still works.
+    bool ReadFile(const std::filesystem::path& filePath, std::vector<char>& buffer) {
         // Seek to the end on open so the size is known before the read.
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
         if (!file.is_open()) return false;

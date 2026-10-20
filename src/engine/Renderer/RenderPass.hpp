@@ -9,14 +9,19 @@
 
 namespace GNC {
 
-class RenderTarget;
+// The shader modules a pass builds its pipeline from. Non-owning, and only read
+// during the pass's constructor: a module can be destroyed as soon as the
+// pipeline that uses it exists.
+struct PassShaders {
+    vk::ShaderModule vertex;
+    vk::ShaderModule fragment;
+};
 
 // Base render pass class
 class RenderPass {
 private:
     std::string name;
     std::vector<std::string> dependencies;
-    RenderTarget* target = nullptr;
     bool enabled = true;
 
 public:
@@ -31,14 +36,6 @@ public:
 
     const std::vector<std::string>& GetDependencies() const {
         return dependencies;
-    }
-
-    void SetRenderTarget(RenderTarget* renderTarget) {
-        target = renderTarget;
-    }
-
-    RenderTarget* GetRenderTarget() const {
-        return target;
     }
 
     void SetEnabled(bool isEnabled) {

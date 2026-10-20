@@ -19,18 +19,20 @@ struct FrameData {
     vk::raii::CommandBuffer commandBuffer = nullptr;
     vk::raii::Fence inFlightFence = nullptr;
 
-    // TODO: once there is a swapchain, renderFinished should be indexed by the
-    // acquired swapchain image, not by the frame. Present waits on it, and the
-    // only proof that present is done with it is getting that image back from
-    // acquire; this frame's fence says nothing about present.
+    // Signaled by acquire, waited on by this frame's submit. The semaphore the
+    // submit signals for present lives in the Swapchain, one per image.
     vk::raii::Semaphore imageAvailableSemaphore = nullptr;
-    vk::raii::Semaphore renderFinishedSemaphore = nullptr;
 
     // Set 0, binding 0: CameraUniform. Host visible and coherent, and mapped
     // for the buffer's whole lifetime, so updating it is a plain memcpy.
     vk::raii::Buffer cameraBuffer = nullptr;
     vk::raii::DeviceMemory cameraMemory = nullptr;
     void* cameraMapped = nullptr;
+
+    // Set 0, binding 1: LightsUniform, kept the same way as the camera buffer.
+    vk::raii::Buffer lightsBuffer = nullptr;
+    vk::raii::DeviceMemory lightsMemory = nullptr;
+    void* lightsMapped = nullptr;
 
     vk::raii::DescriptorSet globalSet = nullptr;
 };
@@ -41,13 +43,19 @@ struct FrameData {
 struct FrameContext {
     vk::raii::CommandBuffer& commandBuffer;
 
-    // Set 0: per-frame data every pass shares (the camera, for now). Bind it
+    // Set 0: per-frame data every pass shares (camera and lights). Bind it
     // with a pipeline layout whose set 0 is Renderer::GetGlobalSetLayout().
     vk::DescriptorSet globalSet;
 
     // Which FrameData slot is recording, for passes that keep per-frame
     // resources of their own.
     std::uint32_t frameIndex;
+
+    // The swapchain image this frame ends up on, as acquired: its contents are
+    // undefined. The last pass renders into it and leaves it in
+    // ePresentSrcKHR.
+    vk::Image targetImage;
+    vk::ImageView targetView;
 };
 
 } // namespace GNC

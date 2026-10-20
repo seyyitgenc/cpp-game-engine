@@ -6,16 +6,22 @@ namespace GNC {
 
 // Input events
 // Edge events only: a key going down or up, a button changing, the cursor
-// moving. "Is W currently held" is not an event, it is state, and the polled
-// Keyboard::key() / Mouse::button() API stays the right tool for that. The
-// GLFW callbacks feed both: they update the polled state as they do today and
-// additionally enqueue one of these.
+// moving. The GLFW callbacks in Window.cpp enqueue these. Double clicks and
+// drags are not GLFW events; Window detects them.
+//
+// "Is W currently held" is state. Keep it from KeyPressed/KeyReleased (see
+// CameraController) rather than polling Window::IsKeyDown(): polling skips
+// the bus, so a higher priority listener (a UI layer) cannot swallow the key
+// first. Never return true for a release, or a listener below you keeps the
+// key held forever.
 //
 // Key codes, button ids and modifier bits are GLFW's, passed through
 // untranslated. The engine has one windowing backend and an abstraction layer
 // over its constants would be a second copy of the same table.
 
-// ---- keyboard ---------------------------------------------------------
+// --------
+// Keyboard
+// --------
 
 class KeyEvent : public Event {
 private:
@@ -74,7 +80,9 @@ public:
     unsigned int GetCodepoint() const { return codepoint; }
 };
 
-// ---- mouse ------------------------------------------------------------
+// -----
+// Mouse
+// -----
 
 // Cursor position in window coordinates. Deltas are not carried here: a
 // listener that wants them keeps the last position itself, which is also
@@ -91,6 +99,28 @@ public:
 
     double GetX() const { return x; }
     double GetY() const { return y; }
+};
+
+// Cursor motion while at least one mouse button is held. Enqueued right after
+// the MouseMovedEvent for the same motion, not instead of it, so a listener
+// that wants every cursor position (hover, a UI layer) needs only
+// MouseMovedEvent.
+class MouseDraggedEvent : public Event {
+private:
+    double x;
+    double y;
+    int buttons;
+
+public:
+    GNC_EVENT_TYPE(MouseDraggedEvent, EventCategory::Input | EventCategory::Mouse)
+
+    // heldButtons: bit (1 << GLFW_MOUSE_BUTTON_*) for each button held.
+    MouseDraggedEvent(double posX, double posY, int heldButtons) : x(posX), y(posY), buttons(heldButtons) {}
+
+    double GetX() const { return x; }
+    double GetY() const { return y; }
+    int GetButtons() const { return buttons; }
+    bool IsButtonHeld(int button) const { return (buttons & (1 << button)) != 0; }
 };
 
 class MouseScrolledEvent : public Event {
@@ -137,11 +167,25 @@ public:
     MouseButtonReleasedEvent(int mouseButton, int modifiers) : MouseButtonEvent(mouseButton, modifiers) {}
 };
 
-// ---- gamepad ----------------------------------------------------------
+// A second press of the same button, quickly and close to the first (see
+// Window::DoubleClickTime). Enqueued right after that second
+// MouseButtonPressedEvent, not instead of it, so a listener tracking which
+// buttons are down never misses a press. A third press starts over.
+class MouseDoubleClickEvent : public MouseButtonEvent {
+public:
+    GNC_EVENT_TYPE(MouseDoubleClickEvent,
+                   EventCategory::Input | EventCategory::Mouse | EventCategory::MouseButton)
 
-// From glfwSetJoystickCallback. Button and axis state stays polled through
-// Gamepad::isButtonPushed(); connection changes are the only real edges GLFW
-// reports for controllers.
+    MouseDoubleClickEvent(int mouseButton, int modifiers) : MouseButtonEvent(mouseButton, modifiers) {}
+};
+
+// -------
+// Gamepad
+// -------
+
+// From glfwSetJoystickCallback (not installed yet: there is no gamepad
+// support). Button and axis state would be polled; connection changes are the
+// only real edges GLFW reports for controllers.
 class GamepadConnectedEvent : public Event {
 private:
     int joystickId;

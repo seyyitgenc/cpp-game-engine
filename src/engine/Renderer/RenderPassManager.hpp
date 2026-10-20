@@ -42,6 +42,9 @@ public:
 
     RenderPass* GetRenderPass(const std::string& name);
     void RemoveRenderPass(const std::string& name);
+    // Destroys every pass. Their GPU objects go with them, so nothing they
+    // recorded may still be in flight.
+    void Clear();
     void Execute(const FrameContext& frame);
 
 private:

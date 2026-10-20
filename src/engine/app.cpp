@@ -1,232 +1,260 @@
-#include "glad/glad.h"
+#include "App.hpp"
 
-#include "app.hpp"
+#include <algorithm>
+#include <chrono>
+#include <stdexcept>
+#include <utility>
 
-#include "callbacks.h"
-#include "globals.h"
-#include "model.h"
-#include "shader.h"
-#include "shader_manager.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
-#include "util/stopwatch.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-#include "gui/ImGuiLayerManager.hpp"
-#include "gui/ShadersGUI.hpp"
-
-#include <glm/gtc/type_ptr.hpp>
+#include "ECS/Component/LightComponent.hpp"
+#include "ECS/Component/MeshComponent.hpp"
+#include "ECS/Component/OrbitComponent.hpp"
+#include "ECS/Component/TransformsComponent.hpp"
+#include "Event/Events.hpp"
+#include "Resource/Primitives.hpp"
+#include "Utils/Log.hpp"
 
 namespace GNC {
 
-App* App::_instance = nullptr;
+namespace {
 
-App& App::instance()
-{
-    if (_instance == nullptr) {
-        _instance = new App();
-        Log::writeFormatted(
-            Log::Info,
-            GREEN_TEXT(
-                "INFO::APP::GET_INSTANCE App Initialized with mem address -> %p")
-                .c_str(),
-            &_instance);
-    }
-    return *_instance;
+constexpr int WindowWidth = 1600;
+constexpr int WindowHeight = 900;
+
+// Rotation that points an entity's -Z axis (the way lights shine) along
+// direction.
+glm::quat FacingDirection(const glm::vec3& direction) {
+    return glm::quatLookAt(glm::normalize(direction), glm::vec3(0.0f, 1.0f, 0.0f));
 }
+
+} // namespace
 
 App::App()
-    : clear_color(ImVec4(0.45f, 0.55f, 0.60f, 1.00f))
-{
+    : window(WindowWidth, WindowHeight, "GNC Engine", eventBus),
+      vulkan(window),
+      uploadPool(CreateUploadPool()),
+      resources(MakeResourceContext()),
+      cameraController(eventBus, window, camera),
+      renderer(vulkan, window.GetFramebufferExtent(), &camera) {
+    SubscribeToEvents();
+    BuildScene();
 }
 
-App::~App()
-{
-    this->clean();
-}
+void App::Run() {
+    Log::write(Log::Info, "Controls: hold right mouse to look, WASD to move, E/Q up/down, Shift faster, wheel zooms, Esc quits\n");
 
-// void init_shader_values(const std::string &name){
-//     Shader shader = gShaderManager->get_shader(name);
-//     shader.bind();
-//     // shader.setMat4("projection", projection);
-//     shader.setMat4("view", camera.GetViewMatrix());
-//     // render the loaded model
-//     // model = glm::translate(model, glm::vec3(f0, f1, f2)); // translate it down so it's at the center of the scene
-//     // model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-//     // shader.setMat4("model", model);
-//     shader.unbind();
-// }
-// TODO :: implement model gshader
+    bool swapchainOutOfDate = false;
+    auto previousTime = std::chrono::steady_clock::now();
 
-Stopwatch<> t1;
+    while (!window.ShouldClose()) {
+        window.PollEvents();
 
-float deltaTime = 0; // note: temporary solution
+        const auto now = std::chrono::steady_clock::now();
+        const float deltaTime = std::min(std::chrono::duration<float>(now - previousTime).count(), MaxDeltaTime);
+        previousTime = now;
 
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
-void renderQuad()
-{
-    if (quadVAO == 0) {
+        // Minimized: there is no surface to render to, and a 0x0 swapchain
+        // cannot exist. Sleep until something happens.
+        const vk::Extent2D extent = window.GetFramebufferExtent();
+        const bool minimized = extent.width == 0 || extent.height == 0;
 
-        // clang-format off
-        float quadVertices[] = {
-            // positions        // texture Coords
-            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-        };
-        // clang-format on
+        // Callbacks enqueue, Flush() delivers: every listener runs here, at
+        // one known point of the frame. FrameEvent goes in behind this
+        // frame's input, and only for frames that will be drawn.
+        if (!minimized) eventBus.Enqueue<FrameEvent>(deltaTime);
+        eventBus.Flush();
 
-        // setup plane VAO
-        glGenVertexArrays(1, &quadVAO);
-        glGenBuffers(1, &quadVBO);
-        glBindVertexArray(quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    }
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-}
+        if (minimized) {
+            window.WaitEvents();
+            continue;
+        }
 
-float x = 30.0f, y = 60.0f, z = -7.0f;
+        if (resizePending || swapchainOutOfDate) {
+            renderer.Resize(extent);
+            resizePending = false;
+        }
 
-// ---------
-// main loop
-// ---------
-void App::run()
-{
-    gInitGlobals();
+        cameraController.Update(deltaTime);
+        scene.Update(deltaTime);
 
-    ImGuiLayerManager::instance().addPanel("Shaders", new ShadersGUI);
-
-    auto shaderManager = ShaderManager::instance();
-    auto debugDepthPassShader = shaderManager->getShader("shader_debug_depth_pass");
-    auto depthPassShader = shaderManager->getShader("shader_depth_pass");
-    auto gBufferShader = shaderManager->getShader("shader_gbuffer");
-    auto lightingPassShader = shaderManager->getShader("shader_lighting_pass");
-    auto debugShader = shaderManager->getShader("shader_debugging");
-
-    // Model plane(FileSystem::getPath("resources/objects/TwoSidedPlane/glTF/TwoSidedPlane.gltf"));
-    Model cube(FileSystem::getPath("resources/objects/BoxTextured/glTF/BoxTextured.gltf"));
-    // Model camera(FileSystem::getPath("resources/objects/camera/10124_SLR_Camera_SG_V1_Iteration2.obj"));
-    // Model earth(FileSystem::getPath("resources/objects/earth/Earth_1_12756.glb"));
-
-    // cube_transf[0].scale(1.0f, 3.0f, 1.0f);
-    // cube_transf[0].translate(2.0f, 0.0f, 2.0f);
-
-    // cube_transf[1].scale(1.0f, 5.0f, 1.0f);
-    // cube_tra`nsf[1].translate(-2.0f, 0.0f, -2.0f);
-
-    // cube_base_transf.translate(0.0f, -2.0f, 0.0f);
-    // cube_base_transf.scale(20.0f, 1.0f, 20.0f);
-
-    std::vector<glm::vec3> cubeScales = { glm::vec3(1.0f, 3.0f, 1.0f), glm::vec3(1.0f, 5.0f, 1.0f), glm::vec3(20.0f, 1.0f, 20.0f) };
-    std::vector<glm::vec3> cubeTransfors = { glm::vec3(-2.0f, 0.0f, -2.0f), glm::vec3(2.0f, 0.0f, 2.0f), glm::vec3(0.0f, -2.0f, 0.0f) };
-
-    glEnable(GL_DEPTH_TEST);
-
-    // FrameBuffer shadowMap;
-    // shadowMap.bind(GL_FRAMEBUFFER);
-    // shadowMap.attachRenderBuffer();
-    // shadowMap.attachTexture(SHADOW_WIDTH, SHADOW_HEIGHT, FBTT::SHADOW, GL_DEPTH_ATTACHMENT);
-    // glDrawBuffer(GL_NONE);
-    // glReadBuffer(GL_NONE);
-    // shadowMap.checkCompleteness();
-    // shadowMap.unbind();
-    // // renderer instance
-    // FrameBuffer gBuffer;
-    // gBuffer.bind(GL_FRAMEBUFFER);
-    // gBuffer.attachRenderBuffer();
-    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::POSITION, GL_COLOR_ATTACHMENT0);
-    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::NORMAL, GL_COLOR_ATTACHMENT1);
-    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ALBEDO, GL_COLOR_ATTACHMENT2);
-    // gBuffer.attachTexture(gViewport._width, gViewport._height, FBTT::ROUGHNESS, GL_COLOR_ATTACHMENT3);
-    // gBuffer.checkCompleteness();
-    // gBuffer.unbind();
-
-    // Track previous viewport size for resize detection
-    int prevWidth = gViewport._width;
-    int prevHeight = gViewport._height;
-
-    while (!glfwWindowShouldClose(gWindow)) {
-
-        glfwSwapBuffers(gWindow);
-        glfwPollEvents();
+        swapchainOutOfDate = !renderer.Render(scene.GetEntities());
     }
 }
 
-// ----------
-// event loop
-// ----------
-void App::processInput([[maybe_unused]] GLFWwindow* window)
-{
-    if (Keyboard::key(GLFW_KEY_ESCAPE))
-        glfwSetWindowShouldClose(gWindow, true);
+vk::raii::CommandPool App::CreateUploadPool() const {
+    // eTransient: its command buffers are short lived, one per upload.
+    return vk::raii::CommandPool(vulkan.GetDevice(), vk::CommandPoolCreateInfo {
+        .flags = vk::CommandPoolCreateFlagBits::eTransient,
+        .queueFamilyIndex = vulkan.GetQueueFamilyIndex()
+    });
+}
 
-    ShaderManager::instance()->handleEvents(deltaTime);
+ResourceContext App::MakeResourceContext() const {
+    // Uploads go through the one queue that does everything; see VulkanContext.
+    return ResourceContext {
+        .device = &vulkan.GetDevice(),
+        .physicalDevice = &vulkan.GetPhysicalDevice(),
+        .transferQueue = &vulkan.GetQueue(),
+        .transferPool = &uploadPool
+    };
+}
 
-    if (Keyboard::key(GLFW_KEY_O))
-        y += 0.5;
-    if (Keyboard::key(GLFW_KEY_L))
-        y -= 0.5;
-    if (Keyboard::key(GLFW_KEY_K))
-        x += 0.5;
-    if (Keyboard::key(GLFW_KEY_SEMICOLON))
-        x -= 0.5;
-    if (Keyboard::key(GLFW_KEY_Q))
-        z -= 0.5;
-    if (Keyboard::key(GLFW_KEY_E))
-        z += 0.5;
+void App::SubscribeToEvents() {
+    subscriptions.push_back(eventBus.Subscribe<WindowResizeEvent>([this](WindowResizeEvent&) {
+        resizePending = true;
+        return false;
+    }));
 
-    // Gui::handleEvents(deltaTime);
-    if (Keyboard::keyWentDown(GLFW_KEY_J)) {
-        gEditModeEnabled = !gEditModeEnabled;
-        if (gEditModeEnabled) {
-            glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            setEditModeCallbacks(gWindow);
-        } else {
-            glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            setNormalModeCallbacks(gWindow);
-            Mouse::setFirstMouse(true);
+    // Esc only asks to quit; whatever ends up deciding (a "save changes?"
+    // prompt, later) listens for the request instead of for the key.
+    subscriptions.push_back(eventBus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
+        if (e.GetKey() != GLFW_KEY_ESCAPE || e.IsRepeat()) return false;
+        eventBus.Enqueue<QuitApplicationEvent>();
+        return true;
+    }));
+
+    subscriptions.push_back(eventBus.Subscribe<QuitApplicationEvent>([this](QuitApplicationEvent&) {
+        window.Close();
+        return true;
+    }));
+}
+
+Mesh* App::LoadMesh(const std::string& id, MeshData data) {
+    ResourceHandle<Mesh> handle = resources.Load<Mesh>(id, std::move(data));
+    if (!handle) {
+        throw std::runtime_error("App: failed to upload mesh '" + id + "'");
+    }
+    return handle.Get();
+}
+
+// A PBR showcase: a material chart over a ground plane, lit by a dim sun, a
+// spot light from above, and three coloured point lights circling the chart.
+// Light intensities are in physical units (lux / candela), see LightComponent.
+void App::BuildScene() {
+    camera.SetPerspective(45.0f, camera.GetAspectRatio(), 0.1f, 100.0f);
+    camera.SetPosition({ 0.0f, 1.6f, 7.5f });
+    camera.LookAt({ 0.0f, 0.5f, 0.0f });
+
+    Mesh* sphereMesh = LoadMesh("sphere", CreateSphere(1.0f, 64, 128));
+    Mesh* planeMesh = LoadMesh("plane", CreatePlane(1.0f));
+
+    // ------
+    // Ground
+    // ------
+    Entity& ground = scene.CreateEntity("Ground");
+    auto* groundTransform = ground.AddComponent<TransformComponent>();
+    groundTransform->SetPosition({ 0.0f, -0.4f, 0.0f });
+    groundTransform->SetScale({ 30.0f, 1.0f, 30.0f });
+    ground.AddComponent<MeshComponent>(planeMesh, scene.CreateMaterial({
+        .baseColorFactor = { 0.18f, 0.18f, 0.18f, 1.0f },
+        .metallicFactor = 0.0f,
+        .roughnessFactor = 0.9f
+    }));
+
+    // --------------
+    // Material Chart
+    // --------------
+    // Roughness rises from left to right. Bottom row: red plastic, a
+    // dielectric. Top row: gold, a metal (base color is gold's measured
+    // reflectance). The spheres sit on the ground.
+    struct ChartRow {
+        const char* name;
+        glm::vec3 baseColor;
+        float metallic;
+        float height;
+    };
+    const ChartRow rows[] = {
+        { "Plastic", { 0.8f, 0.08f, 0.08f }, 0.0f, 0.0f },
+        { "Gold", { 1.0f, 0.766f, 0.336f }, 1.0f, 1.1f },
+    };
+    constexpr int Columns = 7;
+    constexpr float Spacing = 1.1f;
+    constexpr float SphereRadius = 0.4f;
+
+    for (const ChartRow& row : rows) {
+        for (int column = 0; column < Columns; ++column) {
+            const float t = static_cast<float>(column) / static_cast<float>(Columns - 1);
+
+            Entity& sphere = scene.CreateEntity(std::string(row.name) + " " + std::to_string(column));
+            auto* transform = sphere.AddComponent<TransformComponent>();
+            transform->SetPosition({ (static_cast<float>(column) - (Columns - 1) * 0.5f) * Spacing, row.height, 0.0f });
+            transform->SetScale(glm::vec3(SphereRadius));
+            sphere.AddComponent<MeshComponent>(sphereMesh, scene.CreateMaterial({
+                .baseColorFactor = glm::vec4(row.baseColor, 1.0f),
+                .metallicFactor = row.metallic,
+                .roughnessFactor = glm::mix(0.05f, 1.0f, t)
+            }));
         }
     }
-}
 
-// ------
-// update
-// ------
-void App::update([[maybe_unused]] const float& dt)
-{
-}
+    // ---
+    // Sun
+    // ---
+    // Dim and warm, from above and behind the camera's left shoulder.
+    Entity& sun = scene.CreateEntity("Sun");
+    sun.AddComponent<TransformComponent>()->SetRotation(FacingDirection({ 0.5f, -1.0f, -0.6f }));
+    auto* sunLight = sun.AddComponent<LightComponent>(LightType::Directional);
+    sunLight->SetColor({ 1.0f, 0.93f, 0.82f });
+    sunLight->SetIntensity(1.0f); // lux
 
-// ------
-// render
-// ------
-void App::render()
-{
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    // TODO: move rendering code here after simplifying it the render code
-    // render stuff here
+    // ----
+    // Spot
+    // ----
+    // Straight down onto the middle of the chart from above and in front.
+    const glm::vec3 spotPosition { 0.0f, 5.0f, 3.0f };
+    Entity& spot = scene.CreateEntity("Spot Light");
+    auto* spotTransform = spot.AddComponent<TransformComponent>();
+    spotTransform->SetPosition(spotPosition);
+    spotTransform->SetRotation(FacingDirection(glm::vec3(0.0f, 0.5f, 0.0f) - spotPosition));
+    auto* spotLight = spot.AddComponent<LightComponent>(LightType::Spot);
+    spotLight->SetIntensity(60.0f); // candela
+    spotLight->SetRange(15.0f);
+    spotLight->SetSpotCone(glm::radians(15.0f), glm::radians(25.0f));
 
-    glfwSwapBuffers(gWindow);
-    glfwPollEvents();
-}
+    // ---------------------
+    // Orbiting Point Lights
+    // ---------------------
+    // Each carries a small emissive sphere, so you can see where it is. The
+    // light sits inside its own bulb and the bulb's surface faces away from
+    // it, so the bulb is not lit by its own light.
+    struct Orbiter {
+        glm::vec3 color;
+        float height;
+        float speed; // radians per second
+        float phase;
+    };
+    const Orbiter orbiters[] = {
+        { { 1.0f, 0.55f, 0.25f }, 0.6f, 0.5f, 0.0f },
+        { { 0.3f, 0.6f, 1.0f }, 1.6f, -0.35f, 2.1f },
+        { { 1.0f, 0.3f, 0.8f }, 2.4f, 0.25f, 4.2f },
+    };
+    constexpr float OrbitRadius = 4.0f;
+    constexpr float BulbRadius = 0.08f;
 
-void App::clean()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    int index = 0;
+    for (const Orbiter& orbiter : orbiters) {
+        Entity& entity = scene.CreateEntity("Point Light " + std::to_string(index++));
+        entity.AddComponent<TransformComponent>()->SetScale(glm::vec3(BulbRadius));
+        entity.AddComponent<MeshComponent>(sphereMesh, scene.CreateMaterial({
+            .baseColorFactor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            .metallicFactor = 0.0f,
+            .roughnessFactor = 1.0f,
+            .emissiveFactor = orbiter.color,
+            .emissiveStrength = 8.0f
+        }));
 
-    glfwDestroyWindow(gWindow);
-    glfwTerminate();
+        auto* light = entity.AddComponent<LightComponent>(LightType::Point);
+        light->SetColor(orbiter.color);
+        light->SetIntensity(20.0f); // candela
+        light->SetRange(12.0f);
+
+        entity.AddComponent<OrbitComponent>(glm::vec3(0.0f, orbiter.height, 0.0f), OrbitRadius, orbiter.speed, orbiter.phase);
+    }
 }
 
 } // namespace GNC
