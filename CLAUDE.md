@@ -34,31 +34,55 @@ cd bin/debug && ./engine.exe             # or ./run.sh
 - Warnings are `-Wall -Wextra -Wpedantic`; keep the build warning-free.
 - There are no tests and no lint step. `.clang-format` (WebKit based) exists, but existing files are not uniformly formatted with it, so do not reformat code you are not changing.
 - **Debug builds enable `VK_LAYER_KHRONOS_validation`** when it is installed. Messages print to stdout as `[Vulkan] ...`. A clean run prints no validation output; treat any as a bug.
-- **Commit messages** follow `feat(Scope): summary`, written in Turkish, with a bulleted body (see `git log`).
+
+## Commits
+
+Commit messages are in Turkish. Follow the commits on the `vulkan` branch; older history is in English and does not follow these rules.
+
+- **Subject:** `type(Scope,Scope): summary.`
+  - `type` is `feat`, `fix` or `refactor`.
+  - Scopes name the engine areas the commit touches, after their `src/engine/` directories (`Renderer`, `Platform`, `Event`, `UI`, ...), comma separated without spaces.
+  - The summary says what was done in the past tense passive (`eklendi`, `getirildi`, `kaldirildi`, `entegre edildi`) and ends with a period.
+- **No Turkish letters:** write `c s g i o u` for `ç ş ğ ı ö ü` (`calisir hale getirildi`, not `çalışır hale getirildi`). English technical terms stay as they are and take Turkish suffixes after an apostrophe: `pass'ler`, `semaphore'lari`, `backend'lerle`.
+- **Body:** a bulleted list (`- `), one bullet per change, usually starting with the class or file it is about (`- Swapchain: ...`). Wrap lines at about 76 columns and indent continuation lines by two spaces.
+- **Scope of a commit:** one finished piece of work. If the change makes this file wrong, update `CLAUDE.md` in the same commit.
+- Commits Claude makes end with its `Co-Authored-By` trailer.
+- Commit only when asked, and push only when asked.
+
+Example:
+
+```
+feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
+
+- FrameData.hpp: frame basina command buffer, fence, semaphore, kamera
+  uniform buffer (kalici map'li) ve descriptor set. MaxFramesInFlight = 2.
+- VulkanHelpers: createBuffer eklendi.
+```
 
 ## Architecture
 
 ### Ownership and the frame loop
 
-`App` (`src/engine/app.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
+`App` (`src/engine/app.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → ImGuiLayer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
 
-`App::Run()` per frame:
+`App::Run()` computes the frame time (capped at `App::MaxDeltaTime`), then runs three traversals in order, as OSG's viewer does:
 
-1. `window.PollEvents()`, then compute the frame time, capped at `App::MaxDeltaTime`.
-2. Unless minimized, enqueue a `FrameEvent(dt)` behind the frame's input. Then `eventBus.Flush()`: every event listener runs here and nowhere else.
-3. While minimized (framebuffer 0x0), wait for events and skip the frame.
-4. `renderer.Resize(extent)` if a `WindowResizeEvent` arrived or the last `Render()` returned false (swapchain out of date). `Resize` rebuilds the swapchain *and every render pass*.
-5. `cameraController.Update(dt)` and `scene.Update(dt)` (which calls each component's `Update`).
-6. `renderer.Render(scene.GetEntities())`.
+1. **`EventTraversal(dt)`:** `window.PollEvents()`; unless minimized, enqueue a `FrameEvent(dt)` behind the frame's input; then `eventBus.Flush()`. Every event listener runs here and nowhere else.
+   - While minimized (framebuffer 0x0, `Window::IsMinimized`), `Run` then waits for events and skips the other two traversals.
+2. **`UpdateTraversal(dt)`:** `cameraController.Update(dt)` and `scene.Update(dt)` (which calls each component's `Update`).
+3. **`RenderTraversal()`:**
+   - `renderer.Resize(extent)` if a `WindowResizeEvent` arrived or the last `Render()` returned false (swapchain out of date). `Resize` rebuilds the swapchain *and every render pass*.
+   - `gui.Render()` builds the UI, then `renderer.Render(scene.GetEntities())` draws the frame, then `gui.RenderPlatformWindows()`.
 
 ### Events and input (`src/engine/Event/`, `Platform/Window`)
 
 - **Publishing:** GLFW callbacks in `Window.cpp` only enqueue events onto the `EventBus`. Resize uses `EnqueueCoalesced`, so a drag yields one event.
 - **Subscribing:** listeners use `bus.Subscribe<E>(lambda, priority)` and must keep the returned `EventSubscription`; dropping it unsubscribes. Owners store tokens in a `std::vector<EventSubscription>` member.
-- **Handled events:** returning true from a listener stops delivery to lower-priority listeners. This is how a future UI layer would swallow input before the camera sees it.
+- **Handled events:** returning true from a listener stops delivery to lower-priority listeners. This is how `ImGuiLayer` swallows input before the camera sees it.
 - **Event kinds:** each kind is its own class, following OSG's GUIEventAdapter set. The mapping is PUSH/RELEASE → `MouseButtonPressed/ReleasedEvent`, DOUBLECLICK → `MouseDoubleClickEvent`, MOVE → `MouseMovedEvent`, DRAG → `MouseDraggedEvent`, KEYDOWN/KEYUP → `KeyPressed/ReleasedEvent`, SCROLL → `MouseScrolledEvent`, RESIZE → `WindowResizeEvent`, CLOSE_WINDOW → `WindowCloseEvent`, FRAME → `FrameEvent` and QUIT_APPLICATION → `QuitApplicationEvent`. Game-defined events use `GNC_EVENT_TYPE` with `EventCategory::User`.
   - Unlike OSG, `Window` sends DOUBLECLICK *after* the second press, and DRAG *alongside* MOVE, never in place of them.
-- **Held keys come from events:** track `KeyPressed`/`KeyReleased` (ignoring repeats) and clear on focus loss, as `CameraController` does. `Window::IsKeyDown` bypasses the bus, so a UI layer could not swallow the key. Never return true for a release event. Key codes are GLFW's, untranslated.
+  - Beyond OSG's set: `WindowFocusEvent`, `CharTypedEvent`, and `MouseEnterEvent`/`MouseLeaveEvent` (the cursor crossing the window edge, which the ImGui backend needs).
+- **Held keys come from events:** track `KeyPressed`/`KeyReleased` (ignoring repeats) and clear on focus loss, as `CameraController` does. `Window::IsKeyDown` bypasses the bus, so ImGui could not swallow the key. Never return true for a release event. Key codes are GLFW's, untranslated.
 
 ### Vulkan setup
 
@@ -77,13 +101,31 @@ cd bin/debug && ./engine.exe             # or ./run.sh
 
 1. **GeometryPass** draws every visible `MeshComponent` into the G-buffer: base color, octahedral-encoded normal, occlusion/roughness/metallic, emissive, and D32 depth. The formats live in the `GBuffer` struct (`GeometryPass.hpp`) and must match `shaders/common/gbuffer.slang`.
 2. **LightingPass** runs a fullscreen triangle. It rebuilds world position from depth with `inverseViewProjection`, loops over every light with the Cook-Torrance BRDF (`shaders/common/brdf.slang`), adds flat ambient and emissive, and writes linear HDR (`R16G16B16A16_SFLOAT`).
-3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into the swapchain image (taken from `FrameContext::targetImage`/`targetView`), then leaves it in `ePresentSrcKHR`. If the swapchain format is not sRGB, it applies the sRGB encoding itself.
+3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into the swapchain image (taken from `FrameContext::targetImage`/`targetView`). If the swapchain format is not sRGB, it applies the sRGB encoding itself.
+   - The swapchain *prefers* a UNORM format, so this is the normal path. ImGui's colors are already sRGB encoded; an sRGB swapchain would encode them again and wash the UI out.
+4. **ImGuiPass** loads the image and draws ImGui's draw data over it with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
 
 How passes work together:
 - **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers.
+  - The swapchain image stays in `eColorAttachmentOptimal` through every pass. `Renderer::Render` transitions it to `ePresentSrcKHR` after the last one, so a pass can be added at the end without moving that barrier.
 - **Descriptor sets:** set 0 is always the global set (binding 0 camera, binding 1 lights) and every pipeline layout includes it. Set 1 holds the pass's inputs, which shaders read with `Texture2D.Load()`: sampled images, no samplers.
 - **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix plus material factors, which must stay ≤128 bytes).
 - **Shader modules** are loaded in `Renderer::SetupRenderPasses()` by constructing `Shader` objects directly, not through `ResourceManager`. The manager caches by id only, so the vertex and fragment stages of the same shader would collide in its cache.
+
+### ImGui (`src/engine/UI/ImGuiLayer`)
+
+- **Library:** Dear ImGui's docking branch, vendored as plain files in `src/external/ImGui` (core plus `backends/imgui_impl_glfw` and `imgui_impl_vulkan`, unmodified), built as the `imgui` static library. `CMakeLists.txt` records the upstream commit and how to update.
+- **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format) and waits for the GPU before shutting the backends down.
+- **Panels:** the UI is made of `ImGuiPanel`s (`UI/ImGuiPanel.hpp`), each with a name and a `Render()` that opens its own window with `ImGui::Begin(GetName().c_str())`. `ImGuiLayer` is their manager:
+  - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels in `App::BuildGui()`.
+  - `gui.Render()` runs the whole ImGui frame: NewFrame, a passthru dockspace over the main window, every panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
+  - App-specific panels live in `UI/Panels/` (`EnginePanel`: FPS, camera position, the demo window toggle).
+- **Input comes from the bus**, not from GLFW callbacks: the GLFW backend is initialized with `install_callbacks = false`. Listeners at `ImGuiLayer::EventPriority` pass each event to the matching `ImGui_ImplGlfw_*Callback` and return `io.WantCaptureMouse`/`WantCaptureKeyboard` to swallow it. Releases, focus and enter/leave are never swallowed.
+  - While the camera has the cursor captured, the layer ignores mouse input and sets `ImGuiConfigFlags_NoMouse`.
+  - Platform windows the backend creates (panels dragged out of the main window) get the backend's own callbacks; their input never reaches the bus.
+- **Multi-viewport** is on (`ImGuiLayer::EnableViewports`). Those windows have their own swapchains, which the backend renders and presents in `RenderPlatformWindows()` on the same queue.
+- **Pipeline:** the backend's main-window pipeline is rebuilt only when the swapchain format changes, not on every resize. Rebuilding it after a platform window exists leaves the backend's viewport pipeline info pointing at freed memory (`imgui_impl_vulkan`, 1.93.1 WIP).
+- **`imgui.ini`** is saved next to the executable (`FileSystem::getPath`).
 
 ### C++ ↔ shader contract
 

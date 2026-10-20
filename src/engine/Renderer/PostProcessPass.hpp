@@ -12,9 +12,10 @@ namespace GNC {
 class LightingPass;
 
 // Post-processing pass
-// The last pass of the frame: exposure and tonemapping from the lighting pass's
-// linear HDR output into the swapchain image (FrameContext::targetView), which
-// it leaves ready to present. shaders/post_process.slang.
+// Exposure and tonemapping from the lighting pass's linear HDR output into the
+// swapchain image (FrameContext::targetView). The first pass to write that
+// image; it leaves it as a color attachment for the passes after it.
+// shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
 private:
     RenderTargetContext context;

@@ -60,6 +60,8 @@ public:
     // In pixels, which is not the same as screen coordinates on high DPI
     // displays. 0x0 while minimized.
     vk::Extent2D GetFramebufferExtent() const;
+    // The framebuffer is 0x0: there is nothing to render to.
+    bool IsMinimized() const;
 
     // GLFW key codes (GLFW_KEY_*). Skips the event bus, so a higher priority
     // listener cannot swallow the key first; listeners should track
@@ -70,6 +72,11 @@ public:
     // unbounded, as mouse look needs. Uses raw (unaccelerated) motion where
     // the platform has it.
     void SetCursorCaptured(bool captured);
+    bool IsCursorCaptured() const;
+
+    // For libraries that drive GLFW themselves (the ImGui backend). Everything
+    // else goes through Window.
+    GLFWwindow* GetNativeHandle() const { return handle; }
 
     // Instance extensions the surface needs (VK_KHR_surface plus the platform's).
     static std::vector<const char*> GetRequiredInstanceExtensions();

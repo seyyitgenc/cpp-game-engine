@@ -72,6 +72,11 @@ vk::Extent2D Window::GetFramebufferExtent() const {
     return { static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height) };
 }
 
+bool Window::IsMinimized() const {
+    const vk::Extent2D extent = GetFramebufferExtent();
+    return extent.width == 0 || extent.height == 0;
+}
+
 bool Window::IsKeyDown(int key) const {
     return glfwGetKey(handle, key) == GLFW_PRESS;
 }
@@ -81,6 +86,10 @@ void Window::SetCursorCaptured(bool captured) {
     if (glfwRawMouseMotionSupported()) {
         glfwSetInputMode(handle, GLFW_RAW_MOUSE_MOTION, captured ? GLFW_TRUE : GLFW_FALSE);
     }
+}
+
+bool Window::IsCursorCaptured() const {
+    return glfwGetInputMode(handle, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
 }
 
 std::vector<const char*> Window::GetRequiredInstanceExtensions() {
@@ -138,6 +147,13 @@ void Window::InstallCallbacks() {
         window.eventBus.Enqueue<MouseMovedEvent>(x, y);
         if (window.heldButtons != 0) {
             window.eventBus.Enqueue<MouseDraggedEvent>(x, y, window.heldButtons);
+        }
+    });
+    glfwSetCursorEnterCallback(handle, [](GLFWwindow* w, int entered) {
+        if (entered == GLFW_TRUE) {
+            WindowOf(w).eventBus.Enqueue<MouseEnterEvent>();
+        } else {
+            WindowOf(w).eventBus.Enqueue<MouseLeaveEvent>();
         }
     });
     glfwSetScrollCallback(handle, [](GLFWwindow* w, double dx, double dy) {

@@ -39,7 +39,7 @@ Swapchain::Swapchain(const VulkanContext& vulkan, vk::Extent2D desiredExtent, co
         .imageColorSpace = surfaceFormat.colorSpace,
         .imageExtent = extent,
         .imageArrayLayers = 1,
-        // Rendered to directly by the last pass, never sampled or copied.
+        // Rendered to directly by the last passes, never sampled or copied.
         .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
         .imageSharingMode = vk::SharingMode::eExclusive,
         .preTransform = capabilities.currentTransform,
@@ -104,13 +104,19 @@ bool Swapchain::IsSrgb() const {
 }
 
 vk::SurfaceFormatKHR Swapchain::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& available) {
-    // An sRGB format does the linear to sRGB encode in hardware on write.
+    // UNORM, with the post-process pass doing the sRGB encode itself. ImGui's
+    // colors are already sRGB encoded and meant to be written and blended as
+    // they are; an sRGB format would encode them a second time and wash the
+    // UI out. The ImGui backend picks these same formats for the windows it
+    // creates when a panel is dragged out of the main one.
     for (const vk::SurfaceFormatKHR& format : available) {
-        if (IsSrgbFormat(format.format) && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+        if ((format.format == vk::Format::eB8G8R8A8Unorm || format.format == vk::Format::eR8G8B8A8Unorm)
+            && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             return format;
         }
     }
-    // Anything else works too; the post-process pass then encodes by hand.
+    // Anything else still shows the scene correctly (IsSrgb() tells the
+    // post-process pass whether to encode), but an sRGB one brightens the UI.
     return available.front();
 }
 

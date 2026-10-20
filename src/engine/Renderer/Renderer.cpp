@@ -18,6 +18,7 @@
 #include "Utils/Log.hpp"
 
 #include "GeometryPass.hpp"
+#include "ImGuiPass.hpp"
 #include "LightingPass.hpp"
 #include "PostProcessPass.hpp"
 
@@ -99,6 +100,18 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
         .targetView = swapchain->GetImageView(*imageIndex)
     };
     renderPassManager.Execute(frameContext);
+
+    // Every pass leaves the image as a color attachment. Present waits on the
+    // semaphore the submit signals after everything in it, so nothing on the
+    // GPU side has to wait for this barrier: it only changes the layout.
+    const vk::ImageMemoryBarrier2 presentBarrier = makeImageBarrier(frameContext.targetImage, vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
+    frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo {
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &presentBarrier
+    });
 
     frame.commandBuffer.end();
 
@@ -372,6 +385,10 @@ void Renderer::SetupRenderPasses() {
         PassShaders { *postVertex.GetShaderModule(), *postFragment.GetShaderModule() },
         lightingPass, swapchain->GetFormat(), swapchain->IsSrgb());
     postProcessPass->AddDependency(lightingPass->GetName());
+
+    // ImGui over the finished image
+    auto imguiPass = renderPassManager.AddRenderPass<ImGuiPass>("ImGuiPass", extent);
+    imguiPass->AddDependency(postProcessPass->GetName());
 }
 
 } // namespace GNC

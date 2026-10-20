@@ -52,8 +52,9 @@ struct FrameContext {
     std::uint32_t frameIndex;
 
     // The swapchain image this frame ends up on, as acquired: its contents are
-    // undefined. The last pass renders into it and leaves it in
-    // ePresentSrcKHR.
+    // undefined. PostProcessPass writes it first, and every pass leaves it in
+    // eColorAttachmentOptimal; the Renderer transitions it to ePresentSrcKHR
+    // after the last pass.
     vk::Image targetImage;
     vk::ImageView targetView;
 };

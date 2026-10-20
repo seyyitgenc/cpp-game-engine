@@ -17,6 +17,7 @@
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
+#include "UI/Panels/EnginePanel.hpp"
 #include "Utils/Log.hpp"
 
 namespace GNC {
@@ -40,50 +41,63 @@ App::App()
       uploadPool(CreateUploadPool()),
       resources(MakeResourceContext()),
       cameraController(eventBus, window, camera),
-      renderer(vulkan, window.GetFramebufferExtent(), &camera) {
+      renderer(vulkan, window.GetFramebufferExtent(), &camera),
+      gui(eventBus, window, vulkan, renderer) {
     SubscribeToEvents();
     BuildScene();
+    BuildGui();
 }
 
 void App::Run() {
     Log::write(Log::Info, "Controls: hold right mouse to look, WASD to move, E/Q up/down, Shift faster, wheel zooms, Esc quits\n");
 
-    bool swapchainOutOfDate = false;
     auto previousTime = std::chrono::steady_clock::now();
 
     while (!window.ShouldClose()) {
-        window.PollEvents();
-
         const auto now = std::chrono::steady_clock::now();
         const float deltaTime = std::min(std::chrono::duration<float>(now - previousTime).count(), MaxDeltaTime);
         previousTime = now;
 
+        EventTraversal(deltaTime);
+
         // Minimized: there is no surface to render to, and a 0x0 swapchain
         // cannot exist. Sleep until something happens.
-        const vk::Extent2D extent = window.GetFramebufferExtent();
-        const bool minimized = extent.width == 0 || extent.height == 0;
-
-        // Callbacks enqueue, Flush() delivers: every listener runs here, at
-        // one known point of the frame. FrameEvent goes in behind this
-        // frame's input, and only for frames that will be drawn.
-        if (!minimized) eventBus.Enqueue<FrameEvent>(deltaTime);
-        eventBus.Flush();
-
-        if (minimized) {
+        if (window.IsMinimized()) {
             window.WaitEvents();
             continue;
         }
 
-        if (resizePending || swapchainOutOfDate) {
-            renderer.Resize(extent);
-            resizePending = false;
-        }
-
-        cameraController.Update(deltaTime);
-        scene.Update(deltaTime);
-
-        swapchainOutOfDate = !renderer.Render(scene.GetEntities());
+        UpdateTraversal(deltaTime);
+        RenderTraversal();
     }
+}
+
+// Callbacks enqueue, Flush() delivers: every listener runs here, at one known
+// point of the frame, ImGui's first. FrameEvent goes in behind this frame's
+// input, and only for frames that will be drawn.
+void App::EventTraversal(float deltaTime) {
+    window.PollEvents();
+
+    if (!window.IsMinimized()) eventBus.Enqueue<FrameEvent>(deltaTime);
+    eventBus.Flush();
+}
+
+void App::UpdateTraversal(float deltaTime) {
+    cameraController.Update(deltaTime);
+    scene.Update(deltaTime);
+}
+
+void App::RenderTraversal() {
+    if (resizePending || swapchainOutOfDate) {
+        renderer.Resize(window.GetFramebufferExtent());
+        resizePending = false;
+    }
+
+    // The UI first: ImGuiPass records the draw data it leaves.
+    gui.Render();
+    swapchainOutOfDate = !renderer.Render(scene.GetEntities());
+    // Panels dragged out of the main window draw and present on their own.
+    gui.RenderPlatformWindows();
 }
 
 vk::raii::CommandPool App::CreateUploadPool() const {
@@ -255,6 +269,11 @@ void App::BuildScene() {
 
         entity.AddComponent<OrbitComponent>(glm::vec3(0.0f, orbiter.height, 0.0f), OrbitRadius, orbiter.speed, orbiter.phase);
     }
+}
+
+// The UI's panels. ImGuiLayer renders them every frame, in this order.
+void App::BuildGui() {
+    gui.AddPanel<EnginePanel>("Engine", camera);
 }
 
 } // namespace GNC

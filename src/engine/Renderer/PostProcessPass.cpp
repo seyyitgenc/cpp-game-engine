@@ -73,20 +73,10 @@ void PostProcessPass::Render(const FrameContext& frame) {
     commandBuffer.draw(3, 1, 0, 0);
 }
 
+// The image stays a color attachment: ImGuiPass draws over it next, and the
+// Renderer transitions it for present after the last pass.
 void PostProcessPass::EndPass(const FrameContext& frame) {
     frame.commandBuffer.endRendering();
-
-    // Present waits on the semaphore the submit signals after everything in
-    // it, so nothing on the GPU side has to wait for this barrier: it only
-    // changes the layout.
-    const vk::ImageMemoryBarrier2 barrier = makeImageBarrier(frame.targetImage, vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
-        vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
-    frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo {
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &barrier
-    });
 }
 
 void PostProcessPass::CreateDescriptorSet() {

@@ -179,6 +179,19 @@ public:
     MouseDoubleClickEvent(int mouseButton, int modifiers) : MouseButtonEvent(mouseButton, modifiers) {}
 };
 
+// The cursor crossed into or out of the window's content area. Not one of
+// OSG's event kinds: GLFW reports it, and the ImGui backend needs it to know
+// when the mouse is over no window at all.
+class MouseEnterEvent : public Event {
+public:
+    GNC_EVENT_TYPE(MouseEnterEvent, EventCategory::Input | EventCategory::Mouse)
+};
+
+class MouseLeaveEvent : public Event {
+public:
+    GNC_EVENT_TYPE(MouseLeaveEvent, EventCategory::Input | EventCategory::Mouse)
+};
+
 // -------
 // Gamepad
 // -------

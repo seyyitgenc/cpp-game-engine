@@ -14,15 +14,20 @@
 #include "Resource/ResourceManager.hpp"
 #include "Resource/Types/Mesh.hpp"
 #include "Scene/Scene.hpp"
+#include "UI/ImGuiLayer.hpp"
 
 namespace GNC {
 
 // App
-// Owns everything and runs the main loop. Members are declared in dependency
-// order and C++ destroys them in reverse, which is exactly the teardown
-// needed: listeners and the scene first, then the renderer (after waiting for
-// the GPU), then GPU resources, the device, the window, and the event bus the
-// window's callbacks enqueue onto last of all.
+// Owns everything and runs the main loop. Each frame is three traversals, in
+// order: event (input and queued events are delivered), update (the world
+// moves on), render (the UI is built, the frame drawn and presented).
+//
+// Members are declared in dependency order and C++ destroys them in reverse,
+// which is exactly the teardown needed: listeners and the scene first, then
+// ImGui and the renderer (each after waiting for the GPU), then GPU resources,
+// the device, the window, and the event bus the window's callbacks enqueue
+// onto last of all.
 class App {
 public:
     // Longest step a single frame may advance the simulation by. After a stall
@@ -42,13 +47,17 @@ private:
     Camera camera;
     CameraController cameraController;
     Renderer renderer;
+    // After the renderer: its pipeline is built for the swapchain format.
+    ImGuiLayer gui;
 
     Scene scene;
 
-    // Set by the WindowResizeEvent listener, acted on by the frame loop: the
-    // listener runs at Flush(), and rebuilding the swapchain belongs at a
-    // known point of the frame, not inside a listener.
+    // Set by the WindowResizeEvent listener, acted on by the render
+    // traversal: the listener runs at Flush(), and rebuilding the swapchain
+    // belongs at a known point of the frame, not inside a listener.
     bool resizePending = false;
+    // Set when the last Renderer::Render() found the swapchain out of date.
+    bool swapchainOutOfDate = false;
 
     // App's own listeners. Declared last, so they are dropped first.
     std::vector<EventSubscription> subscriptions;
@@ -63,12 +72,17 @@ public:
     void Run();
 
 private:
+    void EventTraversal(float deltaTime);
+    void UpdateTraversal(float deltaTime);
+    void RenderTraversal();
+
     vk::raii::CommandPool CreateUploadPool() const;
     ResourceContext MakeResourceContext() const;
     void SubscribeToEvents();
 
     Mesh* LoadMesh(const std::string& id, MeshData data);
     void BuildScene();
+    void BuildGui();
 };
 
 } // namespace GNC

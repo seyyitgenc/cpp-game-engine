@@ -27,7 +27,7 @@ class VulkanContext;
 // Owns the swapchain and the frame loop around the render passes: per-frame
 // resources, acquire, record, submit, present. Deferred: GeometryPass fills a
 // G-buffer, LightingPass shades it into HDR, PostProcessPass tonemaps that
-// into the swapchain image.
+// into the swapchain image, and ImGuiPass draws the UI over it.
 //
 // Knows nothing about the window. When Render() reports the swapchain out of
 // date, or the window was resized, the owner calls Resize() with the new
@@ -79,6 +79,10 @@ public:
 
     // Every pass's pipeline layout uses this as set 0.
     const vk::raii::DescriptorSetLayout& GetGlobalSetLayout() const { return globalSetLayout; }
+
+    // The swapchain's format, which the passes drawing into it build their
+    // pipelines for. Can change when Resize() rebuilds the swapchain.
+    vk::Format GetTargetFormat() const { return swapchain->GetFormat(); }
 
     // Draws and presents one frame. Returns false when the swapchain no longer
     // matches the window; call Resize() before the next frame.
