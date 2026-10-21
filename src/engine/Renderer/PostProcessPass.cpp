@@ -10,21 +10,22 @@
 namespace GNC {
 
 PostProcessPass::PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
-                                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass,
-                                 vk::Format targetFormat, bool targetIsSrgb)
-    : RenderPass(name), context(renderContext), extent(renderExtent), lightingPass(lPass), encodeSrgb(!targetIsSrgb) {
+                                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass)
+    : RenderPass(name), context(renderContext), extent(renderExtent), lightingPass(lPass) {
+    output = Attachment(context, extent, OutputFormat,
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageAspectFlagBits::eColor);
+
     CreateDescriptorSet();
-    CreatePipeline(globalSetLayout, shaders, targetFormat);
+    CreatePipeline(globalSetLayout, shaders);
 }
 
 void PostProcessPass::BeginPass(const FrameContext& frame) {
-    // The swapchain image only becomes usable once the acquire semaphore is
-    // signaled. The submit waits on it at eColorAttachmentOutput, so starting
-    // this barrier's src scope at that same stage chains the two: the layout
-    // transition happens after the wait. The old contents are not needed.
-    const vk::ImageMemoryBarrier2 barrier = makeImageBarrier(frame.targetImage, vk::ImageAspectFlagBits::eColor,
+    // The previous frame's ImGui pass (or a platform window) may still be
+    // sampling the scene image.
+    const vk::ImageMemoryBarrier2 barrier = makeImageBarrier(*output.image, vk::ImageAspectFlagBits::eColor,
         vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone,
+        vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eNone,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite);
     frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo {
         .imageMemoryBarrierCount = 1,
@@ -33,7 +34,7 @@ void PostProcessPass::BeginPass(const FrameContext& frame) {
 
     // eDontCare: the fullscreen triangle writes every pixel.
     const vk::RenderingAttachmentInfo colorInfo {
-        .imageView = frame.targetView,
+        .imageView = *output.view,
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
         .loadOp = vk::AttachmentLoadOp::eDontCare,
         .storeOp = vk::AttachmentStoreOp::eStore
@@ -63,9 +64,10 @@ void PostProcessPass::Render(const FrameContext& frame) {
     const std::array descriptorSets { frame.globalSet, *inputSet };
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, descriptorSets, nullptr);
 
+    // The output is UNORM, so the shader encodes sRGB itself.
     const PostProcessPushConstants pushConstants {
         .exposure = exposure,
-        .encodeSrgb = encodeSrgb ? 1u : 0u
+        .encodeSrgb = 1u
     };
     commandBuffer.pushConstants<PostProcessPushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, pushConstants);
 
@@ -73,10 +75,18 @@ void PostProcessPass::Render(const FrameContext& frame) {
     commandBuffer.draw(3, 1, 0, 0);
 }
 
-// The image stays a color attachment: ImGuiPass draws over it next, and the
-// Renderer transitions it for present after the last pass.
 void PostProcessPass::EndPass(const FrameContext& frame) {
     frame.commandBuffer.endRendering();
+
+    // For ImGui, which samples it in the Viewport panel.
+    const vk::ImageMemoryBarrier2 barrier = makeImageBarrier(*output.image, vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead);
+    frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo {
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier
+    });
 }
 
 void PostProcessPass::CreateDescriptorSet() {
@@ -130,7 +140,7 @@ void PostProcessPass::CreateDescriptorSet() {
     }, {});
 }
 
-void PostProcessPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, vk::Format targetFormat) {
+void PostProcessPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders) {
     const vk::raii::Device& device = *context.device;
 
     const std::array setLayouts { globalSetLayout, *inputSetLayout };
@@ -184,7 +194,7 @@ void PostProcessPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, co
 
     const vk::PipelineRenderingCreateInfo renderingInfo {
         .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &targetFormat
+        .pColorAttachmentFormats = &OutputFormat
     };
 
     const vk::GraphicsPipelineCreateInfo pipelineInfo {

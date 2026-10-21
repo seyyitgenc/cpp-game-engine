@@ -20,6 +20,7 @@ namespace GNC {
 class Camera;
 class Entity;
 class LightComponent;
+class PostProcessPass;
 class TransformComponent;
 class VulkanContext;
 
@@ -27,11 +28,12 @@ class VulkanContext;
 // Owns the swapchain and the frame loop around the render passes: per-frame
 // resources, acquire, record, submit, present. Deferred: GeometryPass fills a
 // G-buffer, LightingPass shades it into HDR, PostProcessPass tonemaps that
-// into the swapchain image, and ImGuiPass draws the UI over it.
+// into the scene image, and ImGuiPass draws the UI, which shows the scene
+// image in its Viewport panel, into the swapchain image.
 //
 // Knows nothing about the window. When Render() reports the swapchain out of
 // date, or the window was resized, the owner calls Resize() with the new
-// framebuffer size.
+// framebuffer size. The scene has a size of its own, SetSceneExtent().
 class Renderer {
 private:
     const VulkanContext& vulkan;
@@ -53,11 +55,17 @@ private:
     std::array<FrameData, MaxFramesInFlight> frames;
     std::uint32_t currentFrame = 0;
 
-    // Every offscreen target (G-buffer, lighting output) is sized to match it,
-    // so the passes are rebuilt along with it.
     std::unique_ptr<Swapchain> swapchain;
 
+    // Every offscreen target (G-buffer, lighting output, scene image) is this
+    // size, and the camera's aspect ratio follows it.
+    vk::Extent2D sceneExtent;
+    // Counts the times the passes were built, which replaces the scene image.
+    std::uint64_t sceneVersion = 0;
+
     RenderPassManager renderPassManager;
+    // Owned by renderPassManager.
+    PostProcessPass* postProcessPass = nullptr;
     FrustumCulling cullingSystem;
 
 public:
@@ -80,18 +88,33 @@ public:
     // Every pass's pipeline layout uses this as set 0.
     const vk::raii::DescriptorSetLayout& GetGlobalSetLayout() const { return globalSetLayout; }
 
-    // The swapchain's format, which the passes drawing into it build their
-    // pipelines for. Can change when Resize() rebuilds the swapchain.
+    // The swapchain's format, which ImGui's pipeline for the main window is
+    // built for. Can change when Resize() rebuilds the swapchain.
     vk::Format GetTargetFormat() const { return swapchain->GetFormat(); }
 
     // Draws and presents one frame. Returns false when the swapchain no longer
     // matches the window; call Resize() before the next frame.
     bool Render(const std::vector<Entity*>& entities);
 
-    // Rebuilds the swapchain and every size dependent target. Waits for the
-    // GPU first. extent must not be 0x0 (minimized): skip frames until it
-    // is not.
+    // Rebuilds the swapchain and every render pass. Waits for the GPU first.
+    // extent must not be 0x0 (minimized): skip frames until it is not.
     void Resize(vk::Extent2D extent);
+
+    // -----
+    // Scene
+    // -----
+
+    // The size the scene renders at, in pixels; at least 1x1. When it
+    // changes, waits for the GPU and rebuilds every render pass.
+    void SetSceneExtent(vk::Extent2D extent);
+    vk::Extent2D GetSceneExtent() const { return sceneExtent; }
+
+    // The finished frame: tonemapped, sRGB encoded RGBA8, sceneExtent in
+    // size, and in eShaderReadOnlyOptimal outside the post-process pass.
+    // Replaced whenever the passes are rebuilt, which GetSceneVersion()
+    // counts; the GPU is idle when that happens.
+    vk::ImageView GetSceneView() const;
+    std::uint64_t GetSceneVersion() const { return sceneVersion; }
 
 private:
     void CreateCommandPool();
@@ -104,6 +127,8 @@ private:
     static GpuLight MakeGpuLight(const LightComponent& light, const TransformComponent* transform);
 
     void UpdateCameraAspect();
+    // The GPU must be idle.
+    void RebuildRenderPasses();
     void SetupRenderPasses();
 };
 

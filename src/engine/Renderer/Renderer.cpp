@@ -50,6 +50,8 @@ Renderer::Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Came
     CreateFrameResources();
 
     swapchain = std::make_unique<Swapchain>(vulkan, extent);
+    // Until the Viewport panel says otherwise.
+    sceneExtent = swapchain->GetExtent();
     UpdateCameraAspect();
 
     // Set up render passes
@@ -116,7 +118,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     frame.commandBuffer.end();
 
     // The swapchain image is first written at eColorAttachmentOutput (by the
-    // post-process pass), so that is where the wait for acquire goes.
+    // ImGui pass), so that is where the wait for acquire goes.
     const vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     const vk::Semaphore imageAvailable = *frame.imageAvailableSemaphore;
     const vk::Semaphore renderFinished = swapchain->GetRenderFinishedSemaphore(*imageIndex);
@@ -140,14 +142,26 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
 void Renderer::Resize(vk::Extent2D extent) {
     context.device->waitIdle();
 
-    // Passes first: they hold views of targets sized for the old swapchain.
-    renderPassManager.Clear();
     // The old swapchain stays alive until the new one exists, so the driver
     // can hand its resources over.
     swapchain = std::make_unique<Swapchain>(vulkan, extent, swapchain.get());
 
-    UpdateCameraAspect();
-    SetupRenderPasses();
+    // ImGuiPass is sized for the swapchain.
+    RebuildRenderPasses();
+}
+
+void Renderer::SetSceneExtent(vk::Extent2D extent) {
+    extent.width = std::max(extent.width, 1u);
+    extent.height = std::max(extent.height, 1u);
+    if (extent == sceneExtent) return;
+
+    context.device->waitIdle();
+    sceneExtent = extent;
+    RebuildRenderPasses();
+}
+
+vk::ImageView Renderer::GetSceneView() const {
+    return *postProcessPass->GetOutput().view;
 }
 
 void Renderer::CreateCommandPool() {
@@ -345,8 +359,15 @@ GpuLight Renderer::MakeGpuLight(const LightComponent& light, const TransformComp
 void Renderer::UpdateCameraAspect() {
     if (!camera) return;
 
-    const vk::Extent2D extent = swapchain->GetExtent();
-    camera->SetAspectRatio(static_cast<float>(extent.width) / static_cast<float>(extent.height));
+    camera->SetAspectRatio(static_cast<float>(sceneExtent.width) / static_cast<float>(sceneExtent.height));
+}
+
+void Renderer::RebuildRenderPasses() {
+    postProcessPass = nullptr;
+    renderPassManager.Clear();
+
+    UpdateCameraAspect();
+    SetupRenderPasses();
 }
 
 void Renderer::SetupRenderPasses() {
@@ -362,17 +383,15 @@ void Renderer::SetupRenderPasses() {
         LoadShader(*shader, shaderContext);
     }
 
-    const vk::Extent2D extent = swapchain->GetExtent();
-
     // Create geometry pass
     auto geometryPass = renderPassManager.AddRenderPass<GeometryPass>("GeometryPass",
-        context, extent, *globalSetLayout,
+        context, sceneExtent, *globalSetLayout,
         PassShaders { *geometryVertex.GetShaderModule(), *geometryFragment.GetShaderModule() },
         &cullingSystem);
 
     // Create lighting pass
     auto lightingPass = renderPassManager.AddRenderPass<LightingPass>("LightingPass",
-        context, extent, *globalSetLayout,
+        context, sceneExtent, *globalSetLayout,
         PassShaders { *lightingVertex.GetShaderModule(), *lightingFragment.GetShaderModule() },
         geometryPass);
     // The manager runs passes in dependency order, and without dependencies
@@ -380,15 +399,17 @@ void Renderer::SetupRenderPasses() {
     lightingPass->AddDependency(geometryPass->GetName());
 
     // Create post-process pass
-    auto postProcessPass = renderPassManager.AddRenderPass<PostProcessPass>("PostProcessPass",
-        context, extent, *globalSetLayout,
+    postProcessPass = renderPassManager.AddRenderPass<PostProcessPass>("PostProcessPass",
+        context, sceneExtent, *globalSetLayout,
         PassShaders { *postVertex.GetShaderModule(), *postFragment.GetShaderModule() },
-        lightingPass, swapchain->GetFormat(), swapchain->IsSrgb());
+        lightingPass);
     postProcessPass->AddDependency(lightingPass->GetName());
 
-    // ImGui over the finished image
-    auto imguiPass = renderPassManager.AddRenderPass<ImGuiPass>("ImGuiPass", extent);
+    // The UI into the swapchain image, after the scene image it shows
+    auto imguiPass = renderPassManager.AddRenderPass<ImGuiPass>("ImGuiPass", swapchain->GetExtent());
     imguiPass->AddDependency(postProcessPass->GetName());
+
+    ++sceneVersion;
 }
 
 } // namespace GNC

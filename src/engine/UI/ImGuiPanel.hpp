@@ -37,6 +37,11 @@ public:
     // ShowDemoWindow), which clear it when the window is closed.
     bool* GetVisibleFlag() { return &visible; }
 
+    // True to dock into the dockspace's central node the first time the
+    // window opens, before imgui.ini has a place for it. Render()'s first
+    // Begin() must then be the panel's own window.
+    virtual bool DocksInCentralNode() const { return false; }
+
     // Called only while the panel is visible.
     virtual void Render() = 0;
 };

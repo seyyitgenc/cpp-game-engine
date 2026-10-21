@@ -9,10 +9,11 @@
 namespace GNC {
 
 // ImGui pass
-// Draws ImGui's main window over the post-processed swapchain image: whatever
-// ImGui::Render() produced this frame (see UI/ImGuiLayer). Loads the image
-// rather than clearing it, and leaves it as a color attachment like the passes
-// before it.
+// Draws ImGui's main window into the swapchain image: whatever ImGui::Render()
+// produced this frame (see UI/ImGuiLayer), including the Viewport panel that
+// shows PostProcessPass's scene image. The only pass that writes the swapchain
+// image: clears it, and leaves it as a color attachment for the Renderer to
+// present.
 //
 // Owns no GPU objects. The pipeline, vertex buffers and font atlas belong to
 // the ImGui Vulkan backend, which ImGuiLayer sets up. Without an ImGui context

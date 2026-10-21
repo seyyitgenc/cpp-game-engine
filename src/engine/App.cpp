@@ -19,6 +19,7 @@
 #include "Resource/Primitives.hpp"
 #include "UI/Panels/DemoWindowPanel.hpp"
 #include "UI/Panels/EnginePanel.hpp"
+#include "UI/Panels/ViewportPanel.hpp"
 #include "Utils/Log.hpp"
 
 namespace GNC {
@@ -94,7 +95,8 @@ void App::RenderTraversal() {
         resizePending = false;
     }
 
-    // The UI first: ImGuiPass records the draw data it leaves.
+    // The UI first: ImGuiPass records the draw data it leaves, and the
+    // Viewport panel sets the scene's size.
     gui.Render();
     swapchainOutOfDate = !renderer.Render(scene.GetEntities());
     // Panels dragged out of the main window draw and present on their own.
@@ -287,6 +289,7 @@ void App::BuildGui() {
     // View
     // ----
     ImGuiMenu& view = menuBar.GetMenu("View");
+    view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
     view.AddSeparator();
     view.AddPanelItem(*gui.AddPanel<DemoWindowPanel>("ImGui Demo"));

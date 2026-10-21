@@ -13,18 +13,21 @@ class LightingPass;
 
 // Post-processing pass
 // Exposure and tonemapping from the lighting pass's linear HDR output into the
-// swapchain image (FrameContext::targetView). The first pass to write that
-// image; it leaves it as a color attachment for the passes after it.
-// shaders/post_process.slang.
+// scene image (GetOutput()), which the Viewport panel shows through ImGui.
+// Leaves it in eShaderReadOnlyOptimal. shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
+public:
+    // UNORM, holding values the shader has already sRGB encoded: ImGui copies
+    // texels to the UNORM swapchain as they are. An sRGB format would be
+    // decoded when sampled and show too dark.
+    static constexpr vk::Format OutputFormat = vk::Format::eR8G8B8A8Unorm;
+
 private:
     RenderTargetContext context;
     vk::Extent2D extent;
     LightingPass* lightingPass;
 
-    // Without an sRGB swapchain format the shader applies the sRGB transfer
-    // function itself.
-    bool encodeSrgb;
+    Attachment output;
 
     // Scales scene radiance before tonemapping. 1 suits the current scene;
     // physically based light units will want it driven by a camera exposure
@@ -41,10 +44,10 @@ private:
     vk::raii::Pipeline pipeline = nullptr;
 
 public:
-    // targetFormat is the swapchain's; targetIsSrgb whether it encodes on write.
     PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
-                    vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass,
-                    vk::Format targetFormat, bool targetIsSrgb);
+                    vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass);
+
+    const Attachment& GetOutput() const { return output; }
 
 protected:
     void BeginPass(const FrameContext& frame) override;
@@ -53,7 +56,7 @@ protected:
 
 private:
     void CreateDescriptorSet();
-    void CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, vk::Format targetFormat);
+    void CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders);
 };
 
 } // namespace GNC

@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
+#include <imgui_internal.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -86,8 +87,9 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
     initInfo.Device = static_cast<VkDevice>(*vulkan.GetDevice());
     initInfo.QueueFamily = vulkan.GetQueueFamilyIndex();
     initInfo.Queue = static_cast<VkQueue>(*vulkan.GetQueue());
-    // The backend makes its own descriptor pool, sized for the font atlas.
-    initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
+    // The backend makes its own descriptor pool, sized for the font atlas
+    // and the panels' textures.
+    initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE + MaxUserTextures;
     // ImageCount is how many copies of its vertex and index buffers the
     // backend cycles through, and how many frames it waits before freeing a
     // texture: one per frame in flight. MinImageCount is only for the
@@ -107,6 +109,10 @@ ImGuiLayer::~ImGuiLayer() {
     subscriptions.clear();
 
     vulkan.GetDevice().waitIdle();
+    // Panels may own textures registered with the Vulkan backend.
+    menuBar = ImGuiMenu {};
+    panels.clear();
+
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     // Also saves the layout to imgui.ini.
@@ -123,22 +129,23 @@ ImGuiPanel* ImGuiLayer::GetPanel(const std::string& name) const {
 void ImGuiLayer::Render() {
     NewFrame();
 
-    // The bar takes its height out of the main viewport's work area, which
-    // is all the dockspace below covers, so docked panels sit under the bar
-    // rather than behind it. The bar reports its height for the next frame,
-    // so this order only matters on the first one.
     if (ImGui::BeginMainMenuBar()) {
         menuBar.Render();
         ImGui::EndMainMenuBar();
     }
 
-    // Panels dock to the window's edges. Passthru keeps the middle (the
-    // central node) see-through and lets clicks there fall through to the
-    // scene, so docked panels frame the 3D view instead of covering it.
-    ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+    // Not passthru: the scene is the Viewport panel's, docked in the central
+    // node like any other panel.
+    const ImGuiID dockSpaceId = ImGui::DockSpaceOverViewport(0, nullptr);
+    const ImGuiDockNode* centralNode = ImGui::DockBuilderGetCentralNode(dockSpaceId);
+    const ImGuiID centralNodeId = centralNode ? centralNode->ID : dockSpaceId;
 
     for (const std::unique_ptr<ImGuiPanel>& panel : panels) {
-        if (panel->IsVisible()) panel->Render();
+        if (!panel->IsVisible()) continue;
+
+        // Only while the window has no settings yet.
+        if (panel->DocksInCentralNode()) ImGui::SetNextWindowDockID(centralNodeId, ImGuiCond_FirstUseEver);
+        panel->Render();
     }
 
     ImGui::Render();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -51,6 +52,10 @@ public:
     // Lets panels leave the main window (ImGuiConfigFlags_ViewportsEnable).
     static constexpr bool EnableViewports = true;
 
+    // Images panels show through ImGui_ImplVulkan_AddTexture (the Viewport's
+    // scene image), on top of what the font atlas needs.
+    static constexpr std::uint32_t MaxUserTextures = 8;
+
 private:
     Window& window;
     const VulkanContext& vulkan;
@@ -76,7 +81,8 @@ public:
     ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanContext, const Renderer& rend);
 
     // Waits for the GPU first: frames in flight may still read the backend's
-    // buffers and font atlas.
+    // buffers and font atlas. Destroys the panels before the backends, so
+    // they can still free their textures.
     ~ImGuiLayer();
 
     // There is one ImGui context, and the listeners capture this.
@@ -111,18 +117,14 @@ public:
     // --------
     // Menu Bar
     // --------
-
-    // Its submenus are the bar's dropdown menus; an item added to it directly
-    // is a button on the bar. A panel gets a menu item only through
-    // ImGuiMenu::AddPanelItem().
     ImGuiMenu& GetMenuBar() { return menuBar; }
 
     // -----
     // Frame
     // -----
 
-    // Builds this frame's UI: the menu bar, a dockspace over the rest of the
-    // main window, then every visible panel. Leaves the draw data ImGuiPass
+    // Builds this frame's UI: the menu bar, a dockspace
+    // then every visible panel. Leaves the draw data ImGuiPass
     // records, so call it before Renderer::Render(), and after any
     // Renderer::Resize() of the frame.
     void Render();

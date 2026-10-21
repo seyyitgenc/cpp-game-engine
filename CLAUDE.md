@@ -73,6 +73,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 3. **`RenderTraversal()`:**
    - `renderer.Resize(extent)` if a `WindowResizeEvent` arrived or the last `Render()` returned false (swapchain out of date). `Resize` rebuilds the swapchain *and every render pass*.
    - `gui.Render()` builds the UI, then `renderer.Render(scene.GetEntities())` draws the frame, then `gui.RenderPlatformWindows()`.
+   - The Viewport panel calls `renderer.SetSceneExtent()` from inside `gui.Render()`. A size change waits for the GPU and rebuilds every render pass, as `Resize` does.
 
 ### Events and input (`src/engine/Event/`, `Platform/Window`)
 
@@ -101,12 +102,14 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 
 1. **GeometryPass** draws every visible `MeshComponent` into the G-buffer: base color, octahedral-encoded normal, occlusion/roughness/metallic, emissive, and D32 depth. The formats live in the `GBuffer` struct (`GeometryPass.hpp`) and must match `shaders/common/gbuffer.slang`.
 2. **LightingPass** runs a fullscreen triangle. It rebuilds world position from depth with `inverseViewProjection`, loops over every light with the Cook-Torrance BRDF (`shaders/common/brdf.slang`), adds flat ambient and emissive, and writes linear HDR (`R16G16B16A16_SFLOAT`).
-3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into the swapchain image (taken from `FrameContext::targetImage`/`targetView`). If the swapchain format is not sRGB, it applies the sRGB encoding itself.
-   - The swapchain *prefers* a UNORM format, so this is the normal path. ImGui's colors are already sRGB encoded; an sRGB swapchain would encode them again and wash the UI out.
-4. **ImGuiPass** loads the image and draws ImGui's draw data over it with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
+3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into its own output, the *scene image* (`R8G8B8A8_UNORM`, `Renderer::GetSceneView()`). The shader applies the sRGB encoding itself, and `EndPass` leaves the image in `eShaderReadOnlyOptimal` for ImGui, which shows it in the Viewport panel.
+   - UNORM on purpose: ImGui copies texels to the swapchain as they are. An sRGB scene image would be decoded when sampled and show too dark.
+   - The swapchain *prefers* a UNORM format too. ImGui's colors are already sRGB encoded; an sRGB swapchain would encode them again and wash the UI (and the scene in it) out.
+4. **ImGuiPass** is the only pass that writes the swapchain image (`FrameContext::targetImage`/`targetView`). It does the acquire barrier, clears the image, and draws ImGui's draw data with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
 
 How passes work together:
-- **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers.
+- **Sizes:** the G-buffer, the HDR target and the scene image are all `Renderer`'s *scene extent* (the Viewport panel's size, `SetSceneExtent()`), not the swapchain's. Only ImGuiPass is swapchain-sized. The lighting shader takes the size from `gDepth.GetDimensions`, so the targets must be exactly the scene's size.
+- **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers, which for the scene image are ImGui's (also in platform windows).
   - The swapchain image stays in `eColorAttachmentOptimal` through every pass. `Renderer::Render` transitions it to `ePresentSrcKHR` after the last one, so a pass can be added at the end without moving that barrier.
 - **Descriptor sets:** set 0 is always the global set (binding 0 camera, binding 1 lights) and every pipeline layout includes it. Set 1 holds the pass's inputs, which shaders read with `Texture2D.Load()`: sampled images, no samplers.
 - **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix plus material factors, which must stay ≤128 bytes).
@@ -115,11 +118,17 @@ How passes work together:
 ### ImGui (`src/engine/UI/ImGuiLayer`)
 
 - **Library:** Dear ImGui's docking branch, vendored as plain files in `src/external/ImGui` (core plus `backends/imgui_impl_glfw` and `imgui_impl_vulkan`, unmodified), built as the `imgui` static library. `CMakeLists.txt` records the upstream commit and how to update.
-- **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format) and waits for the GPU before shutting the backends down.
+- **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format). On destruction it waits for the GPU and destroys its panels, so they can still free their textures, before shutting the backends down.
 - **Panels:** the UI is made of `ImGuiPanel`s (`UI/ImGuiPanel.hpp`), each with a name, a visibility flag and a `Render()` that opens its own window with `ImGui::Begin(GetName().c_str(), GetVisibleFlag())`. Passing the flag gives the window a close button. `ImGuiLayer` is their manager:
   - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels and menus in `App::BuildGui()`.
-  - `gui.Render()` runs the whole ImGui frame: NewFrame, the main menu bar, a passthru dockspace over the rest of the main window, every *visible* panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
-  - App-specific panels live in `UI/Panels/` (`EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+  - `gui.Render()` runs the whole ImGui frame: NewFrame, the main menu bar, a dockspace over the rest of the main window (not passthru), every *visible* panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
+  - A panel whose `DocksInCentralNode()` returns true docks into the dockspace's central node the first time its window exists (`SetNextWindowDockID`, `ImGuiCond_FirstUseEver`). After that, `imgui.ini` decides.
+  - App-specific panels live in `UI/Panels/` (`ViewportPanel`: the scene; `EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+- **Viewport:** `ViewportPanel` shows the scene image and sizes the scene to its content area with `renderer.SetSceneExtent()`.
+  - It registers the image with `ImGui_ImplVulkan_AddTexture` (the backend brings its own sampler). It re-registers whenever `Renderer::GetSceneVersion()` changes, since every pass rebuild replaces the image after a wait for the GPU. It compares versions, not view handles, because a recreated view can reuse the old handle value.
+  - The backend's descriptor pool has room for `ImGuiLayer::MaxUserTextures` such textures on top of the font atlas.
+  - An `InvisibleButton` over the image takes left clicks, so a floating viewport is not dragged. While the image is hovered, the panel calls `SetNextFrameWantCaptureMouse(false)`, so the layer lets mouse events through to the camera. Holding the left button on it makes ImGui capture the keyboard (an active item); right-drag + WASD is unaffected.
+  - Dragged out into its own OS window, the viewport still shows the scene, but that window's input bypasses the bus, so the camera does not respond there.
 - **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
   - The bar's submenus are its dropdown menus; an item added to the bar itself is a button on it.
   - The shortcut text is display only; bind the key with an event listener.

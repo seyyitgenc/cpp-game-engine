@@ -104,19 +104,18 @@ bool Swapchain::IsSrgb() const {
 }
 
 vk::SurfaceFormatKHR Swapchain::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& available) {
-    // UNORM, with the post-process pass doing the sRGB encode itself. ImGui's
-    // colors are already sRGB encoded and meant to be written and blended as
-    // they are; an sRGB format would encode them a second time and wash the
-    // UI out. The ImGui backend picks these same formats for the windows it
-    // creates when a panel is dragged out of the main one.
+    // UNORM: only ImGui draws into it, and its colors, the scene image it
+    // shows included, are already sRGB encoded and meant to be written and
+    // blended as they are; an sRGB format would encode them a second time
+    // and wash the UI out. The ImGui backend picks these same formats for the
+    // windows it creates when a panel is dragged out of the main one.
     for (const vk::SurfaceFormatKHR& format : available) {
         if ((format.format == vk::Format::eB8G8R8A8Unorm || format.format == vk::Format::eR8G8B8A8Unorm)
             && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             return format;
         }
     }
-    // Anything else still shows the scene correctly (IsSrgb() tells the
-    // post-process pass whether to encode), but an sRGB one brightens the UI.
+    // Anything else works, but an sRGB one brightens the UI and the scene.
     return available.front();
 }
 
