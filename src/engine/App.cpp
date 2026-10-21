@@ -17,6 +17,7 @@
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
+#include "UI/Panels/DemoWindowPanel.hpp"
 #include "UI/Panels/EnginePanel.hpp"
 #include "Utils/Log.hpp"
 
@@ -271,9 +272,24 @@ void App::BuildScene() {
     }
 }
 
-// The UI's panels. ImGuiLayer renders them every frame, in this order.
+// The menu bar and the UI's panels. Menu entries appear in the order added,
+// and ImGuiLayer renders the visible panels every frame in the order added.
 void App::BuildGui() {
-    gui.AddPanel<EnginePanel>("Engine", camera);
+    ImGuiMenu& menuBar = gui.GetMenuBar();
+
+    // ----
+    // File
+    // ----
+    // Asks to quit, as Esc does (see SubscribeToEvents()).
+    menuBar.GetMenu("File").AddItem("Quit", [this] { eventBus.Enqueue<QuitApplicationEvent>(); }, { .shortcut = "Esc" });
+
+    // ----
+    // View
+    // ----
+    ImGuiMenu& view = menuBar.GetMenu("View");
+    view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
+    view.AddSeparator();
+    view.AddPanelItem(*gui.AddPanel<DemoWindowPanel>("ImGui Demo"));
 }
 
 } // namespace GNC

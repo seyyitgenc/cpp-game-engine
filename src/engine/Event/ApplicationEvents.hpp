@@ -65,9 +65,9 @@ public:
 };
 
 // A request to quit, from anything that wants the application to end (the
-// Esc binding, later a menu). App's listener closes the window; the loop
-// exits before the next frame. WindowCloseEvent is the window's close button,
-// which GLFW already acts on by itself.
+// Esc binding, File > Quit in the menu bar). App's listener closes the
+// window; the loop exits before the next frame. WindowCloseEvent is the
+// window's close button, which GLFW already acts on by itself.
 class QuitApplicationEvent : public Event {
 public:
     GNC_EVENT_TYPE(QuitApplicationEvent, EventCategory::Application)

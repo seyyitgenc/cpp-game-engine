@@ -9,6 +9,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "Event/EventBus.hpp"
+#include "ImGuiMenu.hpp"
 #include "ImGuiPanel.hpp"
 
 namespace GNC {
@@ -20,8 +21,12 @@ class Window;
 // ImGui layer
 // Dear ImGui (docking branch, src/external/ImGui) on its official GLFW and
 // Vulkan backends, and the manager of the UI's panels. Owns the ImGui context,
-// both backends and every panel. ImGuiPass, in the Renderer, records the main
-// window's UI into each frame.
+// both backends, every panel and the main menu bar. ImGuiPass, in the
+// Renderer, records the main window's UI into each frame.
+//
+// The menu bar runs along the top of the main window, above the dockspace.
+// Its menus (GetMenuBar(), an ImGuiMenu tree) hold commands, submenus and
+// check mark items that show and hide panels; only visible panels render.
 //
 // Input reaches ImGui through the event bus, not through GLFW callbacks of its
 // own: Window's callbacks stay the only ones on the main window. The listeners
@@ -59,6 +64,9 @@ private:
 
     // In the order they were added, which is the order they render in.
     std::vector<std::unique_ptr<ImGuiPanel>> panels;
+
+    // After the panels, so it is destroyed first: its items point at them.
+    ImGuiMenu menuBar;
 
     std::vector<EventSubscription> subscriptions;
 
@@ -100,13 +108,23 @@ public:
     // nullptr when there is none.
     ImGuiPanel* GetPanel(const std::string& name) const;
 
+    // --------
+    // Menu Bar
+    // --------
+
+    // Its submenus are the bar's dropdown menus; an item added to it directly
+    // is a button on the bar. A panel gets a menu item only through
+    // ImGuiMenu::AddPanelItem().
+    ImGuiMenu& GetMenuBar() { return menuBar; }
+
     // -----
     // Frame
     // -----
 
-    // Builds this frame's UI: a dockspace over the main window, then every
-    // panel. Leaves the draw data ImGuiPass records, so call it before
-    // Renderer::Render(), and after any Renderer::Resize() of the frame.
+    // Builds this frame's UI: the menu bar, a dockspace over the rest of the
+    // main window, then every visible panel. Leaves the draw data ImGuiPass
+    // records, so call it before Renderer::Render(), and after any
+    // Renderer::Resize() of the frame.
     void Render();
 
     // Draws and presents the panels outside the main window. Call after

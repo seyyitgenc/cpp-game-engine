@@ -123,13 +123,22 @@ ImGuiPanel* ImGuiLayer::GetPanel(const std::string& name) const {
 void ImGuiLayer::Render() {
     NewFrame();
 
+    // The bar takes its height out of the main viewport's work area, which
+    // is all the dockspace below covers, so docked panels sit under the bar
+    // rather than behind it. The bar reports its height for the next frame,
+    // so this order only matters on the first one.
+    if (ImGui::BeginMainMenuBar()) {
+        menuBar.Render();
+        ImGui::EndMainMenuBar();
+    }
+
     // Panels dock to the window's edges. Passthru keeps the middle (the
     // central node) see-through and lets clicks there fall through to the
     // scene, so docked panels frame the 3D view instead of covering it.
     ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 
     for (const std::unique_ptr<ImGuiPanel>& panel : panels) {
-        panel->Render();
+        if (panel->IsVisible()) panel->Render();
     }
 
     ImGui::Render();

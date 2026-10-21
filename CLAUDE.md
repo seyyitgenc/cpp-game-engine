@@ -63,7 +63,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 
 ### Ownership and the frame loop
 
-`App` (`src/engine/app.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → ImGuiLayer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
+`App` (`src/engine/App.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → ImGuiLayer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
 
 `App::Run()` computes the frame time (capped at `App::MaxDeltaTime`), then runs three traversals in order, as OSG's viewer does:
 
@@ -116,10 +116,15 @@ How passes work together:
 
 - **Library:** Dear ImGui's docking branch, vendored as plain files in `src/external/ImGui` (core plus `backends/imgui_impl_glfw` and `imgui_impl_vulkan`, unmodified), built as the `imgui` static library. `CMakeLists.txt` records the upstream commit and how to update.
 - **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format) and waits for the GPU before shutting the backends down.
-- **Panels:** the UI is made of `ImGuiPanel`s (`UI/ImGuiPanel.hpp`), each with a name and a `Render()` that opens its own window with `ImGui::Begin(GetName().c_str())`. `ImGuiLayer` is their manager:
-  - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels in `App::BuildGui()`.
-  - `gui.Render()` runs the whole ImGui frame: NewFrame, a passthru dockspace over the main window, every panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
-  - App-specific panels live in `UI/Panels/` (`EnginePanel`: FPS, camera position, the demo window toggle).
+- **Panels:** the UI is made of `ImGuiPanel`s (`UI/ImGuiPanel.hpp`), each with a name, a visibility flag and a `Render()` that opens its own window with `ImGui::Begin(GetName().c_str(), GetVisibleFlag())`. Passing the flag gives the window a close button. `ImGuiLayer` is their manager:
+  - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels and menus in `App::BuildGui()`.
+  - `gui.Render()` runs the whole ImGui frame: NewFrame, the main menu bar, a passthru dockspace over the rest of the main window, every *visible* panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
+  - App-specific panels live in `UI/Panels/` (`EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+- **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
+  - The bar's submenus are its dropdown menus; an item added to the bar itself is a button on it.
+  - The shortcut text is display only; bind the key with an event listener.
+  - Commands run inside the ImGui frame, before the frame is drawn. Anything outside the UI should be changed by enqueuing an event (File > Quit enqueues `QuitApplicationEvent`), not directly.
+  - Which panels are visible is not saved; `imgui.ini` only keeps window positions and docking.
 - **Input comes from the bus**, not from GLFW callbacks: the GLFW backend is initialized with `install_callbacks = false`. Listeners at `ImGuiLayer::EventPriority` pass each event to the matching `ImGui_ImplGlfw_*Callback` and return `io.WantCaptureMouse`/`WantCaptureKeyboard` to swallow it. Releases, focus and enter/leave are never swallowed.
   - While the camera has the cursor captured, the layer ignores mouse input and sets `ImGuiConfigFlags_NoMouse`.
   - Platform windows the backend creates (panels dragged out of the main window) get the backend's own callbacks; their input never reaches the bus.
