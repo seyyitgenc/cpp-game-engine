@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "ECS/Entity/Entity.hpp"
@@ -13,7 +14,8 @@ namespace GNC {
 // Scene
 // Owns the entities and the materials their MeshComponents point at, behind
 // unique_ptr so addresses stay valid. Materials are declared first, so they
-// outlive the entities.
+// outlive the entities. Entities form a tree through their parents; the
+// list stays flat, in the order created.
 class Scene {
 private:
     std::vector<std::unique_ptr<Material>> materials;
@@ -22,20 +24,24 @@ private:
 
 public:
     // Already initialized, so components added afterwards initialize as they
-    // join.
-    Entity& CreateEntity(const std::string& name) {
+    // join. parent, if any, must be in this scene.
+    Entity& CreateEntity(const std::string& name, Entity* parent = nullptr) {
         entities.push_back(std::make_unique<Entity>(name));
         Entity& entity = *entities.back();
+        if (parent) {
+            entity.parent = parent;
+            parent->children.push_back(&entity);
+        }
         entity.Initialize();
         entityViews.push_back(&entity);
         return entity;
     }
 
-    // name, or "name 1", "name 2", ... when an entity already has it.
-    std::string MakeUniqueName(const std::string& name) const {
-        auto taken = [this](const std::string& candidate) {
-            return std::ranges::any_of(entities, [&](const std::unique_ptr<Entity>& entity) {
-                return entity->GetName() == candidate;
+    // name, or "name 1", "name 2", ... when a sibling already has it.
+    std::string MakeUniqueName(const std::string& name, const Entity* parent = nullptr) const {
+        auto taken = [&](const std::string& candidate) {
+            return std::ranges::any_of(entityViews, [&](const Entity* entity) {
+                return entity->parent == parent && entity->GetName() == candidate;
             });
         };
 
@@ -51,11 +57,26 @@ public:
         return std::ranges::find(entityViews, entity) != entityViews.end();
     }
 
-    // Its components go with it; its materials stay. Whatever else points at
-    // it (Selection, Renderer::ForgetEntity()) must let go first.
-    void DestroyEntity(const Entity* entity) {
-        std::erase(entityViews, entity);
-        std::erase_if(entities, [entity](const std::unique_ptr<Entity>& owned) { return owned.get() == entity; });
+    // root first, then its descendants.
+    static std::vector<Entity*> GetSubtree(Entity& root) {
+        std::vector<Entity*> subtree { &root };
+        for (std::size_t i = 0; i < subtree.size(); ++i) {
+            const std::vector<Entity*>& children = subtree[i]->children;
+            subtree.insert(subtree.end(), children.begin(), children.end());
+        }
+        return subtree;
+    }
+
+    // Its descendants go with it, and their components with each; their
+    // materials stay. Whatever else points at any of them (Selection,
+    // Renderer::ForgetEntity()) must let go first.
+    void DestroyEntity(Entity* entity) {
+        if (entity->parent) std::erase(entity->parent->children, entity);
+
+        const std::vector<Entity*> subtree = GetSubtree(*entity);
+        const std::unordered_set<const Entity*> doomed(subtree.begin(), subtree.end());
+        std::erase_if(entityViews, [&](const Entity* view) { return doomed.contains(view); });
+        std::erase_if(entities, [&](const std::unique_ptr<Entity>& owned) { return doomed.contains(owned.get()); });
     }
 
     Material* CreateMaterial(const Material& material) {

@@ -3,6 +3,8 @@
 #include "Component.hpp"
 #include "Property.hpp"
 
+#include "../Entity/Entity.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -10,8 +12,8 @@
 namespace GNC {
 
 // Transform component
-// Handles the position, rotation, and scale of an entity in 3D space
-// AffineTransform or "Pose" matrix.
+// Position, rotation and scale relative to the nearest ancestor that has a
+// transform (the world, if none does).
 class TransformComponent : public Component {
 private:
     glm::vec3 position = glm::vec3(0.0f);
@@ -40,11 +42,27 @@ public:
         transformDirty = true;
     }
 
+    // Split into position, rotation and scale; shear is lost, and a
+    // mirroring matrix comes back as a negative x scale.
+    void SetLocalMatrix(const glm::mat4& matrix) {
+        glm::vec3 axes[3] = { glm::vec3(matrix[0]), glm::vec3(matrix[1]), glm::vec3(matrix[2]) };
+        glm::vec3 lengths(glm::length(axes[0]), glm::length(axes[1]), glm::length(axes[2]));
+        if (glm::dot(glm::cross(axes[0], axes[1]), axes[2]) < 0.0f) lengths.x = -lengths.x;
+
+        position = glm::vec3(matrix[3]);
+        scale = lengths;
+        // A zero scale leaves no axis to take the rotation from.
+        if (lengths.x != 0.0f && lengths.y != 0.0f && lengths.z != 0.0f) {
+            rotation = glm::normalize(glm::quat_cast(glm::mat3 { axes[0] / lengths.x, axes[1] / lengths.y, axes[2] / lengths.z }));
+        }
+        transformDirty = true;
+    }
+
     const glm::vec3& GetPosition() const { return position; }
     const glm::quat& GetRotation() const { return rotation; }
     const glm::vec3& GetScale() const { return scale; }
 
-    glm::mat4 GetTransformMatrix() const {
+    glm::mat4 GetLocalMatrix() const {
         if (transformDirty) {
             // Calculate transformation matrix
             glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
@@ -56,6 +74,16 @@ public:
         }
         return transformMatrix;
     }
+
+    // Not cached: each call walks up through the ancestors.
+    glm::mat4 GetParentMatrix() const {
+        for (Entity* ancestor = owner ? owner->GetParent() : nullptr; ancestor; ancestor = ancestor->GetParent()) {
+            if (const TransformComponent* transform = ancestor->GetComponent<TransformComponent>()) return transform->GetWorldMatrix();
+        }
+        return glm::mat4(1.0f);
+    }
+
+    glm::mat4 GetWorldMatrix() const { return GetParentMatrix() * GetLocalMatrix(); }
 
     static void Reflect(PropertyList<TransformComponent>& properties) {
         properties.Add<glm::vec3>(

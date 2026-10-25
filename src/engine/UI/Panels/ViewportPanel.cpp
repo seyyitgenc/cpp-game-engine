@@ -60,7 +60,7 @@ ViewportPanel::~ViewportPanel() {
 
 void ViewportPanel::Render() {
     // A click on the background answers nullptr, which deselects.
-    if (const std::optional<Entity*> picked = renderer.TakePickResult()) selection.Select(*picked);
+    if (const std::optional<Entity*> picked = renderer.TakePickResult()) selection.Select(ClickTarget(*picked));
 
     // ImGuizmo only takes a press while no ImGui item is hovered or active,
     // so over the gizmo (as of last frame) the image gets no button, and the
@@ -124,7 +124,18 @@ void ViewportPanel::Render() {
     ImGui::End();
 
     renderer.SetHoverPixel(hoverPixel);
-    renderer.SetOutlinedEntities(selection.GetEntity(), renderer.GetHoveredEntity());
+    // The hover shows what a click would select.
+    renderer.SetOutlinedEntities(selection.GetEntity(), ClickTarget(renderer.GetHoveredEntity()));
+}
+
+// A model is selected whole first; once something in its tree is selected,
+// a click selects the entity drawn there.
+Entity* ViewportPanel::ClickTarget(Entity* picked) const {
+    if (!picked) return nullptr;
+
+    Entity& root = picked->GetRoot();
+    const Entity* selected = selection.GetEntity();
+    return selected && selected->IsInSubtree(&root) ? picked : &root;
 }
 
 // Every new scene version follows a wait for the GPU, so nothing in flight
@@ -159,13 +170,20 @@ void ViewportPanel::RenderGizmo(const ImVec2& min, const ImVec2& size) {
     ImGuizmo::SetDrawlist();
     ImGuizmo::SetRect(min.x, min.y, size.x, size.y);
 
-    glm::mat4 model = transform->GetTransformMatrix();
+    // A flattened parent has no inverse to bring the result back with.
+    const glm::mat4 parent = transform->GetParentMatrix();
+    if (glm::determinant(parent) == 0.0f) return;
+
+    glm::mat4 world = parent * transform->GetLocalMatrix();
     if (!ImGuizmo::Manipulate(glm::value_ptr(camera.GetViewMatrix()), glm::value_ptr(projection), ToOperation(gizmoTool),
-            gizmoLocal ? ImGuizmo::LOCAL : ImGuizmo::WORLD, glm::value_ptr(model))) {
+            gizmoLocal ? ImGuizmo::LOCAL : ImGuizmo::WORLD, glm::value_ptr(world))) {
         return;
     }
 
     // Only what the tool changes, so rounding does not creep into the rest.
+    // Under a parent scaled unevenly, a rotation can shear the local matrix,
+    // which the transform cannot hold.
+    const glm::mat4 model = glm::inverse(parent) * world;
     switch (gizmoTool) {
         case GizmoTool::Move:
             transform->SetPosition(glm::vec3(model[3]));

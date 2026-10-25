@@ -3,15 +3,23 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
+#include <glm/glm.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
+#include "FrameData.hpp"
 #include "RenderPass.hpp"
 #include "RenderTarget.hpp"
+#include "ShaderTypes.hpp"
 
 namespace GNC {
 
 class FrustumCulling;
+class Mesh;
+class TextureTable;
+struct Material;
 
 // G-buffer
 // Laid out as in shaders/common/gbuffer.slang. One, shared by all frames in
@@ -48,21 +56,57 @@ struct GBuffer {
 };
 
 // Geometry pass for deferred rendering
-// Draws every entity that survived culling into the G-buffer, unlit.
+// Draws every entity that survived culling into the G-buffer, unlit. Each
+// frame it writes the materials it draws with into that frame's material
+// buffer (set 2); their textures come from the TextureTable (set 1).
 class GeometryPass : public RenderPass {
+public:
+    // Per frame; materials past it draw with the defaults.
+    static constexpr std::uint32_t MaxMaterials = 4096;
+
 private:
+    struct MaterialBuffer {
+        vk::raii::Buffer buffer = nullptr;
+        vk::raii::DeviceMemory memory = nullptr;
+        GpuMaterial* mapped = nullptr;
+        vk::raii::DescriptorSet set = nullptr;
+    };
+
+    struct Draw {
+        const Mesh* mesh;
+        glm::mat4 model;
+        std::uint32_t materialIndex;
+        std::uint32_t entityId;
+        bool masked;
+        bool doubleSided;
+    };
+
     RenderTargetContext context;
     vk::Extent2D extent;
     FrustumCulling* cullingSystem;
+    const TextureTable& textureTable;
 
     GBuffer gBuffer;
 
+    // The pool before the sets, which free themselves into it.
+    vk::raii::DescriptorSetLayout materialSetLayout = nullptr;
+    vk::raii::DescriptorPool descriptorPool = nullptr;
+    std::array<MaterialBuffer, MaxFramesInFlight> materialBuffers;
+
     vk::raii::PipelineLayout pipelineLayout = nullptr;
-    vk::raii::Pipeline pipeline = nullptr;
+    vk::raii::Pipeline opaquePipeline = nullptr;
+    // Discards below the alpha cutoff (ALPHA_MASK in the shader).
+    vk::raii::Pipeline maskedPipeline = nullptr;
+
+    // Rebuilt every frame; members only to keep their storage.
+    std::unordered_map<const Material*, std::uint32_t> materialIndices;
+    std::vector<Draw> draws;
+    bool warnedAboutMaterialLimit = false;
 
 public:
     GeometryPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
-                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, FrustumCulling* culling);
+                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, FrustumCulling* culling,
+                 const TextureTable& textures);
     ~GeometryPass() override;
 
     const GBuffer& GetGBuffer() const { return gBuffer; }
@@ -75,7 +119,9 @@ protected:
 
 private:
     void CreateGBuffer();
-    void CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders);
+    void CreateMaterialBuffers();
+    void CreatePipelines(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders);
+    std::uint32_t AddMaterial(const Material* material, std::uint32_t& materialCount, GpuMaterial* gpuMaterials);
 };
 
 } // namespace GNC

@@ -16,6 +16,7 @@ namespace {
 enum InputBinding : std::uint32_t {
     HdrColorBinding = 0,
     EntityIdBinding = 1,
+    DepthBinding = 2,
     InputBindingCount
 };
 
@@ -81,8 +82,10 @@ void PostProcessPass::Render(const FrameContext& frame) {
     const PostProcessPushConstants pushConstants {
         .exposure = exposure,
         .encodeSrgb = 1u,
-        .selectedId = selectedId,
-        .hoveredId = hoveredId
+        .selectedBegin = selectedIds.begin,
+        .selectedEnd = selectedIds.end,
+        .hoveredBegin = hoveredIds.begin,
+        .hoveredEnd = hoveredIds.end
     };
     commandBuffer.pushConstants<PostProcessPushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, pushConstants);
 
@@ -147,6 +150,7 @@ void PostProcessPass::CreateDescriptorSet() {
     std::array<vk::DescriptorImageInfo, InputBindingCount> imageInfos;
     imageInfos[HdrColorBinding] = { .imageView = *lightingPass->GetOutput().view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
     imageInfos[EntityIdBinding] = { .imageView = *geometryPass->GetGBuffer().entityId.view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+    imageInfos[DepthBinding] = { .imageView = *geometryPass->GetGBuffer().depth.view, .imageLayout = vk::ImageLayout::eDepthStencilReadOnlyOptimal };
 
     std::array<vk::WriteDescriptorSet, InputBindingCount> writes;
     for (std::uint32_t i = 0; i < InputBindingCount; ++i) {

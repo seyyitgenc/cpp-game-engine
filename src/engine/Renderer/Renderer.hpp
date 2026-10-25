@@ -24,6 +24,7 @@ class Entity;
 class GeometryPass;
 class LightComponent;
 class PostProcessPass;
+class TextureTable;
 class TransformComponent;
 class VulkanContext;
 
@@ -36,6 +37,7 @@ class Renderer {
 private:
     const VulkanContext& vulkan;
     RenderTargetContext context;
+    const TextureTable& textureTable;
     Camera* camera = nullptr;
 
     // Flat, until there is image based lighting.
@@ -74,8 +76,9 @@ private:
     const Entity* outlinedHovered = nullptr;
 
 public:
-    // extent: the framebuffer size; not 0x0.
-    Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Camera* cam);
+    // extent: the framebuffer size; not 0x0. The texture table must outlive
+    // the renderer.
+    Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Camera* cam, const TextureTable& textures);
 
     // Waits for the GPU: frames in flight still use the RAII members.
     ~Renderer();
@@ -138,7 +141,8 @@ public:
     // Outlines
     // --------
 
-    // Drawn around the entities' visible pixels; either may be nullptr.
+    // Drawn around the visible pixels of each entity and its descendants;
+    // either may be nullptr.
     void SetOutlinedEntities(const Entity* selected, const Entity* hovered) {
         outlinedSelected = selected;
         outlinedHovered = hovered;
@@ -162,8 +166,8 @@ private:
     void RecordPick(FrameData& frame);
     // Once the frame's fence has signaled.
     void ReadPick(FrameData& frame);
-    // GeometryPass's id for the entity this frame; 0 when it is not drawn.
-    std::uint32_t FindEntityId(const Entity* entity) const;
+    // Reorders this frame's visible list; after culling, before the passes.
+    void OrderForOutlines();
 
     void UpdateCameraAspect();
     // The GPU must be idle.

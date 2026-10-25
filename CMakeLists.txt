@@ -14,9 +14,6 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # find required libs
 
-#assimp
-message(STATUS "Found assimp in ${ASSIMP_INCLUDE_DIRS}")
-
 # GLFW3
 find_package(glfw3 REQUIRED)
 message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIRS}")
@@ -29,6 +26,7 @@ message(STATUS "Found Vulkan in ${Vulkan_INCLUDE_DIR}")
 if(WIN32)
     # assimp
     find_package(assimp REQUIRED)
+    message(STATUS "Found assimp ${assimp_VERSION} in ${ASSIMP_INCLUDE_DIRS}")
     # Windows
     message(STATUS "Windows detected")
     set(LIBS glfw pthread ${ASSIMP_LIBRARIES})
@@ -170,6 +168,35 @@ add_custom_command(
 
 add_custom_target(fonts ALL DEPENDS ${FONT_OUTPUT_DIR}/fa-solid-900.ttf)
 add_dependencies(${PROJECT_NAME} fonts)
+
+# Models
+# Every folder under resources/objects that holds a model file of these
+# formats is copied, with its buffers and images, to models/ next to the
+# executable, where File > Import Model lists every file assimp reads.
+# copy_directory_if_different needs CMake 3.26.
+set(MODEL_SOURCE_DIR ${CMAKE_SOURCE_DIR}/resources/objects)
+set(MODEL_EXTENSIONS gltf glb obj fbx dae)
+set(MODEL_PATTERNS)
+foreach(EXTENSION ${MODEL_EXTENSIONS})
+    list(APPEND MODEL_PATTERNS ${MODEL_SOURCE_DIR}/*.${EXTENSION})
+endforeach()
+file(GLOB_RECURSE MODEL_FILES ${MODEL_PATTERNS})
+set(MODEL_DIRS)
+foreach(MODEL ${MODEL_FILES})
+    get_filename_component(MODEL_DIR ${MODEL} DIRECTORY)
+    list(APPEND MODEL_DIRS ${MODEL_DIR})
+endforeach()
+list(REMOVE_DUPLICATES MODEL_DIRS)
+
+set(MODEL_COPY_COMMANDS)
+foreach(MODEL_DIR ${MODEL_DIRS})
+    file(RELATIVE_PATH MODEL_RELATIVE_DIR ${MODEL_SOURCE_DIR} ${MODEL_DIR})
+    list(APPEND MODEL_COPY_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${MODEL_DIR} ${ENGINE_OUTPUT_DIR}/models/${MODEL_RELATIVE_DIR})
+endforeach()
+
+add_custom_target(models ALL ${MODEL_COPY_COMMANDS} COMMENT "Copying models" VERBATIM)
+add_dependencies(${PROJECT_NAME} models)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
 # target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)

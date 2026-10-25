@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include "../../Resource/Types/Mesh.hpp"
+#include "../../Resource/Types/Texture.hpp"
 #include "../../Renderer/Material.hpp"
 
 #include "../../BoundingBox.hpp"
@@ -35,10 +36,8 @@ public:
     Mesh* GetMesh() const { return mesh; }
     Material* GetMaterial() const { return material; }
 
-    // FIXME: later on calculate the bounding box properly, bounding box can be, spherical, square, etc...
-    // min has to stay the small corner and max the big one, otherwise Center()
-    // and Extents() come out inverted and the box never passes the frustum test.
-    AABBBoundingBox3D GetBoundingBox() const { return {{-32, -32, -32}, {32, 32, 32}}; }
+    // The mesh's, in model space; a unit box until there is a mesh.
+    AABBBoundingBox3D GetBoundingBox() const { return mesh ? mesh->GetBounds() : AABBBoundingBox3D {}; }
 
     // The material's factors are listed as the mesh's own, so editing a
     // material that several meshes share changes all of them.
@@ -87,6 +86,47 @@ public:
             [](const MeshComponent& component) { return MaterialOf(component).emissiveStrength; },
             [](MeshComponent& component, float value) {
                 if (Material* material = component.GetMaterial()) material->emissiveStrength = value;
+            },
+            hasMaterial);
+
+        auto addMap = [&](const char* name, Texture* Material::* map) {
+            properties.Add<Resource*>(
+                { .name = name, .category = "Material", .resourceType = &typeid(Texture) },
+                [map](const MeshComponent& component) -> Resource* { return MaterialOf(component).*map; },
+                [map](MeshComponent& component, Resource* value) {
+                    if (Material* material = component.GetMaterial()) material->*map = dynamic_cast<Texture*>(value);
+                },
+                hasMaterial);
+        };
+        addMap("Base Color Map", &Material::baseColorTexture);
+        addMap("Metallic Roughness Map", &Material::metallicRoughnessTexture);
+        addMap("Normal Map", &Material::normalTexture);
+        addMap("Occlusion Map", &Material::occlusionTexture);
+        addMap("Emissive Map", &Material::emissiveTexture);
+
+        properties.Add<int>(
+            { .name = "Alpha Mode", .category = "Material", .hint = PropertyHint::Enum, .enumNames = { "Opaque", "Mask", "Blend (drawn opaque)" } },
+            [](const MeshComponent& component) { return static_cast<int>(MaterialOf(component).alphaMode); },
+            [](MeshComponent& component, int value) {
+                if (Material* material = component.GetMaterial()) material->alphaMode = static_cast<AlphaMode>(value);
+            },
+            hasMaterial);
+
+        properties.Add<float>(
+            { .name = "Alpha Cutoff", .category = "Material", .min = 0.0f, .max = 1.0f, .step = 0.005f },
+            [](const MeshComponent& component) { return MaterialOf(component).alphaCutoff; },
+            [](MeshComponent& component, float value) {
+                if (Material* material = component.GetMaterial()) material->alphaCutoff = value;
+            },
+            [](const MeshComponent& component, PropertyInfo& info) {
+                info.visible = component.GetMaterial() && component.GetMaterial()->alphaMode == AlphaMode::Mask;
+            });
+
+        properties.Add<bool>(
+            { .name = "Double Sided", .category = "Material" },
+            [](const MeshComponent& component) { return MaterialOf(component).doubleSided; },
+            [](MeshComponent& component, bool value) {
+                if (Material* material = component.GetMaterial()) material->doubleSided = value;
             },
             hasMaterial);
     }

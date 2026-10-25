@@ -3,20 +3,25 @@
 // happens here when the target format does not do it (the scene image is
 // UNORM).
 
+import common.frame;
 import common.fullscreen;
 
 // Set 1 (PostProcessPass::CreateDescriptorSet): the lighting pass output and
-// the G-buffer's entity ids. Set 0 is the per-frame global set, bound like in
-// every pass but unused here.
+// the G-buffer's entity ids and depth. Set 0 is the per-frame global set; the
+// outlines use its camera.
 [[vk::binding(0, 1)]] Texture2D<float4> hdrColor;
 [[vk::binding(1, 1)]] Texture2D<uint> entityIds;
+[[vk::binding(2, 1)]] Texture2D<float> depth;
 
 // C++: PostProcessPushConstants in Renderer/ShaderTypes.hpp.
 struct PostData {
     float exposure;
     uint encodeSrgb; // 1 if the target format does not encode by itself
-    uint selectedId; // entity ids to outline, 0 for none
-    uint hoveredId;
+    // Entity ids to outline, [begin, end). Id 0 (nothing drawn) is in neither.
+    uint selectedBegin;
+    uint selectedEnd;
+    uint hoveredBegin;
+    uint hoveredEnd;
 };
 
 [[vk::push_constant]] ConstantBuffer<PostData> post;
@@ -25,6 +30,10 @@ struct PostData {
 static const int OUTLINE_RADIUS = 2; // pixels, outside the silhouette
 static const float3 SELECTED_OUTLINE = float3(1.0, 0.6, 0.1);
 static const float4 HOVERED_OUTLINE = float4(1.0, 1.0, 1.0, 0.5); // a: opacity
+// How much nearer than the outlined entity a pixel may be and still take its
+// outline, as a share of the distance: enough for a neighbor on the same
+// surface.
+static const float OUTLINE_DEPTH_TOLERANCE = 0.01;
 
 // Khronos PBR Neutral (Khronos 3D Commerce, 2024). Made for glTF PBR
 // content: colors below ~0.8 come out practically unchanged, so a base color
@@ -56,10 +65,32 @@ float3 LinearToSrgb(float3 color) {
     return select(color <= 0.0031308, low, high);
 }
 
+bool IsSelected(uint id) {
+    return id >= post.selectedBegin && id < post.selectedEnd;
+}
+
+bool IsHovered(uint id) {
+    return id >= post.hoveredBegin && id < post.hoveredEnd;
+}
+
+// Distance along the view direction, from the depth the camera's projection
+// wrote (perspective or orthographic).
+float ViewDepth(float d) {
+    const float4x4 p = camera.projection;
+    return (p[2][3] - d * p[3][3]) / (p[2][2] - d * p[3][2]);
+}
+
 float3 ApplyOutlines(float3 color, int2 pixel) {
     // The same for every pixel of the draw, so this costs nothing when
     // nothing is selected or hovered.
-    if (post.selectedId == 0 && post.hoveredId == 0) return color;
+    if (post.selectedBegin == post.selectedEnd && post.hoveredBegin == post.hoveredEnd) return color;
+
+    // Only outside the silhouette, so an outline never covers its entities.
+    const uint center = entityIds.Load(int3(pixel, 0));
+    const bool outsideSelected = !IsSelected(center);
+    const bool outsideHovered = !IsHovered(center);
+    if (!outsideSelected && !outsideHovered) return color;
+    const float centerDepth = ViewDepth(depth.Load(int3(pixel, 0)));
 
     uint width, height;
     entityIds.GetDimensions(width, height);
@@ -72,16 +103,21 @@ float3 ApplyOutlines(float3 color, int2 pixel) {
             // Rounds the outline's corners.
             if (x * x + y * y > OUTLINE_RADIUS * OUTLINE_RADIUS + 1) continue;
             // Load() outside the image is undefined without robustness features.
-            uint id = entityIds.Load(int3(clamp(pixel + int2(x, y), int2(0), last), 0));
-            nearSelected = nearSelected || id == post.selectedId;
-            nearHovered = nearHovered || id == post.hoveredId;
+            const int3 texel = int3(clamp(pixel + int2(x, y), int2(0), last), 0);
+            const uint id = entityIds.Load(texel);
+            const bool selected = outsideSelected && IsSelected(id);
+            const bool hovered = outsideHovered && IsHovered(id);
+            // Only on what lies behind: drawn around something in front of
+            // the entity, it would look like that thing's own outline.
+            if ((selected || hovered) && centerDepth >= ViewDepth(depth.Load(texel)) * (1.0 - OUTLINE_DEPTH_TOLERANCE)) {
+                nearSelected = nearSelected || selected;
+                nearHovered = nearHovered || hovered;
+            }
         }
     }
 
-    // Only outside the silhouette, so an outline never covers its entity.
-    uint center = entityIds.Load(int3(pixel, 0));
-    if (post.selectedId != 0 && nearSelected && center != post.selectedId) return SELECTED_OUTLINE;
-    if (post.hoveredId != 0 && nearHovered && center != post.hoveredId) return lerp(color, HOVERED_OUTLINE.rgb, HOVERED_OUTLINE.a);
+    if (nearSelected) return SELECTED_OUTLINE;
+    if (nearHovered) return lerp(color, HOVERED_OUTLINE.rgb, HOVERED_OUTLINE.a);
     return color;
 }
 

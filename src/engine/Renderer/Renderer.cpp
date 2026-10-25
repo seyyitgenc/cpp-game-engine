@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -60,9 +61,10 @@ vk::BufferImageCopy MakePickCopy(vk::Offset2D pixel, vk::Extent2D extent, PickSl
 
 } // namespace
 
-Renderer::Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Camera* cam)
+Renderer::Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Camera* cam, const TextureTable& textures)
     : vulkan(vulkanContext),
       context { .device = &vulkan.GetDevice(), .physicalDevice = &vulkan.GetPhysicalDevice() },
+      textureTable(textures),
       camera(cam),
       cullingSystem(cam) {
     CreateCommandPool();
@@ -108,7 +110,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     UpdateLightsBuffer(frame, entities);
 
     cullingSystem.CullScene(entities);
-    postProcessPass->SetOutlinedIds(FindEntityId(outlinedSelected), FindEntityId(outlinedHovered));
+    OrderForOutlines();
 
     frame.commandBuffer.reset();
     frame.commandBuffer.begin(vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
@@ -347,7 +349,7 @@ void Renderer::UpdateLightsBuffer(FrameData& frame, const std::vector<Entity*>& 
     uniform.ambientColor = ambientColor;
 
     for (Entity* entity : entities) {
-        if (!entity->IsActive()) continue;
+        if (!entity->IsActiveInHierarchy()) continue;
 
         const LightComponent* light = entity->GetComponent<LightComponent>();
         if (!light || !light->IsActive()) continue;
@@ -373,11 +375,10 @@ GpuLight Renderer::MakeGpuLight(const LightComponent& light, const TransformComp
     gpuLight.intensity = light.GetIntensity();
     gpuLight.range = light.GetRange();
 
-    // From the matrix, so this keeps working once transforms have parents.
     // Column 3 is the translation, column 2 the local Z axis (scaled, hence
     // normalize).
     if (transform) {
-        const glm::mat4 world = transform->GetTransformMatrix();
+        const glm::mat4 world = transform->GetWorldMatrix();
         gpuLight.position = glm::vec3(world[3]);
         gpuLight.direction = glm::normalize(-glm::vec3(world[2]));
     }
@@ -449,12 +450,20 @@ void Renderer::ReadPick(FrameData& frame) {
     frame.hoverPending = false;
 }
 
-std::uint32_t Renderer::FindEntityId(const Entity* entity) const {
-    if (!entity) return 0;
+// GeometryPass numbers the ids by the visible list, so this order puts each
+// outlined subtree in one run of ids: selected only, selected and hovered,
+// then hovered only.
+void Renderer::OrderForOutlines() {
+    std::vector<Entity*>& visible = cullingSystem.GetVisibleEntities();
+    auto selected = [this](const Entity* entity) { return entity->IsInSubtree(outlinedSelected); };
+    auto hovered = [this](const Entity* entity) { return entity->IsInSubtree(outlinedHovered); };
 
-    const std::vector<Entity*>& visible = cullingSystem.GetVisibleEntities();
-    const auto it = std::ranges::find(visible, entity);
-    return it != visible.end() ? static_cast<std::uint32_t>(it - visible.begin() + 1) : 0;
+    const auto selectedEnd = std::stable_partition(visible.begin(), visible.end(), selected);
+    const auto bothBegin = std::stable_partition(visible.begin(), selectedEnd, std::not_fn(hovered));
+    const auto hoveredEnd = std::stable_partition(selectedEnd, visible.end(), hovered);
+
+    auto toId = [&](std::vector<Entity*>::iterator it) { return static_cast<std::uint32_t>(it - visible.begin() + 1); };
+    postProcessPass->SetOutlinedIds({ toId(visible.begin()), toId(selectedEnd) }, { toId(bothBegin), toId(hoveredEnd) });
 }
 
 void Renderer::UpdateCameraAspect() {
@@ -488,7 +497,7 @@ void Renderer::SetupRenderPasses() {
     geometryPass = renderPassManager.AddRenderPass<GeometryPass>("GeometryPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *geometryVertex.GetShaderModule(), *geometryFragment.GetShaderModule() },
-        &cullingSystem);
+        &cullingSystem, textureTable);
 
     auto lightingPass = renderPassManager.AddRenderPass<LightingPass>("LightingPass",
         context, sceneExtent, *globalSetLayout,

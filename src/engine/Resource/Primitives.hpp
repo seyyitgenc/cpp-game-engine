@@ -49,6 +49,7 @@ inline MeshData CreateSphere(float radius, std::uint32_t stacks, std::uint32_t s
             data.indices.insert(data.indices.end(), { a, b, c, a, c, d });
         }
     }
+    GenerateTangents(data);
     return data;
 }
 
@@ -67,6 +68,7 @@ inline MeshData CreatePlane(float size) {
     };
     // Counter-clockwise seen from above.
     data.indices = { 0, 1, 2, 0, 2, 3 };
+    GenerateTangents(data);
     return data;
 }
 

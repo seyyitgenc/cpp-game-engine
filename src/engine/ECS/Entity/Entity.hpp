@@ -14,7 +14,8 @@ namespace GNC {
 
 // Entity class
 // A name plus the components it owns, with a type id -> component map for
-// O(1) lookups.
+// O(1) lookups. Its place in the hierarchy is kept by the Scene, which owns
+// every entity.
 
 // FIXME: not thread safe
 class Entity {
@@ -26,6 +27,11 @@ private:
     std::vector<std::unique_ptr<Component>> components;
     std::unordered_map<ComponentTypeID, Component*> componentMap;
 
+    // Set by the Scene only.
+    Entity* parent = nullptr;
+    std::vector<Entity*> children;
+    friend class Scene;
+
 public:
     explicit Entity(const std::string& entityName) : name(entityName) {}
 
@@ -36,8 +42,32 @@ public:
 
     const std::string& GetName() const { return name; }
     void SetName(const std::string& entityName) { name = entityName; }
+
+    // Its own flag; an inactive ancestor still hides it.
     bool IsActive() const { return active; }
     void SetActive(bool isActive) { active = isActive; }
+    bool IsActiveInHierarchy() const { return active && (!parent || parent->IsActiveInHierarchy()); }
+
+    // ---------
+    // Hierarchy
+    // ---------
+    Entity* GetParent() const { return parent; }
+    // In the order added.
+    const std::vector<Entity*>& GetChildren() const { return children; }
+
+    Entity& GetRoot() {
+        Entity* root = this;
+        while (root->parent) root = root->parent;
+        return *root;
+    }
+
+    // This entity is root or one of its descendants; never for nullptr.
+    bool IsInSubtree(const Entity* root) const {
+        for (const Entity* entity = this; entity; entity = entity->parent) {
+            if (entity == root) return true;
+        }
+        return false;
+    }
 
     // In the order added.
     const std::vector<std::unique_ptr<Component>>& GetComponents() const { return components; }
@@ -50,7 +80,7 @@ public:
     }
 
     void Update(float deltaTime) {
-        if (!active) return;
+        if (!IsActiveInHierarchy()) return;
 
         for (auto& component : components) {
             if (!component->IsActive()) continue;
@@ -59,7 +89,7 @@ public:
     }
 
     void Render() {
-        if (!active) return;
+        if (!IsActiveInHierarchy()) return;
 
         for (auto& component : components) {
             if (!component->IsActive()) continue;

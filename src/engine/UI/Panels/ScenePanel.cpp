@@ -1,6 +1,7 @@
 #include "ScenePanel.hpp"
 
 #include <memory>
+#include <vector>
 
 #include <imgui.h>
 
@@ -44,10 +45,14 @@ void ScenePanel::Render() {
         if (ImGui::Button(ICON_FA_CIRCLE_PLUS " Create Entity")) eventBus.Enqueue<CreateEntityEvent>(NewEntityName);
         ImGui::Separator();
 
+        // A selection made elsewhere (the Viewport), or while the panel was
+        // hidden, is opened up to and scrolled to, once.
+        revealSelection = selection.GetEntity() != shownSelection;
+
         // A child window, so the button stays put while the list scrolls.
         if (ImGui::BeginChild("##Entities")) {
             for (Entity* entity : scene.GetEntities()) {
-                RenderEntity(*entity);
+                if (!entity->GetParent()) RenderEntity(*entity);
             }
 
             if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_NoOpenOverItems)) {
@@ -62,19 +67,27 @@ void ScenePanel::Render() {
             }
         }
         ImGui::EndChild();
+        shownSelection = selection.GetEntity();
     }
     ImGui::End();
 }
 
+// Its components first, then its children.
 void ScenePanel::RenderEntity(Entity& entity) {
     const auto& components = entity.GetComponents();
+    const std::vector<Entity*>& children = entity.GetChildren();
+    const bool active = entity.IsActiveInHierarchy();
 
     // Clicking the name selects; the arrow, or a double click, opens.
     ImGuiTreeNodeFlags flags = NodeFlags | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (components.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
+    if (components.empty() && children.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
     if (selection.IsSelected(&entity)) flags |= ImGuiTreeNodeFlags_Selected;
 
-    const bool open = TreeNode(&entity, flags, ICON_FA_CUBE, entity.GetName().c_str(), entity.IsActive());
+    Entity* selected = selection.GetEntity();
+    if (revealSelection && selected && selected != &entity && selected->IsInSubtree(&entity)) ImGui::SetNextItemOpen(true);
+
+    const bool open = TreeNode(&entity, flags, children.empty() ? ICON_FA_CUBE : ICON_FA_CUBES, entity.GetName().c_str(), active);
+    if (revealSelection && selected == &entity && !ImGui::IsItemVisible()) ImGui::SetScrollHereY();
     SelectOnClick(entity);
     if (ImGui::BeginPopupContextItem()) {
         RenderEntityMenu(entity);
@@ -85,13 +98,16 @@ void ScenePanel::RenderEntity(Entity& entity) {
     for (const std::unique_ptr<Component>& component : components) {
         const ComponentRegistry::Entry* type = componentTypes.Find(component->GetTypeID());
         const char* icon = type ? type->icon.c_str() : UnregisteredIcon;
-        TreeNode(component.get(), ComponentFlags, icon, component->GetTypeName(), entity.IsActive() && component->IsActive());
+        TreeNode(component.get(), ComponentFlags, icon, component->GetTypeName(), active && component->IsActive());
         // A component row stands for its entity.
         SelectOnClick(entity);
         if (ImGui::BeginPopupContextItem()) {
             RenderComponentMenu(entity, *component);
             ImGui::EndPopup();
         }
+    }
+    for (Entity* child : children) {
+        RenderEntity(*child);
     }
     ImGui::TreePop();
 }
@@ -101,6 +117,7 @@ void ScenePanel::RenderEntityMenu(Entity& entity) {
         AddComponentMenuItems(entity, componentTypes, eventBus);
         ImGui::EndMenu();
     }
+    if (ImGui::MenuItem(ICON_FA_CIRCLE_PLUS " Create Child Entity")) eventBus.Enqueue<CreateEntityEvent>(NewEntityName, &entity);
 
     ImGui::Separator();
     if (ImGui::MenuItem(ICON_FA_TRASH_CAN " Delete Entity", "Del")) eventBus.Enqueue<DestroyEntityEvent>(entity);
@@ -113,10 +130,13 @@ void ScenePanel::RenderComponentMenu(Entity& entity, const Component& component)
 }
 
 // Right clicks select too, so a row's menu acts on the entity the Inspector
-// shows.
+// shows. The row is in view already, so it is not revealed.
 void ScenePanel::SelectOnClick(Entity& entity) {
     const bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
-    if (clicked && !ImGui::IsItemToggledOpen()) selection.Select(&entity);
+    if (clicked && !ImGui::IsItemToggledOpen()) {
+        selection.Select(&entity);
+        shownSelection = &entity;
+    }
 }
 
 } // namespace GNC

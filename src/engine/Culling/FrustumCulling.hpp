@@ -97,7 +97,7 @@ public:
         const Frustum frustum = Frustum::FromViewProjection(camera->GetViewProjectionMatrix());
 
         for (auto entity : allEntities) {
-            if (!entity->IsActive()) continue;
+            if (!entity->IsActiveInHierarchy()) continue;
 
             auto meshComponent = entity->GetComponent<MeshComponent>();
             if (!meshComponent) continue;
@@ -107,7 +107,7 @@ public:
 
             // Model space to world space, where the planes are.
             AABBBoundingBox3D boundingBox = meshComponent->GetBoundingBox();
-            boundingBox.Transform(transformComponent->GetTransformMatrix());
+            boundingBox.Transform(transformComponent->GetWorldMatrix());
 
             if (frustum.Intersects(boundingBox)) {
                 visibleEntities.push_back(entity);
@@ -116,6 +116,11 @@ public:
     }
 
     const std::vector<Entity*>& GetVisibleEntities() const {
+        return visibleEntities;
+    }
+
+    // For the Renderer, which orders it for the outlines.
+    std::vector<Entity*>& GetVisibleEntities() {
         return visibleEntities;
     }
 };

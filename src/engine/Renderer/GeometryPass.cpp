@@ -1,5 +1,7 @@
 #include "GeometryPass.hpp"
 
+#include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -7,14 +9,17 @@
 #include "ECS/Component/MeshComponent.hpp"
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Material.hpp"
-#include "ShaderTypes.hpp"
+#include "Resource/Types/Texture.hpp"
+#include "TextureTable.hpp"
+#include "Utils/Log.hpp"
 #include "Utils/VulkanHelpers.hpp"
 
 namespace GNC {
 
 namespace {
 
-// What a MeshComponent without a material draws with.
+// What a MeshComponent without a material draws with: index 0 of every
+// frame's material buffer.
 const Material DefaultMaterial {};
 
 constexpr vk::ShaderStageFlags PushConstantStages =
@@ -23,13 +28,36 @@ constexpr vk::ShaderStageFlags PushConstantStages =
 constexpr vk::PipelineStageFlags2 DepthStages =
     vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
 
+std::uint32_t SlotOf(const Texture* texture, std::uint32_t fallback) {
+    return texture ? texture->GetTableSlot() : fallback;
+}
+
+GpuMaterial ToGpuMaterial(const Material& material) {
+    return GpuMaterial {
+        .baseColorFactor = material.baseColorFactor,
+        .emissive = material.emissiveFactor * material.emissiveStrength,
+        .metallicFactor = material.metallicFactor,
+        .roughnessFactor = material.roughnessFactor,
+        .normalScale = material.normalScale,
+        .occlusionStrength = material.occlusionStrength,
+        .alphaCutoff = material.alphaCutoff,
+        .baseColorTexture = SlotOf(material.baseColorTexture, TextureTable::White),
+        .metallicRoughnessTexture = SlotOf(material.metallicRoughnessTexture, TextureTable::White),
+        .normalTexture = SlotOf(material.normalTexture, TextureTable::FlatNormal),
+        .occlusionTexture = SlotOf(material.occlusionTexture, TextureTable::White),
+        .emissiveTexture = SlotOf(material.emissiveTexture, TextureTable::White)
+    };
+}
+
 } // namespace
 
 GeometryPass::GeometryPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
-                           vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, FrustumCulling* culling)
-    : RenderPass(name), context(renderContext), extent(renderExtent), cullingSystem(culling) {
+                           vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, FrustumCulling* culling,
+                           const TextureTable& textures)
+    : RenderPass(name), context(renderContext), extent(renderExtent), cullingSystem(culling), textureTable(textures) {
     CreateGBuffer();
-    CreatePipeline(globalSetLayout, shaders);
+    CreateMaterialBuffers();
+    CreatePipelines(globalSetLayout, shaders);
 }
 
 GeometryPass::~GeometryPass() = default;
@@ -92,8 +120,48 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
 
 void GeometryPass::Render(const FrameContext& frame) {
     const vk::raii::CommandBuffer& commandBuffer = frame.commandBuffer;
+    const MaterialBuffer& materialBuffer = materialBuffers[frame.frameIndex];
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+    // ---------
+    // Materials
+    // ---------
+    // Host coherent, and this frame's slot: its previous submission is done.
+    materialIndices.clear();
+    std::uint32_t materialCount = 0;
+    AddMaterial(nullptr, materialCount, materialBuffer.mapped);
+
+    // Culling only lets through active entities that have both a mesh and a
+    // transform component.
+    draws.clear();
+    const std::vector<Entity*>& entities = cullingSystem->GetVisibleEntities();
+    for (std::size_t index = 0; index < entities.size(); ++index) {
+        Entity* entity = entities[index];
+        const MeshComponent* meshComponent = entity->GetComponent<MeshComponent>();
+
+        // The component can exist before its mesh has been loaded.
+        const Mesh* mesh = meshComponent->GetMesh();
+        if (!mesh || !mesh->IsLoaded() || mesh->GetIndexCount() == 0) continue;
+
+        const Material* material = meshComponent->GetMaterial();
+        const Material& drawn = material ? *material : DefaultMaterial;
+        draws.push_back(Draw {
+            .mesh = mesh,
+            .model = entity->GetComponent<TransformComponent>()->GetWorldMatrix(),
+            .materialIndex = AddMaterial(material, materialCount, materialBuffer.mapped),
+            // Renderer::ReadPick() maps it back through the same list.
+            .entityId = static_cast<std::uint32_t>(index + 1),
+            .masked = drawn.alphaMode == AlphaMode::Mask,
+            .doubleSided = drawn.doubleSided
+        });
+    }
+
+    // Opaque first, so the depth they write rejects masked fragments behind
+    // them before those are shaded.
+    std::ranges::stable_partition(draws, [](const Draw& draw) { return !draw.masked; });
+
+    // -----
+    // Draws
+    // -----
     commandBuffer.setViewport(0, vk::Viewport {
         .x = 0.0f,
         .y = 0.0f,
@@ -103,38 +171,48 @@ void GeometryPass::Render(const FrameContext& frame) {
         .maxDepth = 1.0f
     });
     commandBuffer.setScissor(0, vk::Rect2D { { 0, 0 }, extent });
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, frame.globalSet, nullptr);
+    const std::array descriptorSets { frame.globalSet, textureTable.GetSet(), *materialBuffer.set };
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, descriptorSets, nullptr);
 
-    // Culling only lets through active entities that have both a mesh and a
-    // transform component.
-    const std::vector<Entity*>& entities = cullingSystem->GetVisibleEntities();
-    for (std::size_t index = 0; index < entities.size(); ++index) {
-        Entity* entity = entities[index];
-        const MeshComponent* meshComponent = entity->GetComponent<MeshComponent>();
-        const TransformComponent* transform = entity->GetComponent<TransformComponent>();
-
-        // The component can exist before its mesh has been loaded.
-        const Mesh* mesh = meshComponent->GetMesh();
-        if (!mesh || !mesh->IsLoaded() || mesh->GetIndexCount() == 0) continue;
-
-        const Material& material = meshComponent->GetMaterial() ? *meshComponent->GetMaterial() : DefaultMaterial;
+    std::optional<bool> boundMasked;
+    for (const Draw& draw : draws) {
+        if (boundMasked != draw.masked) {
+            commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, draw.masked ? *maskedPipeline : *opaquePipeline);
+            boundMasked = draw.masked;
+        }
+        commandBuffer.setCullMode(draw.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack);
 
         const GeometryPushConstants pushConstants {
-            .model = transform->GetTransformMatrix(),
-            .baseColorFactor = material.baseColorFactor,
-            .emissive = glm::vec4(material.emissiveFactor * material.emissiveStrength, 0.0f),
-            .metallicFactor = material.metallicFactor,
-            .roughnessFactor = material.roughnessFactor,
-            // Renderer::ReadPick() maps it back through the same list.
-            .entityId = static_cast<std::uint32_t>(index + 1)
+            .model = draw.model,
+            .materialIndex = draw.materialIndex,
+            .entityId = draw.entityId
         };
         commandBuffer.pushConstants<GeometryPushConstants>(*pipelineLayout, PushConstantStages, 0, pushConstants);
 
         const vk::DeviceSize vertexOffset = 0;
-        commandBuffer.bindVertexBuffers(0, *mesh->GetVertexBuffer(), vertexOffset);
-        commandBuffer.bindIndexBuffer(*mesh->GetIndexBuffer(), 0, vk::IndexType::eUint32);
-        commandBuffer.drawIndexed(mesh->GetIndexCount(), 1, 0, 0, 0);
+        commandBuffer.bindVertexBuffers(0, *draw.mesh->GetVertexBuffer(), vertexOffset);
+        commandBuffer.bindIndexBuffer(*draw.mesh->GetIndexBuffer(), 0, vk::IndexType::eUint32);
+        commandBuffer.drawIndexed(draw.mesh->GetIndexCount(), 1, 0, 0, 0);
     }
+}
+
+// Each material once per frame. nullptr is DefaultMaterial, and so is any
+// material past MaxMaterials.
+std::uint32_t GeometryPass::AddMaterial(const Material* material, std::uint32_t& materialCount, GpuMaterial* gpuMaterials) {
+    const auto [it, added] = materialIndices.try_emplace(material, materialCount);
+    if (!added) return it->second;
+
+    if (materialCount == MaxMaterials) {
+        if (!warnedAboutMaterialLimit) {
+            Log::writeFormatted(Log::Warning, "GeometryPass: more than %u materials in view, the rest draw with the defaults", MaxMaterials);
+            warnedAboutMaterialLimit = true;
+        }
+        it->second = 0;
+        return 0;
+    }
+
+    gpuMaterials[materialCount] = ToGpuMaterial(material ? *material : DefaultMaterial);
+    return materialCount++;
 }
 
 void GeometryPass::EndPass(const FrameContext& frame) {
@@ -184,7 +262,63 @@ void GeometryPass::CreateGBuffer() {
     gBuffer.depth = Attachment(context, extent, GBuffer::DepthFormat, depthUsage, vk::ImageAspectFlagBits::eDepth);
 }
 
-void GeometryPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders) {
+void GeometryPass::CreateMaterialBuffers() {
+    const vk::raii::Device& device = *context.device;
+
+    const vk::DescriptorSetLayoutBinding binding {
+        .binding = 0,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .descriptorCount = 1,
+        .stageFlags = vk::ShaderStageFlagBits::eFragment
+    };
+    materialSetLayout = vk::raii::DescriptorSetLayout(device, vk::DescriptorSetLayoutCreateInfo {
+        .bindingCount = 1,
+        .pBindings = &binding
+    });
+
+    const vk::DescriptorPoolSize poolSize {
+        .type = vk::DescriptorType::eStorageBuffer,
+        .descriptorCount = MaxFramesInFlight
+    };
+    // eFreeDescriptorSet: a vk::raii::DescriptorSet frees itself into its pool.
+    descriptorPool = vk::raii::DescriptorPool(device, vk::DescriptorPoolCreateInfo {
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = MaxFramesInFlight,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize
+    });
+
+    std::array<vk::DescriptorSetLayout, MaxFramesInFlight> setLayouts;
+    setLayouts.fill(*materialSetLayout);
+    vk::raii::DescriptorSets sets(device, vk::DescriptorSetAllocateInfo {
+        .descriptorPool = *descriptorPool,
+        .descriptorSetCount = MaxFramesInFlight,
+        .pSetLayouts = setLayouts.data()
+    });
+
+    const vk::DeviceSize size = sizeof(GpuMaterial) * MaxMaterials;
+    for (std::uint32_t i = 0; i < MaxFramesInFlight; ++i) {
+        MaterialBuffer& materialBuffer = materialBuffers[i];
+        createBuffer(device, *context.physicalDevice, size, vk::BufferUsageFlagBits::eStorageBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            materialBuffer.buffer, materialBuffer.memory);
+        // Never unmapped by hand: freeing the memory unmaps it.
+        materialBuffer.mapped = static_cast<GpuMaterial*>(materialBuffer.memory.mapMemory(0, size));
+        materialBuffer.set = std::move(sets[i]);
+
+        const vk::DescriptorBufferInfo bufferInfo { .buffer = *materialBuffer.buffer, .offset = 0, .range = size };
+        device.updateDescriptorSets(vk::WriteDescriptorSet {
+            .dstSet = *materialBuffer.set,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eStorageBuffer,
+            .pBufferInfo = &bufferInfo
+        }, {});
+    }
+}
+
+void GeometryPass::CreatePipelines(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders) {
     const vk::raii::Device& device = *context.device;
 
     const vk::PushConstantRange pushConstantRange {
@@ -192,15 +326,17 @@ void GeometryPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const
         .offset = 0,
         .size = sizeof(GeometryPushConstants)
     };
+    const std::array setLayouts { globalSetLayout, *textureTable.GetLayout(), *materialSetLayout };
     pipelineLayout = vk::raii::PipelineLayout(device, vk::PipelineLayoutCreateInfo {
-        .setLayoutCount = 1,
-        .pSetLayouts = &globalSetLayout,
+        .setLayoutCount = static_cast<std::uint32_t>(setLayouts.size()),
+        .pSetLayouts = setLayouts.data(),
         .pushConstantRangeCount = 1,
         .pPushConstantRanges = &pushConstantRange
     });
 
-    // slangc names every entry point "main" in the SPIR-V it writes.
-    const std::array stages {
+    // slangc names every entry point "main" in the SPIR-V it writes. The
+    // fragment stage's specialization (ALPHA_MASK) is set per pipeline below.
+    std::array stages {
         vk::PipelineShaderStageCreateInfo { .stage = vk::ShaderStageFlagBits::eVertex, .module = shaders.vertex, .pName = "main" },
         vk::PipelineShaderStageCreateInfo { .stage = vk::ShaderStageFlagBits::eFragment, .module = shaders.fragment, .pName = "main" }
     };
@@ -220,7 +356,8 @@ void GeometryPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const
     const vk::PipelineViewportStateCreateInfo viewportState { .viewportCount = 1, .scissorCount = 1 };
 
     // Counter-clockwise, as authored (glTF). Vulkan's Y axis pointing down would
-    // mirror the winding, but Camera's projection flips Y back.
+    // mirror the winding, but Camera's projection flips Y back. The cull mode
+    // is dynamic, set per draw for double-sided materials.
     const vk::PipelineRasterizationStateCreateInfo rasterizer {
         .polygonMode = vk::PolygonMode::eFill,
         .cullMode = vk::CullModeFlagBits::eBack,
@@ -248,7 +385,7 @@ void GeometryPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const
         .pAttachments = blendAttachments.data()
     };
 
-    const std::array dynamicStates { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+    const std::array dynamicStates { vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eCullMode };
     const vk::PipelineDynamicStateCreateInfo dynamicState {
         .dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size()),
         .pDynamicStates = dynamicStates.data()
@@ -276,7 +413,20 @@ void GeometryPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const
         .pDynamicState = &dynamicState,
         .layout = *pipelineLayout
     };
-    pipeline = vk::raii::Pipeline(device, nullptr, pipelineInfo);
+
+    const vk::SpecializationMapEntry alphaMaskEntry { .constantID = 0, .offset = 0, .size = sizeof(vk::Bool32) };
+    auto createPipeline = [&](vk::Bool32 alphaMask) {
+        const vk::SpecializationInfo specialization {
+            .mapEntryCount = 1,
+            .pMapEntries = &alphaMaskEntry,
+            .dataSize = sizeof(alphaMask),
+            .pData = &alphaMask
+        };
+        stages[1].pSpecializationInfo = &specialization;
+        return vk::raii::Pipeline(device, nullptr, pipelineInfo);
+    };
+    opaquePipeline = createPipeline(vk::False);
+    maskedPipeline = createPipeline(vk::True);
 }
 
 } // namespace GNC

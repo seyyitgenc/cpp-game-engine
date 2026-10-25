@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -17,12 +19,14 @@
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
+#include "Scene/ModelImporter.hpp"
 #include "UI/Icons.hpp"
 #include "UI/Panels/DemoWindowPanel.hpp"
 #include "UI/Panels/EnginePanel.hpp"
 #include "UI/Panels/InspectorPanel.hpp"
 #include "UI/Panels/ScenePanel.hpp"
 #include "UI/Panels/ViewportPanel.hpp"
+#include "Utils/FileSystem.hpp"
 #include "Utils/Log.hpp"
 
 namespace GNC {
@@ -38,15 +42,29 @@ glm::quat FacingDirection(const glm::vec3& direction) {
     return glm::quatLookAt(glm::normalize(direction), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+// Every file assimp reads among those the models target copied next to the
+// executable.
+std::vector<std::filesystem::path> FindModels() {
+    std::vector<std::filesystem::path> models;
+    std::error_code error;
+    for (auto it = std::filesystem::recursive_directory_iterator(FileSystem::getPath("models"), error);
+         !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error)) {
+        if (it->is_regular_file() && IsModelFile(it->path())) models.push_back(it->path());
+    }
+    std::ranges::sort(models);
+    return models;
+}
+
 } // namespace
 
 App::App()
     : window(WindowWidth, WindowHeight, "GNC Engine", eventBus),
       vulkan(window),
       uploadPool(CreateUploadPool()),
+      textureTable(MakeResourceContext()),
       resources(MakeResourceContext()),
       cameraController(eventBus, window, camera),
-      renderer(vulkan, window.GetFramebufferExtent(), &camera),
+      renderer(vulkan, window.GetFramebufferExtent(), &camera, textureTable),
       gui(eventBus, window, vulkan, renderer) {
     SubscribeToEvents();
     RegisterComponents();
@@ -115,13 +133,14 @@ vk::raii::CommandPool App::CreateUploadPool() const {
     });
 }
 
-ResourceContext App::MakeResourceContext() const {
+ResourceContext App::MakeResourceContext() {
     // Uploads go through the one queue that does everything; see VulkanContext.
     return ResourceContext {
         .device = &vulkan.GetDevice(),
         .physicalDevice = &vulkan.GetPhysicalDevice(),
         .transferQueue = &vulkan.GetQueue(),
-        .transferPool = &uploadPool
+        .transferPool = &uploadPool,
+        .textures = &textureTable
     };
 }
 
@@ -153,7 +172,10 @@ void App::SubscribeToEvents() {
 
     // Scene requests from the UI (SceneEvents.hpp).
     subscriptions.push_back(eventBus.Subscribe<CreateEntityEvent>([this](CreateEntityEvent& e) {
-        Entity& entity = scene.CreateEntity(scene.MakeUniqueName(e.GetEntityName()));
+        Entity* parent = e.GetParent();
+        if (parent && !scene.Contains(parent)) return true;
+
+        Entity& entity = scene.CreateEntity(scene.MakeUniqueName(e.GetEntityName(), parent), parent);
         entity.AddComponent<TransformComponent>();
         selection.Select(&entity);
         return true;
@@ -170,13 +192,20 @@ void App::SubscribeToEvents() {
         return true;
     }));
 
-    // Everything else that points at the entity lets go first.
+    // Uploads wait for the queue, so a big model stalls the frame.
+    subscriptions.push_back(eventBus.Subscribe<ImportModelEvent>([this](ImportModelEvent& e) {
+        if (Entity* model = ImportModel(e.GetPath(), scene, resources)) selection.Select(model);
+        return true;
+    }));
+
+    // Everything else that points at the entity or a descendant lets go
+    // first.
     subscriptions.push_back(eventBus.Subscribe<DestroyEntityEvent>([this](DestroyEntityEvent& e) {
         Entity* entity = e.GetEntity();
         if (!scene.Contains(entity)) return true;
 
-        if (selection.IsSelected(entity)) selection.Clear();
-        renderer.ForgetEntity(entity);
+        if (selection.GetEntity() && selection.GetEntity()->IsInSubtree(entity)) selection.Clear();
+        for (const Entity* doomed : Scene::GetSubtree(*entity)) renderer.ForgetEntity(doomed);
         scene.DestroyEntity(entity);
         return true;
     }));
@@ -349,8 +378,17 @@ void App::BuildGui() {
     // ----
     // File
     // ----
+    ImGuiMenu& file = menuBar.GetMenu("File");
+    ImGuiMenu& importModel = file.GetMenu("Import Model");
+    const std::filesystem::path modelRoot = FileSystem::getPath("models");
+    const std::vector<std::filesystem::path> models = FindModels();
+    for (const std::filesystem::path& model : models) {
+        importModel.AddItem(model.lexically_relative(modelRoot).generic_string(), [this, model] { eventBus.Enqueue<ImportModelEvent>(model); });
+    }
+    if (models.empty()) importModel.AddItem("No models found", {}, { .enabled = [] { return false; } });
+    file.AddSeparator();
     // Asks to quit, as Esc does (see SubscribeToEvents()).
-    menuBar.GetMenu("File").AddItem("Quit", [this] { eventBus.Enqueue<QuitApplicationEvent>(); }, { .shortcut = "Esc" });
+    file.AddItem("Quit", [this] { eventBus.Enqueue<QuitApplicationEvent>(); }, { .shortcut = "Esc" });
 
     // ----
     // Edit

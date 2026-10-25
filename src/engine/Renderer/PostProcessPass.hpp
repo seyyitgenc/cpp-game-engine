@@ -16,7 +16,7 @@ class LightingPass;
 // Post-processing pass
 // Exposure and tonemapping from the lighting pass's linear HDR output into the
 // scene image (GetOutput()), which the Viewport panel shows through ImGui,
-// then outlines from the G-buffer's entity ids. Leaves it in
+// then outlines from the G-buffer's entity ids and depth. Leaves it in
 // eShaderReadOnlyOptimal. shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
 public:
@@ -36,11 +36,19 @@ private:
     // Physical light units will want a camera exposure model (EV100) here.
     float exposure = 1.0f;
 
-    std::uint32_t selectedId = 0;
-    std::uint32_t hoveredId = 0;
+public:
+    // GeometryPushConstants::entityId values in [begin, end).
+    struct IdRange {
+        std::uint32_t begin = 0;
+        std::uint32_t end = 0;
+    };
 
-    // Set 1: the lighting output and the entity ids. The pool is declared
-    // before the set, so it outlives it.
+private:
+    IdRange selectedIds;
+    IdRange hoveredIds;
+
+    // Set 1: the lighting output, the entity ids and depth. The pool is
+    // declared before the set, so it outlives it.
     vk::raii::DescriptorSetLayout inputSetLayout = nullptr;
     vk::raii::DescriptorPool descriptorPool = nullptr;
     vk::raii::DescriptorSet inputSet = nullptr;
@@ -55,10 +63,10 @@ public:
 
     const Attachment& GetOutput() const { return output; }
 
-    // This frame's GeometryPushConstants::entityId values; 0 for none.
-    void SetOutlinedIds(std::uint32_t selected, std::uint32_t hovered) {
-        selectedId = selected;
-        hoveredId = hovered;
+    // This frame's; either may be empty.
+    void SetOutlinedIds(IdRange selected, IdRange hovered) {
+        selectedIds = selected;
+        hoveredIds = hovered;
     }
 
 protected:

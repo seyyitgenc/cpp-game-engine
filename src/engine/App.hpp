@@ -11,6 +11,7 @@
 #include "Event/EventBus.hpp"
 #include "Platform/Window.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Renderer/TextureTable.hpp"
 #include "Renderer/VulkanContext.hpp"
 #include "Resource/ResourceManager.hpp"
 #include "Resource/Types/Mesh.hpp"
@@ -37,6 +38,8 @@ private:
 
     // For load time uploads.
     vk::raii::CommandPool uploadPool = nullptr;
+    // Before the resources: textures leave it as they unload.
+    TextureTable textureTable;
     ResourceManager resources;
 
     Camera camera;
@@ -76,7 +79,7 @@ private:
     void RenderTraversal();
 
     vk::raii::CommandPool CreateUploadPool() const;
-    ResourceContext MakeResourceContext() const;
+    ResourceContext MakeResourceContext();
     void SubscribeToEvents();
 
     Mesh* LoadMesh(const std::string& id, MeshData data);

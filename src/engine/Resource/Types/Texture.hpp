@@ -2,76 +2,72 @@
 
 #include "../Resource.hpp"
 
+#include <cstdint>
+#include <filesystem>
 #include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include <vulkan/vulkan_raii.hpp>
+
+#include "../../Renderer/TextureTable.hpp"
 
 namespace GNC {
 
+// What a glTF sampler says, plus the color space of the texture's role.
+struct TextureSettings {
+    // Base color and emissive maps are sRGB; data maps are linear.
+    bool srgb = true;
+    vk::SamplerAddressMode wrapU = vk::SamplerAddressMode::eRepeat;
+    vk::SamplerAddressMode wrapV = vk::SamplerAddressMode::eRepeat;
+    vk::Filter magFilter = vk::Filter::eLinear;
+    vk::Filter minFilter = vk::Filter::eLinear;
+    vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear;
+    bool mipmaps = true;
+};
+
+// An encoded image stb_image reads (PNG, JPEG, ...): a file, or its bytes
+// (embedded in a model file).
+using TextureSource = std::variant<std::filesystem::path, std::vector<std::uint8_t>>;
+
 // Texture resource
+// Decoded to RGBA8, uploaded with a full mip chain, and added to the
+// ResourceContext's TextureTable, whose slot materials use.
 class Texture : public Resource {
 private:
-    vk::raii::Image image{nullptr};
-    vk::raii::DeviceMemory memory{nullptr};
-    vk::raii::ImageView imageView{nullptr};
-    vk::raii::Sampler sampler{nullptr};
+    TextureSource source;
+    TextureSettings settings;
 
-    int width = 0;
-    int height = 0;
-    int channels = 0;
+    vk::raii::DeviceMemory memory = nullptr;
+    vk::raii::Image image = nullptr;
+    vk::raii::ImageView imageView = nullptr;
+    vk::raii::Sampler sampler = nullptr;
+
+    std::uint32_t width = 0;
+    std::uint32_t height = 0;
+    std::uint32_t mipLevels = 0;
+    std::uint32_t tableSlot = TextureTable::White;
 
 public:
-    explicit Texture(const std::string& id) : Resource(id) {}
+    Texture(const std::string& id, TextureSource textureSource, TextureSettings textureSettings)
+        : Resource(id), source(std::move(textureSource)), settings(textureSettings) {}
 
-    const vk::raii::Image& GetImage() const { return image; }
-    const vk::raii::ImageView& GetImageView() const { return imageView; }
-    const vk::raii::Sampler& GetSampler() const { return sampler; }
+    // TextureTable::White until loaded.
+    std::uint32_t GetTableSlot() const { return tableSlot; }
 
-    int GetWidth() const { return width; }
-    int GetHeight() const { return height; }
-    int GetChannels() const { return channels; }
+    std::uint32_t GetWidth() const { return width; }
+    std::uint32_t GetHeight() const { return height; }
+    const TextureSettings& GetSettings() const { return settings; }
 
-    std::vector<std::string> GetSourcePaths() const override { return {SourcePath()}; }
+    std::vector<std::string> GetSourcePaths() const override;
 
 protected:
-    bool doLoad() override {
-        const std::string filePath = SourcePath();
-
-        unsigned char* data = LoadImageData(filePath, &width, &height, &channels);
-        if (!data) return false;
-
-        CreateVulkanImage(data, width, height, channels);
-        FreeImageData(data);
-        return true;
-    }
-
-    void doUnload() override {
-        // Reverse creation order: the view sits on the image, the image in
-        // the memory.
-        sampler = nullptr;
-        imageView = nullptr;
-        image = nullptr;
-        memory = nullptr;
-
-        width = height = channels = 0;
-    }
+    bool doLoad() override;
+    void doUnload() override;
 
 private:
-    // TODO: discover extensions automatically, then fetch the loader for it.
-    std::string SourcePath() const { return "textures/" + GetId() + ".ktx"; }
-
-    // TODO: implement these out (stb_image for png/jpg, libktx for .ktx)
-    unsigned char* LoadImageData(const std::string& /*filePath*/,
-                                 int* /*outWidth*/, int* /*outHeight*/, int* /*outChannels*/) {
-        return nullptr;
-    }
-
-    void FreeImageData(unsigned char* /*data*/) {}
-
-    // TODO: create the vk::raii::Image, back it with device-local memory, copy
-    // the pixels in through a staging buffer using the context's transfer
-    // queue, then build the view and the sampler.
-    void CreateVulkanImage(const unsigned char* /*data*/,
-                           int /*imageWidth*/, int /*imageHeight*/, int /*imageChannels*/) {}
+    void CreateSampler();
 };
 
 } // namespace GNC
