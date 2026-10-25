@@ -1,6 +1,5 @@
-// Geometry pass: rasterizes every visible mesh once and writes its surface
-// attributes into the G-buffer (layout in common/gbuffer.slang). No lighting
-// happens here.
+// Geometry pass: writes every visible mesh's surface attributes into the
+// G-buffer (common/gbuffer.slang), unlit.
 
 import common.frame;
 import common.gbuffer;
@@ -31,11 +30,10 @@ struct VSOutput {
     float2 texCoord; // for the material textures, once they exist
 };
 
-// Normals transform by the inverse transpose of the model's 3x3 part, which is
-// its cofactor matrix divided by its determinant. Normalizing later takes care
-// of the scale, so all the division contributes is a sign flip for mirrored
-// (negative determinant) transforms. Three cross products instead of a 3x3
-// inverse per vertex, and correct under non-uniform scale.
+// Normals transform by the inverse transpose, the cofactor matrix over the
+// determinant. Normalizing takes care of the scale, so the determinant only
+// contributes its sign (mirrored transforms). Three cross products instead of
+// a 3x3 inverse, and correct under non-uniform scale.
 float3 TransformNormal(float4x4 model, float3 n) {
     // m[row][col], so these are the columns of the 3x3 part.
     float3 c0 = float3(model[0][0], model[1][0], model[2][0]);

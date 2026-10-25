@@ -1,10 +1,6 @@
-// Post-process pass: turns the lighting pass's linear HDR radiance into
-// something a display can show, and writes it to the scene image, which
-// ImGui shows in the Viewport panel.
-//   1. exposure: scales scene radiance into the display's range
-//   2. tonemapping: rolls highlights off instead of clipping them
-//   3. sRGB encoding: done by the target format when it is an sRGB one,
-//      otherwise here (the scene image is UNORM)
+// Post-process pass: exposure, then tonemapping, from linear HDR into the
+// scene image the Viewport shows. sRGB encoding happens here when the target
+// format does not do it (the scene image is UNORM).
 
 import common.fullscreen;
 

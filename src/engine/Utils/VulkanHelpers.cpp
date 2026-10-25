@@ -104,9 +104,8 @@ void uploadBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice
     commandBuffer.begin(vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
     commandBuffer.copyBuffer(*stagingBuffer, *buffer, vk::BufferCopy { .size = size });
 
-    // Waiting for the queue only makes the copy available. The barrier makes
-    // it visible to whatever reads the buffer later on this queue (vertex
-    // fetch, uniform reads, ...), even in other submissions.
+    // Waiting for the queue only makes the copy available; the barrier makes
+    // it visible to later reads on this queue, in any submission.
     const vk::MemoryBarrier2 barrier {
         .srcStageMask = vk::PipelineStageFlagBits2::eCopy,
         .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
@@ -118,8 +117,7 @@ void uploadBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice
 
     const vk::CommandBuffer rawCommandBuffer = *commandBuffer;
     queue.submit(vk::SubmitInfo { .commandBufferCount = 1, .pCommandBuffers = &rawCommandBuffer });
-    // The staging buffer dies at the end of this function, so the copy has to
-    // be done by then.
+    // The staging buffer dies with this function.
     queue.waitIdle();
 }
 

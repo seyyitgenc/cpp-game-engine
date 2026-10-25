@@ -1,7 +1,5 @@
-// Cook-Torrance BRDF for the glTF metallic-roughness model, and the punctual
-// light evaluation that feeds it. Everything here works in world space and in
-// linear light; exposure, tonemapping and gamma come later, once, in
-// post-processing.
+// Cook-Torrance BRDF for glTF metallic-roughness, and punctual light
+// evaluation. World space, linear light.
 
 import common.frame;
 

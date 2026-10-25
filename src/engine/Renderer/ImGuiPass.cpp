@@ -12,10 +12,9 @@ namespace GNC {
 ImGuiPass::ImGuiPass(const std::string& name, vk::Extent2D renderExtent) : RenderPass(name), extent(renderExtent) {}
 
 void ImGuiPass::BeginPass(const FrameContext& frame) {
-    // The swapchain image only becomes usable once the acquire semaphore is
-    // signaled. The submit waits on it at eColorAttachmentOutput, so starting
-    // this barrier's src scope at that same stage chains the two: the layout
-    // transition happens after the wait. The old contents are not needed.
+    // The submit waits for acquire at eColorAttachmentOutput; starting the src
+    // scope there puts the layout transition after that wait. The old
+    // contents are not needed.
     const vk::ImageMemoryBarrier2 barrier = makeImageBarrier(frame.targetImage, vk::ImageAspectFlagBits::eColor,
         vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone,
@@ -25,8 +24,7 @@ void ImGuiPass::BeginPass(const FrameContext& frame) {
         .pImageMemoryBarriers = &barrier
     });
 
-    // The UI is all that goes in the swapchain image; the scene reaches it
-    // as a texture in the Viewport panel.
+    // Only the UI goes here; the scene arrives as the Viewport's texture.
     const vk::RenderingAttachmentInfo colorInfo {
         .imageView = frame.targetView,
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,

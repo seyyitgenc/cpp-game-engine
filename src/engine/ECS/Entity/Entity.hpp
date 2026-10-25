@@ -13,9 +13,8 @@
 namespace GNC {
 
 // Entity class
-// An entity is just a name plus a bag of components. It owns its components
-// through the vector, and keeps a type id -> component map alongside it so
-// lookups are O(1) instead of a linear walk with dynamic_cast.
+// A name plus the components it owns, with a type id -> component map for
+// O(1) lookups.
 
 // FIXME: not thread safe
 class Entity {
@@ -97,8 +96,7 @@ public:
         components.push_back(std::move(component));
         componentMap[typeID] = componentPtr;
 
-        // Entities can grow after they are up and running; a late component
-        // still gets its OnInitialize() at the point it joins.
+        // A component added after Initialize() is initialized as it joins.
         if (initialized) {
             componentPtr->Initialize();
         }

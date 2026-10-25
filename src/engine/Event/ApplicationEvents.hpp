@@ -9,11 +9,9 @@
 
 namespace GNC {
 
-// Fired by the framebuffer-size callback. Publish with EnqueueCoalesced():
-// a drag produces many of these per frame and only the last size matters.
-// The renderer's listener should mark the swapchain dirty and recreate it at
-// the start of the next frame, never inside the listener itself, since Flush()
-// runs before the previous frame's fence has necessarily been waited on.
+// Publish with EnqueueCoalesced(): only the last size matters. Listeners
+// should only mark the swapchain dirty; Flush() runs before the previous
+// frame's fence is waited on.
 class WindowResizeEvent : public Event {
 private:
     std::uint32_t width;
@@ -27,7 +25,7 @@ public:
     std::uint32_t GetWidth() const { return width; }
     std::uint32_t GetHeight() const { return height; }
 
-    // Minimised windows report 0x0; there is nothing to render into.
+    // Minimized windows report 0x0.
     bool IsMinimized() const { return width == 0 || height == 0; }
 };
 
@@ -48,10 +46,8 @@ public:
     bool IsFocused() const { return focused; }
 };
 
-// Enqueued by App::Run() once per frame that will be drawn (not while
-// minimized), after the window's input for that frame, so its listeners see
-// that input already applied. deltaTime in seconds, capped at
-// App::MaxDeltaTime.
+// Once per drawn frame, after that frame's input. deltaTime in seconds,
+// capped at App::MaxDeltaTime.
 class FrameEvent : public Event {
 private:
     float deltaTime;
@@ -64,23 +60,16 @@ public:
     float GetDeltaTime() const { return deltaTime; }
 };
 
-// A request to quit, from anything that wants the application to end (the
-// Esc binding, File > Quit in the menu bar). App's listener closes the
-// window; the loop exits before the next frame. WindowCloseEvent is the
-// window's close button, which GLFW already acts on by itself.
+// A request to quit (Esc, File > Quit); App closes the window.
+// WindowCloseEvent is the close button, which GLFW acts on by itself.
 class QuitApplicationEvent : public Event {
 public:
     GNC_EVENT_TYPE(QuitApplicationEvent, EventCategory::Application)
 };
 
-// Fired from HotReloadResourceManager::ApplyPendingReloads() on the main
-// thread, once per resource that was actually rebuilt. Anything that cached
-// a Vulkan object derived from the resource (a pipeline built from a shader
-// module, a descriptor set pointing at a texture view) listens for this and
-// rebuilds its own copy.
-//
-// The resource is identified the same way the manager's table keys it, so a
-// listener can compare against ResourceHandle::GetId() directly.
+// For anything holding a Vulkan object built from a resource (a pipeline
+// from a shader) to rebuild it. Meant to be enqueued per resource
+// HotReloadResourceManager rebuilds; nothing enqueues it yet.
 class ResourceReloadedEvent : public Event {
 private:
     std::type_index resourceType;

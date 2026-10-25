@@ -7,9 +7,7 @@
 
 namespace GNC {
 
-// Axis aligned bounding box, stored as its two opposite corners.
-// Axis aligned means the edges always stay parallel to the world axes, so a box
-// only ever needs these six numbers no matter how the object inside it is posed.
+// Axis aligned bounding box, as its two opposite corners.
 struct AABBBoundingBox3D {
     glm::vec3 min {-1.0f, -1.0f, -1.0f};
     glm::vec3 max { 1.0f,  1.0f,  1.0f};

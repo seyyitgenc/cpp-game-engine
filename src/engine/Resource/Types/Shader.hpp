@@ -15,8 +15,8 @@
 namespace GNC {
 
 // Shader resource
-// Wraps one SPIR-V module. The stage is part of the resource's identity because
-// the same base name usually exists once per stage on disk.
+// One SPIR-V module. The stage is part of its identity: a base name exists
+// once per stage on disk.
 class Shader : public Resource {
 private:
     vk::raii::ShaderModule shaderModule{nullptr};
@@ -38,8 +38,7 @@ protected:
         std::vector<char> code;
         if (!ReadFile(filePath, code)) return false;
 
-        // SPIR-V is a stream of 32-bit words; anything else is a truncated or
-        // non-SPIR-V file and Vulkan would reject it anyway.
+        // SPIR-V is 32-bit words.
         if (code.empty() || code.size() % 4 != 0) return false;
 
         CreateShaderModule(code);
@@ -65,10 +64,9 @@ private:
         }
     }
 
-    // Takes a path rather than a string: on Windows ifstream then opens it
-    // through the wide API, so a non-ASCII directory name still works.
+    // A path, not a string: on Windows ifstream then opens it through the
+    // wide API, so non-ASCII directories work.
     bool ReadFile(const std::filesystem::path& filePath, std::vector<char>& buffer) {
-        // Seek to the end on open so the size is known before the read.
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
         if (!file.is_open()) return false;
 

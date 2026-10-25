@@ -113,8 +113,7 @@ vk::raii::SurfaceKHR Window::CreateSurface(const vk::raii::Instance& instance) c
 // listener runs later, at the bus's Flush().
 void Window::InstallCallbacks() {
     glfwSetFramebufferSizeCallback(handle, [](GLFWwindow* w, int width, int height) {
-        // Coalesced: a drag fires dozens of these per frame and only the last
-        // size matters.
+        // Coalesced: only the last size of a drag matters.
         WindowOf(w).eventBus.EnqueueCoalesced<WindowResizeEvent>(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
     });
     glfwSetWindowCloseCallback(handle, [](GLFWwindow* w) {

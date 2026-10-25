@@ -10,7 +10,6 @@
 
 namespace GNC {
 
-// Forward declarations
 class RenderPass;
 class RenderTarget;
 struct FrameContext;

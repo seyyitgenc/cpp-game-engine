@@ -20,25 +20,10 @@
 namespace GNC {
 
 // Hot-reloading resource manager
-// A development-time ResourceManager that notices when a file behind a loaded
-// resource changes on disk and rebuilds that resource from it.
-//
-// The work is split across two threads on purpose:
-//
-//   - the watcher thread only ever *stats files*. It touches no Vulkan object
-//     and no resource table entry, so it cannot race the renderer.
-//   - ApplyPendingReloads(), which you call yourself from the main thread,
-//     does the actual destroy-and-rebuild.
-//
-// That split is the whole point. Reloading from the watcher thread, the way the
-// obvious implementation does, destroys vk::raii handles at an arbitrary moment
-// which may be while a command buffer referencing them is still in flight, and
-// races the main thread's Load()/Release() over the same containers.
-//
-// Reloading is not free of synchronisation duty even so: see
-// ApplyPendingReloads() for what the caller still owns.
-//
-// Ship this out of release builds, or just never call StartWatcher() there.
+// Development only: rebuilds a resource when a file behind it changes. The
+// watcher thread only stats files; the rebuild happens in
+// ApplyPendingReloads() on the main thread, so no Vulkan handle is destroyed
+// while a command buffer may still use it.
 class HotReloadResourceManager : public ResourceManager {
 public:
     using Clock = std::chrono::steady_clock;
@@ -48,24 +33,18 @@ public:
 
     ~HotReloadResourceManager() override { StopWatcher(); }
 
-    // How often the watcher stats its files.
     void SetPollInterval(std::chrono::milliseconds interval) {
         pollIntervalMs.store(static_cast<int>(interval.count()), std::memory_order_relaxed);
     }
 
-    // How long a file must hold still after a change before it is reloaded.
-    // Editors and shader compilers do not write atomically, so reacting to the
-    // first changed timestamp regularly means reading a half-written file.
+    // How long a file must hold still before it is reloaded: editors and
+    // compilers do not write files atomically.
     void SetSettleTime(std::chrono::milliseconds settle) {
         settleTimeMs.store(static_cast<int>(settle.count()), std::memory_order_relaxed);
     }
 
-    // Same contract as ResourceManager::Load(), and additionally registers the
-    // resource's source files with the watcher.
-    //
-    // Registering *after* the load rather than before means the timestamps
-    // recorded are the ones the resource actually read, so an edit that lands
-    // during startup is caught on the next poll instead of being missed.
+    // Also watches the resource's files, from after the load, so the recorded
+    // timestamps are the ones the load read.
     template<typename T, typename... Args>
     ResourceHandle<T> Load(const std::string& resourceId, Args&&... args) {
         ResourceHandle<T> handle = ResourceManager::Load<T>(resourceId, std::forward<Args>(args)...);
@@ -77,8 +56,7 @@ public:
         return handle;
     }
 
-    // Same contract as ResourceManager::Release(), and stops watching the files
-    // once the resource has actually left the cache.
+    // Also stops watching once the resource has left the cache.
     template<typename T>
     void Release(const std::string& resourceId) {
         ResourceManager::Release<T>(resourceId);
@@ -89,8 +67,7 @@ public:
     }
 
     void StartWatcher() {
-        // exchange() rather than a load/store pair: two calls racing here would
-        // otherwise both spawn a thread and leak one of them.
+        // exchange(): two racing calls would otherwise both spawn a thread.
         if (running.exchange(true)) return;
 
         watcher = std::thread(&HotReloadResourceManager::WatcherLoop, this);
@@ -103,19 +80,9 @@ public:
 
     bool IsWatching() const { return running.load(std::memory_order_relaxed); }
 
-    // Applies every reload the watcher has queued and returns how many resources
-    // were rebuilt. Cheap when nothing changed: one mutex acquisition.
-    //
-    // Call it from the main thread at a point where nothing this could rebuild
-    // is referenced by an in-flight command buffer. Between frames, after the
-    // fence for the frame you just submitted, is the natural spot; a
-    // device.waitIdle() beforehand is the blunt version and perfectly fine for a
-    // development-only path.
-    //
-    // A resource whose new file fails to load keeps its previous version and
-    // logs. That is what makes the edit-save-look loop usable: a typo in a
-    // shader leaves the last good module bound instead of taking the frame down,
-    // and the next save retries.
+    // Main thread, while no in-flight command buffer uses what it may rebuild
+    // (after the frame's fence, or a waitIdle()). A resource that fails to
+    // reload keeps its previous version.
     std::size_t ApplyPendingReloads() {
         std::vector<PendingKey> batch;
         {
@@ -123,8 +90,8 @@ public:
             batch.swap(pending);
         }
 
-        // Deliberately outside the lock: ReloadEntry() touches the GPU, and the
-        // watcher thread must not be blocked on it.
+        // Outside the lock: ReloadEntry() touches the GPU and must not block
+        // the watcher.
         std::size_t reloaded = 0;
         for (const auto& [type, resourceId] : batch) {
             if (ReloadEntry(type, resourceId)) {
@@ -142,7 +109,6 @@ public:
         return reloaded;
     }
 
-    // Number of files currently being watched. Handy in a debug overlay.
     std::size_t GetWatchedFileCount() const {
         std::lock_guard<std::mutex> lock(mutex);
         return watched.size();
@@ -154,13 +120,11 @@ private:
         std::string resourceId;
         std::filesystem::file_time_type stamp{};
 
-        // When the most recent change was seen, and whether one is still
-        // settling. Both only ever touched by the watcher thread under the lock.
+        // Watcher thread only, under the lock.
         Clock::time_point changedAt{};
         bool dirty = false;
     };
 
-    // Which resource to rebuild, in the type-erased form the table is keyed by.
     using PendingKey = std::pair<std::type_index, std::string>;
 
     void WatcherLoop() {
@@ -175,22 +139,19 @@ private:
                     std::error_code ec;
                     const auto stamp = std::filesystem::last_write_time(path, ec);
 
-                    // The file can be legitimately missing for an instant: many
-                    // editors save by writing a temp file and renaming over the
-                    // target. Not an error, just look again next tick.
+                    // Briefly missing while an editor saves through a temp
+                    // file; look again next tick.
                     if (ec) continue;
 
                     if (stamp != entry.stamp) {
-                        // Something wrote to it, but possibly is still writing.
-                        // Restart the settle timer rather than reloading now.
+                        // Maybe still being written: restart the settle timer.
                         entry.stamp = stamp;
                         entry.changedAt = now;
                         entry.dirty = true;
                         continue;
                     }
 
-                    // Unchanged since last tick and the settle window has passed,
-                    // so the writer is done.
+                    // Settled: the writer is done.
                     if (entry.dirty && now - entry.changedAt >= settle) {
                         entry.dirty = false;
                         QueueReload(entry.type, entry.resourceId);
@@ -204,9 +165,7 @@ private:
 
     // Caller holds the lock.
     void QueueReload(std::type_index type, const std::string& resourceId) {
-        // A resource can be built from several files, and a rebuild covers all
-        // of them, so collapse duplicates. The queue is drained every frame and
-        // holds only what changed, so a linear scan is the right shape here.
+        // One rebuild covers all of a resource's files.
         for (const auto& [queuedType, queuedId] : pending) {
             if (queuedType == type && queuedId == resourceId) return;
         }
@@ -221,8 +180,7 @@ private:
             std::error_code ec;
             const auto stamp = std::filesystem::last_write_time(path, ec);
 
-            // A resource can load from somewhere that is not a file on disk, or
-            // name a path that does not exist yet. Nothing to watch either way.
+            // Not a file on disk, or not there yet: nothing to watch.
             if (ec) continue;
 
             watched.insert_or_assign(path, WatchEntry{type, resourceId, stamp, Clock::now(), false});
@@ -236,8 +194,7 @@ private:
             return entry.second.type == type && entry.second.resourceId == resourceId;
         });
 
-        // Drop any queued reload too: the resource is gone, and ReloadEntry()
-        // would only fail to find it.
+        // Its queued reload too: ReloadEntry() would not find it.
         std::erase_if(pending, [&](const PendingKey& key) {
             return key.first == type && key.second == resourceId;
         });

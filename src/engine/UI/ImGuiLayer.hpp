@@ -20,30 +20,10 @@ class VulkanContext;
 class Window;
 
 // ImGui layer
-// Dear ImGui (docking branch, src/external/ImGui) on its official GLFW and
-// Vulkan backends, and the manager of the UI's panels. Owns the ImGui context,
-// both backends, every panel and the main menu bar. ImGuiPass, in the
-// Renderer, records the main window's UI into each frame.
-//
-// The menu bar runs along the top of the main window, above the dockspace.
-// Its menus (GetMenuBar(), an ImGuiMenu tree) hold commands, submenus and
-// check mark items that show and hide panels; only visible panels render.
-//
-// Input reaches ImGui through the event bus, not through GLFW callbacks of its
-// own: Window's callbacks stay the only ones on the main window. The listeners
-// run at EventPriority, above everything else, hand each event to the GLFW
-// backend, and swallow it while ImGui wants that device (io.WantCaptureMouse /
-// io.WantCaptureKeyboard, as of the last frame). So a click on a panel never
-// reaches the camera, and typing into a text field never moves it. Releases
-// are never swallowed, and while the camera has the cursor captured the mouse
-// is the camera's alone.
-//
-// With viewports enabled, a panel dragged out of the main window becomes an
-// OS window with its own swapchain, which the backends create, feed input to
-// and present by themselves in RenderPlatformWindows().
-//
-// Per frame, in the render traversal: Render(), Renderer::Render(),
-// RenderPlatformWindows().
+// Dear ImGui on its GLFW and Vulkan backends: owns the context, the backends,
+// the panels and the menu bar. Input arrives through the bus at
+// EventPriority, and is swallowed while ImGui wants that device. Per frame:
+// Render(), Renderer::Render(), RenderPlatformWindows().
 class ImGuiLayer {
 public:
     // Above every other listener, so ImGui sees input first.
@@ -52,8 +32,8 @@ public:
     // Lets panels leave the main window (ImGuiConfigFlags_ViewportsEnable).
     static constexpr bool EnableViewports = true;
 
-    // Images panels show through ImGui_ImplVulkan_AddTexture (the Viewport's
-    // scene image), on top of what the font atlas needs.
+    // ImGui_ImplVulkan_AddTexture images (the Viewport's), beyond the font
+    // atlas.
     static constexpr std::uint32_t MaxUserTextures = 8;
 
     // At 100% scale. Icons fill the whole em, so at the text's size they
@@ -69,10 +49,10 @@ private:
     // ImGui keeps only the pointer (io.IniFilename), so the string lives here.
     std::string iniPath;
 
-    // The format the backend's pipeline for the main window was built for.
+    // What the backend's main-window pipeline was built for.
     vk::Format pipelineFormat = vk::Format::eUndefined;
 
-    // In the order they were added, which is the order they render in.
+    // In render order.
     std::vector<std::unique_ptr<ImGuiPanel>> panels;
 
     // After the panels, so it is destroyed first: its items point at them.
@@ -81,12 +61,10 @@ private:
     std::vector<EventSubscription> subscriptions;
 
 public:
-    // The window, Vulkan context and renderer must outlive the layer. The
-    // renderer is read for its swapchain format.
+    // The window, Vulkan context and renderer must outlive the layer.
     ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanContext, const Renderer& rend);
 
-    // Waits for the GPU first: frames in flight may still read the backend's
-    // buffers and font atlas. Destroys the panels before the backends, so
+    // Waits for the GPU, then destroys the panels before the backends, so
     // they can still free their textures.
     ~ImGuiLayer();
 
@@ -98,10 +76,8 @@ public:
     // Panels
     // ------
 
-    // Constructs a T(name, args...) and adds it after the panels already
-    // there. If a panel with that name exists, returns it instead when it is
-    // a T, and nullptr when it is not, as RenderPassManager::AddRenderPass
-    // does.
+    // Constructs T(name, args...). If the name is taken, returns that panel
+    // when it is a T, and nullptr when it is not.
     template<typename T, typename... Args>
     T* AddPanel(const std::string& name, Args&&... args) {
         static_assert(std::is_base_of_v<ImGuiPanel, T>, "T must derive from ImGuiPanel");
@@ -116,7 +92,6 @@ public:
         return panelPtr;
     }
 
-    // nullptr when there is none.
     ImGuiPanel* GetPanel(const std::string& name) const;
 
     // --------
@@ -128,13 +103,11 @@ public:
     // Frame
     // -----
 
-    // Builds this frame's UI: the menu bar, a dockspace
-    // then every visible panel. Leaves the draw data ImGuiPass
-    // records, so call it before Renderer::Render(), and after any
-    // Renderer::Resize() of the frame.
+    // Leaves the draw data ImGuiPass records: call before Renderer::Render()
+    // and after any Renderer::Resize() of the frame.
     void Render();
 
-    // Draws and presents the panels outside the main window. Call after
+    // Draws and presents the panels outside the main window. After
     // Renderer::Render(), every frame Render() ran.
     void RenderPlatformWindows();
 

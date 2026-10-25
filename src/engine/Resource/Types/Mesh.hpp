@@ -43,18 +43,15 @@ struct Vertex {
     }
 };
 
-// Geometry on the CPU side, before it goes to the GPU. Also how procedural
-// meshes (Resource/Primitives.hpp) are handed to a Mesh.
+// CPU-side geometry; also how procedural meshes (Resource/Primitives.hpp)
+// reach a Mesh.
 struct MeshData {
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
 };
 
 // Mesh resource
-// Geometry lives in two GPU buffers. The vertex and index counts are cached at
-// load time so drawing never has to ask the buffers how big they are.
-//
-// Built either from a file (by id) or from MeshData handed in up front:
+// Built from a file (by id) or from MeshData handed in up front:
 //     resources.Load<Mesh>("sphere", CreateSphere(1.0f, 64, 128));
 // Uploading needs the transfer queue and pool in the ResourceContext.
 class Mesh : public Resource {
@@ -67,8 +64,7 @@ private:
     vk::raii::DeviceMemory indexBufferMemory{nullptr};
     std::uint32_t indexCount = 0;
 
-    // Set for procedural meshes. Kept after upload so Unload() + Load() can
-    // build the buffers again.
+    // Kept after upload, so Unload() + Load() can rebuild the buffers.
     std::optional<MeshData> procedural;
 
 public:
@@ -92,8 +88,6 @@ protected:
         const ResourceContext& context = GetContext();
         if (!context.transferQueue || !context.transferPool) return false;
 
-        // Parse into CPU vectors first: it is the only place where the data can
-        // still be validated cheaply before it is committed to the GPU.
         MeshData loaded;
         if (!procedural && !LoadMeshData(SourcePath(), loaded)) return false;
         const MeshData& data = procedural ? *procedural : loaded;

@@ -5,15 +5,13 @@
 namespace GNC {
 
 // Resource context
-// The manager holds one context and hands a pointer to it to every
-// resource it creates, so nothing here has to know about a global device.
-//
-// Non-owning. Whoever owns the device must outlive the ResourceManager.
+// Handed to every resource the manager creates. Non-owning: the device's
+// owner must outlive the ResourceManager.
 struct ResourceContext {
     const vk::raii::Device* device = nullptr;
     const vk::raii::PhysicalDevice* physicalDevice = nullptr;
 
-    // Used by the staging uploads that fill textures and vertex buffers.
+    // For staging uploads.
     const vk::raii::Queue* transferQueue = nullptr;
     const vk::raii::CommandPool* transferPool = nullptr;
 

@@ -30,8 +30,8 @@ constexpr std::array DeviceExtensions { vk::KHRSwapchainExtensionName };
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
                                                vk::DebugUtilsMessageTypeFlagsEXT,
                                                const vk::DebugUtilsMessengerCallbackDataEXT* data, void*) {
-    // Log::write rather than writeFormatted: validation messages run well past
-    // writeFormatted's 256 character buffer.
+    // Not writeFormatted: its 256 character buffer truncates validation
+    // messages.
     if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
         Log::write(Log::Error, RED_TEXT("[Vulkan] "), data->pMessage, "\n");
     } else {
@@ -100,8 +100,7 @@ void VulkanContext::CreateInstance() {
         const bool hasValidation = std::ranges::any_of(available, [](const vk::LayerProperties& layer) {
             return std::strcmp(layer.layerName, ValidationLayer) == 0;
         });
-        // A missing layer is not worth refusing to start over; it only means
-        // running without the safety net. It ships with the Vulkan SDK.
+        // Not fatal: it only means no safety net. It ships with the Vulkan SDK.
         if (hasValidation) {
             layers.push_back(ValidationLayer);
             extensions.push_back(vk::EXTDebugUtilsExtensionName);
@@ -176,9 +175,9 @@ void VulkanContext::CreateDevice() {
         { .synchronization2 = vk::True, .dynamicRendering = vk::True }
     };
 
-    // Setters rather than designated initializers: the device layer fields sit
-    // in the middle of the struct, are deprecated, and have no default value,
-    // so naming them warns and skipping them warns too.
+    // Setters, not designated initializers: the deprecated layer fields sit
+    // mid-struct without defaults, so naming them warns and skipping them
+    // warns too.
     vk::DeviceCreateInfo createInfo {};
     createInfo.setPNext(&features.get<vk::PhysicalDeviceFeatures2>())
         .setQueueCreateInfos(queueInfo)

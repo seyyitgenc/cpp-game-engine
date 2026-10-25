@@ -45,8 +45,7 @@ void LightingPass::BeginPass(const FrameContext& frame) {
         .pImageMemoryBarriers = &barrier
     });
 
-    // eDontCare: the fullscreen triangle writes every pixel, background
-    // included, so there is nothing worth clearing or loading.
+    // eDontCare: the fullscreen triangle writes every pixel.
     const vk::RenderingAttachmentInfo colorInfo {
         .imageView = *output.view,
         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -98,8 +97,7 @@ void LightingPass::EndPass(const FrameContext& frame) {
 void LightingPass::CreateDescriptorSet() {
     const vk::raii::Device& device = *context.device;
 
-    // Sampled images without samplers: the shader reads them with Load(),
-    // which fetches one texel and never filters.
+    // No samplers: the shader reads one texel at a time with Load().
     std::array<vk::DescriptorSetLayoutBinding, GBufferBindingCount> bindings;
     for (std::uint32_t i = 0; i < GBufferBindingCount; ++i) {
         bindings[i] = vk::DescriptorSetLayoutBinding {
@@ -186,8 +184,7 @@ void LightingPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const
 
     const vk::PipelineMultisampleStateCreateInfo multisampling { .rasterizationSamples = vk::SampleCountFlagBits::e1 };
 
-    // Every light is summed inside the shader's loop, so the triangle is drawn
-    // once and simply overwrites the target.
+    // The shader sums every light, so one draw, no blending.
     const vk::PipelineColorBlendAttachmentState blendAttachment {
         .blendEnable = vk::False,
         .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG

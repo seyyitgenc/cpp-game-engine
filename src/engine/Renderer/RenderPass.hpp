@@ -9,9 +9,8 @@
 
 namespace GNC {
 
-// The shader modules a pass builds its pipeline from. Non-owning, and only read
-// during the pass's constructor: a module can be destroyed as soon as the
-// pipeline that uses it exists.
+// Non-owning, read only by the pass's constructor: a module can be destroyed
+// once the pipeline exists.
 struct PassShaders {
     vk::ShaderModule vertex;
     vk::ShaderModule fragment;
@@ -55,12 +54,8 @@ public:
     }
 
 protected:
-    // With dynamic rendering, BeginPass typically calls vkCmdBeginRendering
-    // instead of vkCmdBeginRenderPass
     virtual void BeginPass(const FrameContext& frame) = 0;
     virtual void Render(const FrameContext& frame) = 0;
-    // With dynamic rendering, EndPass typically calls vkCmdEndRendering
-    // instead of vkCmdEndRenderPass
     virtual void EndPass(const FrameContext& frame) = 0;
 };
 

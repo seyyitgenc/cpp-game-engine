@@ -14,12 +14,9 @@ namespace GNC {
 class FrustumCulling;
 
 // G-buffer
-// Surface attributes for every pixel, as laid out in shaders/common/gbuffer.slang.
-// Written by GeometryPass, read by LightingPass.
-//
-// There is one, shared by all frames in flight. That is safe because the
-// barrier at the start of GeometryPass waits for the previous frame's lighting
-// pass to finish reading before anything is overwritten.
+// Laid out as in shaders/common/gbuffer.slang. One, shared by all frames in
+// flight: GeometryPass's first barrier waits for the previous frame's
+// lighting pass to finish reading it.
 struct GBuffer {
     static constexpr vk::Format BaseColorFormat = vk::Format::eR8G8B8A8Srgb;
     static constexpr vk::Format NormalFormat = vk::Format::eR16G16Sfloat;
@@ -46,8 +43,7 @@ struct GBuffer {
 };
 
 // Geometry pass for deferred rendering
-// Draws every entity that survived frustum culling once, writing its surface
-// attributes (no lighting) into the G-buffer.
+// Draws every entity that survived culling into the G-buffer, unlit.
 class GeometryPass : public RenderPass {
 private:
     RenderTargetContext context;

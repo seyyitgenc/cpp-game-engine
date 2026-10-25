@@ -15,9 +15,8 @@
 
 namespace GNC {
 
-// A plane in the form dot(normal, p) + distance = 0.
-// The normal points towards the inside of the frustum, so a positive signed
-// distance means "in front of the plane", i.e. on the visible side.
+// dot(normal, p) + distance = 0, the normal pointing into the frustum: a
+// positive signed distance is the visible side.
 struct Plane {
     glm::vec3 normal {0.0f, 1.0f, 0.0f};
     float distance = 0.0f;
@@ -47,11 +46,8 @@ struct Frustum {
         frustum.planes[Right]  = MakePlane(rowW - rowX);
         frustum.planes[Bottom] = MakePlane(rowW + rowY);
         frustum.planes[Top]    = MakePlane(rowW - rowY);
-        // Camera builds its projection with Vulkan's 0..1 depth range, so
-        // the near plane is z >= 0, i.e. just rowZ. (OpenGL's -1..1 range
-        // would make it rowW + rowZ.) The Y flip in the projection only
-        // swaps which plane is Bottom and which is Top; the volume is the
-        // same.
+        // Vulkan's 0..1 depth makes the near plane just rowZ (OpenGL's would
+        // be rowW + rowZ). The Y flip only swaps Bottom and Top.
         frustum.planes[Near]   = MakePlane(rowZ);
         frustum.planes[Far]    = MakePlane(rowW - rowZ);
         return frustum;
@@ -109,8 +105,7 @@ public:
             auto transformComponent = entity->GetComponent<TransformComponent>();
             if (!transformComponent) continue;
 
-            // The mesh box is in model space, so move it into world space first:
-            // the frustum planes live in world space too.
+            // Model space to world space, where the planes are.
             AABBBoundingBox3D boundingBox = meshComponent->GetBoundingBox();
             boundingBox.Transform(transformComponent->GetTransformMatrix());
 

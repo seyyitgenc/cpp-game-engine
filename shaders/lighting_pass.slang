@@ -1,6 +1,5 @@
-// Lighting pass: one fullscreen triangle that reads the G-buffer back and
-// shades every pixel with the Cook-Torrance BRDF, once per light. Output is
-// linear HDR radiance; exposure and tonemapping happen in post-processing.
+// Lighting pass: shades the G-buffer with one fullscreen triangle,
+// Cook-Torrance per light, into linear HDR.
 
 import common.frame;
 import common.gbuffer;

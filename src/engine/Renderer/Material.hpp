@@ -5,15 +5,9 @@
 namespace GNC {
 
 // Material
-// Surface description for the glTF metallic-roughness model. For now only the
-// constant factors; the texture maps (base color, metallic-roughness, normal,
-// occlusion, emissive) multiply into these once texture loading exists.
-//
-// Defaults are glTF's, so an importer can leave out whatever the file leaves
-// out. Note that this makes an untouched material a white, fully rough metal.
-//
-// Colors are linear. A color picked in sRGB (most color pickers, hex codes)
-// has to be converted first, or it will come out too bright.
+// glTF metallic-roughness factors; texture maps come with texture loading.
+// Defaults are glTF's, which makes an untouched material a white, fully rough
+// metal. Colors are linear: convert a color picked in sRGB first.
 struct Material {
     glm::vec4 baseColorFactor {1.0f};
     float metallicFactor = 1.0f;

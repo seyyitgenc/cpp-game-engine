@@ -9,16 +9,9 @@ namespace GNC {
 class Window;
 
 // Vulkan context
-// The Vulkan objects that live as long as the application: instance, debug
-// messenger (debug builds), window surface, the chosen GPU, the device, and
-// its one queue.
-//
-// One queue does everything: graphics, present and uploads. That needs a
-// family that can both draw and present to the surface, which every desktop
-// GPU has; a device without one is rejected.
-//
-// The device is created for Vulkan 1.3 with dynamic rendering and
-// synchronization2 enabled, which the render passes rely on.
+// The application-lifetime objects: instance, debug messenger, surface, GPU,
+// device, and its one queue for graphics, present and uploads. Requires
+// Vulkan 1.3 with dynamic rendering and synchronization2.
 class VulkanContext {
 private:
     vk::raii::Context context;

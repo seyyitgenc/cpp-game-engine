@@ -7,10 +7,8 @@ namespace GNC {
 
 using EventTypeID = std::uint32_t;
 
-// Event type identification
-// Same idea as ComponentTypeIDSystem: every event type gets a unique id the
-// first time it is asked for, so the bus can key its listener table by a plain
-// integer instead of a string compare or a dynamic_cast per delivery.
+// A unique id per event type, assigned on first use, so the bus can key its
+// listener table by integer.
 class EventTypeIDSystem {
 private:
     static inline EventTypeID nextTypeID = 0;
@@ -23,12 +21,8 @@ public:
     }
 };
 
-// Event categories
-// Coarse bit flags an event belongs to, on top of its exact type. A listener
-// subscribes by exact type; categories exist for the one question type alone
-// cannot answer cheaply: "is this something the UI layer wants to swallow?"
-// An ImGui layer with keyboard focus consumes everything tagged Input and
-// nothing else, without having to list every input event type by name.
+// Coarse flags on top of the exact type, to ask "is this input?" without
+// listing every input event type.
 enum class EventCategory : std::uint32_t {
     None        = 0,
     Application = 1u << 0, // window, lifecycle
@@ -57,9 +51,9 @@ constexpr bool Any(EventCategory c) {
 }
 
 // Base event
-// Events are plain value objects that *own* their payload. They sit in the
-// bus's queue until the next Flush(), possibly having been enqueued from
-// another thread, so nothing in here may point back at the publisher's stack.
+// Events own their payload: they wait in the queue until Flush(), maybe
+// enqueued from another thread, so nothing may point at the publisher's
+// stack.
 class Event {
 private:
     bool handled = false;
@@ -70,32 +64,26 @@ public:
     virtual EventTypeID GetTypeID() const = 0;
     virtual EventCategory GetCategories() const = 0;
 
-    // For logging. Static storage, never freed.
+    // For logging; static storage.
     virtual const char* GetName() const = 0;
 
     bool IsInCategory(EventCategory category) const {
         return Any(GetCategories() & category);
     }
 
-    // Set by the bus once a listener returns true; later listeners for the
-    // same event are not called. Exposed so a listener can also inspect it
-    // when the bus is asked to keep delivering handled events.
+    // Set once a listener returns true.
     bool IsHandled() const { return handled; }
     void SetHandled(bool isHandled = true) { handled = isHandled; }
 };
 
 } // namespace GNC
 
-// Fills in the virtual boilerplate for a concrete event type.
+// Fills in the virtual boilerplate for a concrete event type:
 //
 //     class WindowResizeEvent : public Event {
 //     public:
 //         GNC_EVENT_TYPE(WindowResizeEvent, EventCategory::Application)
-//         ...
 //     };
-//
-// StaticTypeID() is what the bus uses at subscribe time; GetTypeID() is the
-// same value reached through the base pointer at dispatch time.
 #define GNC_EVENT_TYPE(TypeName, Categories)                                      \
     static ::GNC::EventTypeID StaticTypeID() {                                    \
         return ::GNC::EventTypeIDSystem::GetTypeID<TypeName>();                   \

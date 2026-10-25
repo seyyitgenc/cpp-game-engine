@@ -5,18 +5,12 @@
 
 namespace GNC {
 
-// Forward declarations
 class ResourceManager;
 
 // Resource handle
-// A handle is an id plus the manager that owns the resource, never a raw
-// pointer to it. The indirection is the point: the manager can move, reload or
-// evict a resource behind the handle's back, and the next Get() simply reports
-// what is true now instead of dangling.
-//
-// Note that a handle is not a smart pointer. Copying one does not take a
-// reference; the reference count moves only through ResourceManager::Load() and
-// ResourceManager::Release().
+// An id plus the owning manager, not a pointer, so Get() stays correct when
+// the manager reloads or evicts the resource. Copying one takes no reference;
+// only Load() and Release() count.
 template<typename T>
 class ResourceHandle {
 private:
@@ -29,9 +23,7 @@ public:
     ResourceHandle(std::string id, ResourceManager* manager)
         : resourceId(std::move(id)), resourceManager(manager) {}
 
-    // Defined at the bottom of ResourceManager.hpp, where ResourceManager is a
-    // complete type. The two headers refer to each other, so one of the
-    // definitions has to come late.
+    // Defined in ResourceManager.hpp, where ResourceManager is complete.
     T* Get() const;
 
     bool IsValid() const { return Get() != nullptr; }

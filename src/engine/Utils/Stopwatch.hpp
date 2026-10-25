@@ -14,14 +14,12 @@ public:
     void reset(){
         _startTime = clock::now();
     }
-    // this function supports integral and floating point types. 
-    // note: providing floating points to this function is the best way to use it.
+    // Integral or floating point; floating point works best.
     template<typename Rep = float, typename time_unit = std::ratio<1,1>>
     [[nodiscard]]Rep getElapsedTime(){
         return static_cast<Rep>(std::chrono::duration_cast<std::chrono::duration<Rep, time_unit>>(std::chrono::steady_clock::now() - _startTime).count());
     }
 
 private:
-    // using time_point = ;
     typename clock::time_point _startTime;
 };

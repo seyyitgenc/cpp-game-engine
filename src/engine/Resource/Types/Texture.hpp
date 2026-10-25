@@ -8,8 +8,6 @@
 namespace GNC {
 
 // Texture resource
-// Owns the four GPU objects a sampled texture needs. Each one is a vk::raii
-// handle, so the only thing doUnload() has to get right is the order.
 class Texture : public Resource {
 private:
     vk::raii::Image image{nullptr};
@@ -42,16 +40,13 @@ protected:
         if (!data) return false;
 
         CreateVulkanImage(data, width, height, channels);
-
-        // The CPU copy has done its job the moment the staging upload is done.
         FreeImageData(data);
         return true;
     }
 
     void doUnload() override {
-        // Assigning nullptr destroys the handle. Order still matters: the view
-        // and the sampler are built on top of the image, and the image sits in
-        // the memory allocation, so everything is released the way it was made.
+        // Reverse creation order: the view sits on the image, the image in
+        // the memory.
         sampler = nullptr;
         imageView = nullptr;
         image = nullptr;
@@ -61,7 +56,7 @@ protected:
     }
 
 private:
-    // TODO: discorver extensions automatically, then fetch the loader for it.
+    // TODO: discover extensions automatically, then fetch the loader for it.
     std::string SourcePath() const { return "textures/" + GetId() + ".ktx"; }
 
     // TODO: implement these out (stb_image for png/jpg, libktx for .ktx)

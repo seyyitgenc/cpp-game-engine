@@ -78,9 +78,8 @@ void App::Run() {
     }
 }
 
-// Callbacks enqueue, Flush() delivers: every listener runs here, at one known
-// point of the frame, ImGui's first. FrameEvent goes in behind this frame's
-// input, and only for frames that will be drawn.
+// Every listener runs here, ImGui's first. FrameEvent goes in behind this
+// frame's input, and only for frames that will be drawn.
 void App::EventTraversal(float deltaTime) {
     window.PollEvents();
 
@@ -131,8 +130,8 @@ void App::SubscribeToEvents() {
         return false;
     }));
 
-    // Esc only asks to quit; whatever ends up deciding (a "save changes?"
-    // prompt, later) listens for the request instead of for the key.
+    // Esc only asks to quit, so a later "save changes?" prompt can listen for
+    // the request.
     subscriptions.push_back(eventBus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
         if (e.GetKey() != GLFW_KEY_ESCAPE || e.IsRepeat()) return false;
         eventBus.Enqueue<QuitApplicationEvent>();
@@ -325,8 +324,7 @@ void App::BuildScene() {
     }
 }
 
-// The menu bar and the UI's panels. Menu entries appear in the order added,
-// and ImGuiLayer renders the visible panels every frame in the order added.
+// Menu entries and panels appear in the order added.
 void App::BuildGui() {
     ImGuiMenu& menuBar = gui.GetMenuBar();
 

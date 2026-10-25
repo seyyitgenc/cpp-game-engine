@@ -11,9 +11,9 @@
 namespace GNC {
 
 // Scene
-// Owns the entities, and the materials their MeshComponents point at. Both
-// live behind unique_ptr, so their addresses stay valid as more are added.
-// Materials are declared first so they outlive the entities using them.
+// Owns the entities and the materials their MeshComponents point at, behind
+// unique_ptr so addresses stay valid. Materials are declared first, so they
+// outlive the entities.
 class Scene {
 private:
     std::vector<std::unique_ptr<Material>> materials;
@@ -21,9 +21,8 @@ private:
     std::vector<Entity*> entityViews; // the form Renderer::Render() takes
 
 public:
-    // Comes back already initialized, so components added afterwards are
-    // initialized as they join (see Entity::AddComponent) and are live at
-    // once; there is no separate "start the scene" step to forget.
+    // Already initialized, so components added afterwards initialize as they
+    // join.
     Entity& CreateEntity(const std::string& name) {
         entities.push_back(std::make_unique<Entity>(name));
         Entity& entity = *entities.back();

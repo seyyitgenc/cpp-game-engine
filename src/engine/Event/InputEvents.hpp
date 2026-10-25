@@ -5,19 +5,9 @@
 namespace GNC {
 
 // Input events
-// Edge events only: a key going down or up, a button changing, the cursor
-// moving. The GLFW callbacks in Window.cpp enqueue these. Double clicks and
-// drags are not GLFW events; Window detects them.
-//
-// "Is W currently held" is state. Keep it from KeyPressed/KeyReleased (see
-// CameraController) rather than polling Window::IsKeyDown(): polling skips
-// the bus, so a higher priority listener (a UI layer) cannot swallow the key
-// first. Never return true for a release, or a listener below you keeps the
-// key held forever.
-//
-// Key codes, button ids and modifier bits are GLFW's, passed through
-// untranslated. The engine has one windowing backend and an abstraction layer
-// over its constants would be a second copy of the same table.
+// Edge events, enqueued by Window's GLFW callbacks; Window detects double
+// clicks and drags itself. Key codes, buttons and modifiers are GLFW's,
+// untranslated.
 
 // --------
 // Keyboard
@@ -49,9 +39,7 @@ private:
 public:
     GNC_EVENT_TYPE(KeyPressedEvent, EventCategory::Input | EventCategory::Keyboard)
 
-    // repeat is true for GLFW_REPEAT: the key was already down and the OS
-    // auto-repeat fired. Text input wants those; a "toggle wireframe"
-    // binding does not.
+    // isRepeat: OS auto-repeat of a held key (GLFW_REPEAT).
     KeyPressedEvent(int keyCode, int scan, int modifiers, bool isRepeat)
         : KeyEvent(keyCode, scan, modifiers), repeat(isRepeat) {}
 
@@ -66,8 +54,8 @@ public:
         : KeyEvent(keyCode, scan, modifiers) {}
 };
 
-// Unicode codepoint from the character callback; already has layout and
-// modifiers applied. This is what a text field wants, not KeyPressedEvent.
+// A Unicode codepoint with layout and modifiers applied: what text input
+// wants, not KeyPressedEvent.
 class CharTypedEvent : public Event {
 private:
     unsigned int codepoint;
@@ -84,9 +72,8 @@ public:
 // Mouse
 // -----
 
-// Cursor position in window coordinates. Deltas are not carried here: a
-// listener that wants them keeps the last position itself, which is also
-// where "first mouse" handling belongs.
+// Window coordinates. No delta: a listener that needs one keeps the last
+// position itself.
 class MouseMovedEvent : public Event {
 private:
     double x;
@@ -101,10 +88,8 @@ public:
     double GetY() const { return y; }
 };
 
-// Cursor motion while at least one mouse button is held. Enqueued right after
-// the MouseMovedEvent for the same motion, not instead of it, so a listener
-// that wants every cursor position (hover, a UI layer) needs only
-// MouseMovedEvent.
+// Motion with a button held. Enqueued after the MouseMovedEvent for the same
+// motion, not instead of it.
 class MouseDraggedEvent : public Event {
 private:
     double x;
@@ -167,10 +152,8 @@ public:
     MouseButtonReleasedEvent(int mouseButton, int modifiers) : MouseButtonEvent(mouseButton, modifiers) {}
 };
 
-// A second press of the same button, quickly and close to the first (see
-// Window::DoubleClickTime). Enqueued right after that second
-// MouseButtonPressedEvent, not instead of it, so a listener tracking which
-// buttons are down never misses a press. A third press starts over.
+// Enqueued after the second MouseButtonPressedEvent, not instead of it (see
+// Window::DoubleClickTime).
 class MouseDoubleClickEvent : public MouseButtonEvent {
 public:
     GNC_EVENT_TYPE(MouseDoubleClickEvent,
@@ -179,9 +162,7 @@ public:
     MouseDoubleClickEvent(int mouseButton, int modifiers) : MouseButtonEvent(mouseButton, modifiers) {}
 };
 
-// The cursor crossed into or out of the window's content area. Not one of
-// OSG's event kinds: GLFW reports it, and the ImGui backend needs it to know
-// when the mouse is over no window at all.
+// The cursor crossed the content area's edge; the ImGui backend needs it.
 class MouseEnterEvent : public Event {
 public:
     GNC_EVENT_TYPE(MouseEnterEvent, EventCategory::Input | EventCategory::Mouse)
@@ -196,9 +177,7 @@ public:
 // Gamepad
 // -------
 
-// From glfwSetJoystickCallback (not installed yet: there is no gamepad
-// support). Button and axis state would be polled; connection changes are the
-// only real edges GLFW reports for controllers.
+// From glfwSetJoystickCallback, which is not installed yet.
 class GamepadConnectedEvent : public Event {
 private:
     int joystickId;

@@ -7,14 +7,9 @@
 
 namespace GNC {
 
-// C++ mirrors of the structs the shaders read. The shader half of each one is
-// named in the comment above it; the two have to agree byte for byte, and the
-// static_asserts at the bottom pin the C++ side to the offsets the shader
-// compiler reports.
-//
-// Every glm::vec3 is followed by a 4 byte scalar. std140 would align a lone
-// vec3 to 16 bytes and C++ would not, so pairing them up is what keeps the two
-// layouts identical without hand written padding in the middle.
+// C++ mirrors of the shader structs named above each one; the static_asserts
+// pin them to the offsets the shader compiler reports. Every glm::vec3 is
+// followed by a 4 byte scalar, so std140 and C++ agree without padding.
 
 // shaders/common/frame.slang: MAX_LIGHTS
 inline constexpr std::uint32_t MaxLights = 64;

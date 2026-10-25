@@ -22,7 +22,7 @@ inline std::string LIGHT_WHITE_TEXT(std::string text) { return "\033[1;37m" + te
 inline std::string LIGHT_YELLOW_TEXT(std::string text) { return "\033[1;33m" + text + "\033[0m"; }
 inline std::string LIGHT_MAGENTA_TEXT(std::string text) { return "\033[1;35m" + text + "\033[0m"; }
 
-// todo: save log into .log filewh
+// todo: save log into .log file
 // todo: add which header file that is included into log
 // todo : reconfigure these properties
 // fixme: this class is not thread safe.

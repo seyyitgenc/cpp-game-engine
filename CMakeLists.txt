@@ -101,12 +101,10 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ENGINE_OUTPUT_DIR}/")
 
 # Shaders
-# Every shaders/*.slang file holds a vertMain and a fragMain entry point, and
-# compiles to <name>.vert.spv and <name>.frag.spv, which is what
-# Resource/Types/Shader.hpp loads. shaders/common/ holds modules the others
-# import; they are not compiled on their own. Output goes next to the
-# executable, because Shader loads "shaders/..." relative to the working
-# directory.
+# Every shaders/*.slang file has vertMain and fragMain, compiled to
+# <name>.vert.spv and <name>.frag.spv next to the executable, where Shader
+# loads them. shaders/common/ holds modules the others import, not compiled
+# on their own.
 find_program(SLANGC slangc HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
 if(NOT SLANGC)
     message(FATAL_ERROR "slangc not found. It ships with the Vulkan SDK; check that VULKAN_SDK is set.")

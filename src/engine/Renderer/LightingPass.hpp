@@ -12,13 +12,9 @@ namespace GNC {
 class GeometryPass;
 
 // Lighting pass for deferred rendering
-// Reads the G-buffer back with one fullscreen triangle and shades every pixel
-// with the Cook-Torrance BRDF, once per light (shaders/lighting_pass.slang).
-// The lights themselves arrive through set 0, which the Renderer fills from the
-// scene's LightComponents each frame.
-//
-// The result is linear HDR radiance in OutputFormat. Nothing here clamps,
-// exposes or gamma corrects it; that is the post-process pass's job.
+// Shades the G-buffer with one fullscreen triangle, Cook-Torrance over every
+// light in set 0, into linear HDR (OutputFormat). Exposure and tonemapping
+// are the post-process pass's.
 class LightingPass : public RenderPass {
 public:
     static constexpr vk::Format OutputFormat = vk::Format::eR16G16B16A16Sfloat;
@@ -30,10 +26,9 @@ private:
 
     Attachment output;
 
-    // Set 1: the G-buffer. Written once: the G-buffer images never change
-    // (until resizing exists), and one set serves every frame in flight for the
-    // same reason one G-buffer does.
-    // The pool is declared before the set, so it outlives it.
+    // Set 1: the G-buffer. Written once: a resize rebuilds the whole pass, and
+    // one set serves every frame in flight, as the one G-buffer does. The
+    // pool is declared first, so it outlives the set.
     vk::raii::DescriptorSetLayout gBufferSetLayout = nullptr;
     vk::raii::DescriptorPool descriptorPool = nullptr;
     vk::raii::DescriptorSet gBufferSet = nullptr;

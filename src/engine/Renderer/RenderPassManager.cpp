@@ -40,16 +40,13 @@ void RenderPassManager::Execute(const FrameContext& frame) {
 }
 
 void RenderPassManager::SortPasses() {
-    // Topologically sort render passes based on dependencies
     sortedPasses.clear();
 
-    // Create a copy of render passes for sorting
     std::unordered_map<std::string, RenderPass*> passMap;
     for (const auto& [name, pass] : renderPasses) {
         passMap[name] = pass.get();
     }
 
-    // Perform topological sort
     std::unordered_set<std::string> visited;
     std::unordered_set<std::string> visiting;
 
@@ -70,7 +67,6 @@ void RenderPassManager::TopologicalSort(const std::string& name,
     for (const auto& dep : pass->GetDependencies()) {
         if (visited.find(dep) == visited.end()) {
             if (visiting.find(dep) != visiting.end()) {
-                // Circular dependency detected
                 throw std::runtime_error("Circular dependency detected in render passes");
             }
             TopologicalSort(dep, passMap, visited, visiting);

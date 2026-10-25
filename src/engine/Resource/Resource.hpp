@@ -9,24 +9,21 @@
 namespace GNC {
 
 // Base resource class
-// Every resource is an id plus a loaded/unloaded state. Load() and Unload() are
-// non-virtual so the state flag is maintained in exactly one place; subclasses
-// fill in doLoad()/doUnload() and never touch the flag themselves.
+// Load() and Unload() keep the loaded flag; subclasses implement
+// doLoad()/doUnload() and never touch it.
 class Resource {
 private:
     std::string resourceId;
     bool loaded = false;
 
-    // Injected by the manager right after construction, before the first Load().
+    // Set by the manager before the first Load().
     const ResourceContext* context = nullptr;
 
 public:
     explicit Resource(std::string id) : resourceId(std::move(id)) {}
 
-    // No Unload() call here: doUnload() is pure virtual and the derived part of
-    // the object is already gone by the time this runs. With vk::raii members
-    // that costs nothing, because each handle destroys itself in reverse
-    // declaration order anyway.
+    // No Unload() here: the derived part is already gone. vk::raii members
+    // destroy themselves.
     virtual ~Resource() = default;
 
     Resource(const Resource&) = delete;
@@ -51,11 +48,8 @@ public:
         loaded = false;
     }
 
-    // Files this resource was built from, for the hot-reload watcher to stat.
-    // The resource reports them rather than the watcher deriving them, because
-    // the id -> path mapping is one-way: Shader folds its stage into the name,
-    // so "shaders/blinn.frag.spv" cannot be turned back into ("blinn", eFragment)
-    // without guessing. A resource that returns nothing is simply never watched.
+    // For the hot-reload watcher. Reported by the resource because a path
+    // does not map back to an id (Shader folds its stage into the file name).
     virtual std::vector<std::string> GetSourcePaths() const { return {}; }
 
 protected:

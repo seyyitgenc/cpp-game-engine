@@ -17,18 +17,15 @@ void createBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice
     vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::raii::Buffer& buffer,
     vk::raii::DeviceMemory& bufferMemory);
 
-// Creates a device local buffer and fills it with size bytes from data, through
-// a host visible staging buffer. Blocks until the copy is done, and leaves the
-// result visible to any later work on the queue. Meant for load time; per-frame
-// uploads would want batching instead of a stall per call.
+// A device local buffer filled through a staging buffer. Blocks until the
+// copy is done and visible to later work on the queue: for load time only.
 void uploadBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice& physicalDevice,
     const vk::raii::Queue& queue, const vk::raii::CommandPool& commandPool,
     const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage,
     vk::raii::Buffer& buffer, vk::raii::DeviceMemory& bufferMemory);
 
-// One layout transition for a whole single-mip, single-layer image, in
-// synchronization2 terms: src is the work that has to finish first, dst the
-// work that waits for it. Batch several into one pipelineBarrier2() call.
+// A layout transition for a whole single-mip, single-layer image. Batch
+// several into one pipelineBarrier2() call.
 vk::ImageMemoryBarrier2 makeImageBarrier(vk::Image image, vk::ImageAspectFlags aspect,
     vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
     vk::PipelineStageFlags2 srcStage, vk::AccessFlags2 srcAccess,

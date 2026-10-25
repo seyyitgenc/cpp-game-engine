@@ -4,13 +4,11 @@
 
 namespace GNC {
 
-// Forward declarations
 class Entity;
 
 // Base component class
-// Components carry the data and behaviour an entity is made of. The lifecycle
-// is a small state machine so setup and teardown happen exactly once, in order,
-// no matter who calls Initialize()/Destroy() or how often.
+// The lifecycle is a small state machine, so setup and teardown happen exactly
+// once, however often Initialize()/Destroy() are called.
 class Component {
 public:
     enum class State {

@@ -34,11 +34,9 @@ GeometryPass::GeometryPass(const std::string& name, const RenderTargetContext& r
 GeometryPass::~GeometryPass() = default;
 
 void GeometryPass::BeginPass(const FrameContext& frame) {
-    // The previous frame's lighting pass may still be sampling the G-buffer.
-    // Overwriting it is a write-after-read hazard, which only needs an
-    // execution dependency on that fragment shader: nothing it did has to be
-    // made visible, hence no src access. Old contents are thrown away
-    // (eUndefined), which is cheaper than preserving them.
+    // The previous frame's lighting pass may still be sampling the G-buffer:
+    // a write-after-read hazard, so an execution dependency (no src access)
+    // is enough. Old contents are discarded (eUndefined).
     std::array<vk::ImageMemoryBarrier2, GBuffer::ColorCount + 1> barriers;
     const auto colorAttachments = gBuffer.ColorAttachments();
     for (std::uint32_t i = 0; i < GBuffer::ColorCount; ++i) {
@@ -57,9 +55,7 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
         .pImageMemoryBarriers = barriers.data()
     });
 
-    // Cleared rather than left undefined: the lighting pass masks out empty
-    // pixels by depth anyway, but zeroed targets are far easier to read in a
-    // frame debugger.
+    // Cleared only for frame debuggers: lighting masks empty pixels by depth.
     std::array<vk::RenderingAttachmentInfo, GBuffer::ColorCount> colorInfos;
     for (std::uint32_t i = 0; i < GBuffer::ColorCount; ++i) {
         colorInfos[i] = vk::RenderingAttachmentInfo {
@@ -135,9 +131,8 @@ void GeometryPass::Render(const FrameContext& frame) {
 void GeometryPass::EndPass(const FrameContext& frame) {
     frame.commandBuffer.endRendering();
 
-    // Hand the G-buffer to the lighting pass, which reads it from its fragment
-    // shader. Unlike at the start of the pass, the writes have to be made
-    // visible here, so both sides carry an access mask.
+    // To the lighting pass's fragment shader; the writes must be made
+    // visible, so both sides carry an access mask.
     std::array<vk::ImageMemoryBarrier2, GBuffer::ColorCount + 1> barriers;
     const auto colorAttachments = gBuffer.ColorAttachments();
     for (std::uint32_t i = 0; i < GBuffer::ColorCount; ++i) {
@@ -158,9 +153,8 @@ void GeometryPass::EndPass(const FrameContext& frame) {
 }
 
 void GeometryPass::CreateGBuffer() {
-    // D32_SFLOAT is not on Vulkan's list of mandatory depth formats, though
-    // every desktop GPU has it. Fail loudly here rather than with a validation
-    // error at image creation.
+    // D32_SFLOAT is not mandatory, though every desktop GPU has it: fail here
+    // rather than with a validation error at image creation.
     // TODO: maybe there should be a fallback for it?
     const vk::FormatFeatureFlags depthFeatures =
         vk::FormatFeatureFlagBits::eDepthStencilAttachment | vk::FormatFeatureFlagBits::eSampledImage;

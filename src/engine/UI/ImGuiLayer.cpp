@@ -25,8 +25,8 @@ namespace GNC {
 
 namespace {
 
-// The backend reports Vulkan results through this rather than throwing, and
-// calls it for successes too.
+// The backend reports Vulkan results here instead of throwing, successes
+// included.
 void CheckVkResult(VkResult result) {
     if (result == VK_SUCCESS) return;
 
@@ -46,8 +46,7 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    // Next to the executable, like every other resource, rather than in
-    // whatever the working directory is.
+    // Next to the executable, like every other resource.
     io.IniFilename = iniPath.c_str();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     if constexpr (EnableViewports) {
@@ -57,8 +56,8 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
     // -----
     // Style
     // -----
-    // Scaled for the primary monitor's DPI and rescaled as windows move
-    // between monitors, as the backends' GLFW + Vulkan example does.
+    // Scaled for the primary monitor's DPI, and rescaled as windows move
+    // between monitors.
     const float dpiScale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
@@ -67,8 +66,7 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
     io.ConfigDpiScaleFonts = true;
     io.ConfigDpiScaleViewports = true;
 
-    // A panel dragged out of the main window becomes an OS window. Square
-    // and opaque, it looks the same outside as it did inside.
+    // So a panel dragged out into an OS window looks the same there.
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
@@ -94,9 +92,8 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
     // The backend makes its own descriptor pool, sized for the font atlas
     // and the panels' textures.
     initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE + MaxUserTextures;
-    // ImageCount is how many copies of its vertex and index buffers the
-    // backend cycles through, and how many frames it waits before freeing a
-    // texture: one per frame in flight. MinImageCount is only for the
+    // ImageCount: copies of its buffers, and frames before a texture is
+    // freed, so one per frame in flight. MinImageCount is only for the
     // swapchains of the windows it creates.
     initInfo.MinImageCount = 2;
     initInfo.ImageCount = std::max<std::uint32_t>(MaxFramesInFlight, initInfo.MinImageCount);
@@ -163,18 +160,16 @@ void ImGuiLayer::RenderPlatformWindows() {
 }
 
 void ImGuiLayer::NewFrame() {
-    // Only when the format really changes, which a resize practically never
-    // does. Rebuilding the pipeline after the backend has created a platform
-    // window leaves the backend's own pipeline info for those windows
-    // pointing at freed memory (imgui_impl_vulkan, 1.93.1 WIP). Renderer::
-    // Resize() waited for the GPU, so the old pipeline is no longer in use.
+    // Only when the format changes: rebuilding after a platform window exists
+    // leaves the backend's pipeline info for those windows pointing at freed
+    // memory (imgui_impl_vulkan, 1.93.1 WIP). Renderer::Resize() waited for
+    // the GPU, so the old pipeline is no longer in use.
     if (renderer.GetTargetFormat() != pipelineFormat) {
         CreateMainPipeline(renderer.GetTargetFormat());
     }
 
-    // While the camera has the cursor captured, its position is unbounded
-    // and hidden, and means nothing to ImGui. The backend leaves ignoring it
-    // to the application.
+    // A captured cursor's position means nothing to ImGui, and the backend
+    // leaves ignoring it to the application.
     ImGuiIO& io = ImGui::GetIO();
     if (window.IsCursorCaptured()) {
         io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
@@ -212,8 +207,7 @@ void ImGuiLayer::LoadFonts() {
     }
 }
 
-// For the main window only; the backend builds the pipeline for the windows it
-// creates itself, in the format it picks for their swapchains.
+// Main window only; the backend builds its own windows' pipelines.
 void ImGuiLayer::CreateMainPipeline(vk::Format format) {
     const vk::PipelineRenderingCreateInfo renderingInfo {
         .colorAttachmentCount = 1,
@@ -226,9 +220,8 @@ void ImGuiLayer::CreateMainPipeline(vk::Format format) {
     pipelineFormat = format;
 }
 
-// Each listener hands the event to the GLFW backend's matching callback,
-// which translates keys, tracks modifiers, and turns window coordinates into
-// screen ones when viewports are on. Returning true swallows the event.
+// Each listener hands the event to the GLFW backend's matching callback;
+// returning true swallows it.
 void ImGuiLayer::SubscribeToEvents(EventBus& bus) {
     GLFWwindow* handle = window.GetNativeHandle();
     auto wantsMouse = [this] { return !window.IsCursorCaptured() && ImGui::GetIO().WantCaptureMouse; };

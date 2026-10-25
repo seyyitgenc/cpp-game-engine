@@ -8,8 +8,7 @@
 
 namespace GNC {
 
-// Directions the camera can be moved in, relative to its own orientation.
-// Up/Down move along the camera's up vector, not the world's.
+// Relative to the camera: Up/Down follow its up vector, not the world's.
 enum class CameraMovement {
     Forward,
     Backward,
@@ -24,40 +23,23 @@ enum class ProjectionType {
     Orthographic
 };
 
-// What a shader needs to know about the camera, laid out for std140.
-// vec3 position is padded to a vec4 on purpose: std140 aligns a vec3 to 16
-// bytes anyway, and spelling it out keeps the C++ and shader sizes identical.
-// Shader side: CameraData in shaders/common/frame.slang.
+// std140; the shader side is CameraData in shaders/common/frame.slang.
+// position is a vec4 so both sides have the same size.
 struct CameraUniform {
     glm::mat4 view {1.0f};
     glm::mat4 projection {1.0f};
     glm::mat4 viewProjection {1.0f};
-    // Clip space back to world space: the deferred lighting pass rebuilds each
-    // pixel's position from depth with it.
+    // The lighting pass rebuilds world positions from depth with it.
     glm::mat4 inverseViewProjection {1.0f};
     glm::vec4 position {0.0f, 0.0f, 0.0f, 1.0f};
 };
 static_assert(sizeof(CameraUniform) == 272);
 
 // Camera
-// A free-look (FPS style) camera driven by yaw and pitch. Roll is left out on
-// purpose: with only yaw and pitch, "up" stays meaningful and the camera can
-// never end up tilted sideways.
-//
-// Conventions (right handed, same as glm):
-//   - yaw = -90 deg, pitch = 0 deg looks down -Z.
-//   - The view matrix is the inverse of the camera's pose; glm::lookAt builds
-//     it directly from position, target and up.
-//
-// The projection matrix targets Vulkan clip space, not OpenGL's:
-//   - depth is mapped to [0, 1] (the *_ZO glm variants) instead of [-1, 1].
-//   - Y is flipped, since Vulkan's clip space Y points down. This is baked in
-//     here instead of patched into the UBO (`proj[1][1] *= -1`) so every
-//     consumer of GetProjectionMatrix() (shaders, frustum culling, picking)
-//     sees the same matrix.
-//
-// The camera does not read input itself. Whoever owns it (a controller,
-// later the event system) translates input into the Process*() calls.
+// Free-look camera driven by yaw and pitch, without roll; yaw -90, pitch 0
+// looks down -Z. The projection is Vulkan's: 0..1 depth, and Y flipped here
+// rather than in the UBO, so every user of GetProjectionMatrix() (shaders,
+// culling) sees the same matrix. Its owner applies input through Process*().
 
 // TODO: implement third person camera
 class Camera {
@@ -70,9 +52,8 @@ public:
 
     static constexpr float MinFov = 1.0f;
     static constexpr float MaxFov = 90.0f;
-    // Pitch stays just short of straight up/down: at exactly +-90 deg the
-    // front vector is parallel to worldUp and the cross product for "right"
-    // collapses to zero.
+    // Short of 90: there front is parallel to worldUp, and the cross product
+    // for right collapses to zero.
     static constexpr float PitchLimit = 89.0f;
 
 private:
@@ -99,7 +80,7 @@ private:
     // projection
     // ----------
     ProjectionType projectionType = ProjectionType::Perspective;
-    float fov = DefaultFov; // vertical, in degrees; scroll "zoom" changes this
+    float fov = DefaultFov; // vertical, in degrees
     float aspectRatio = 16.0f / 9.0f;
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
@@ -107,7 +88,6 @@ private:
     float orthoHalfWidth = 10.0f;
     float orthoHalfHeight = 10.0f;
 
-    // Cached matrices, rebuilt lazily on the next Get*Matrix() call.
     mutable glm::mat4 viewMatrix {1.0f};
     mutable glm::mat4 projectionMatrix {1.0f};
     mutable bool viewDirty = true;
@@ -166,8 +146,6 @@ public:
     // input
     // -----
 
-    // Moves along the camera's local axes. deltaTime keeps speed independent
-    // of frame rate.
     void ProcessKeyboard(CameraMovement direction, float deltaTime) {
         const float velocity = movementSpeed * deltaTime;
         switch (direction) {
@@ -181,8 +159,8 @@ public:
         viewDirty = true;
     }
 
-    // Offsets are raw cursor deltas. yOffset is expected as (lastY - currentY):
-    // screen Y grows downwards, pitch grows upwards.
+    // Raw cursor deltas, yOffset as (lastY - currentY): screen Y grows
+    // downwards, pitch upwards.
     void ProcessMouseMovement(float xOffset, float yOffset, bool constrainPitch = true) {
         yaw += xOffset * mouseSensitivity;
         pitch += yOffset * mouseSensitivity;
@@ -193,7 +171,6 @@ public:
         UpdateCameraVectors();
     }
 
-    // Scrolling narrows/widens the field of view.
     void ProcessMouseScroll(float yOffset) {
         SetFov(fov - yOffset);
     }
@@ -212,8 +189,7 @@ public:
         UpdateCameraVectors();
     }
 
-    // Turns the camera to face a world space point, keeping yaw/pitch in sync
-    // so mouse look continues smoothly from the new direction.
+    // Through yaw and pitch, so mouse look continues from the new direction.
     void LookAt(const glm::vec3& target) {
         const glm::vec3 direction = target - position;
         if (glm::length(direction) <= 0.0f) return;
@@ -251,7 +227,6 @@ public:
         projectionDirty = true;
     }
 
-    // Call on swapchain resize.
     void SetAspectRatio(float aspect) {
         aspectRatio = aspect;
         projectionDirty = true;
@@ -278,8 +253,6 @@ public:
     float GetMouseSensitivity() const { return mouseSensitivity; }
 
 private:
-    // Rebuilds the orthonormal basis from yaw and pitch (spherical to
-    // cartesian), then derives right and up with cross products.
     void UpdateCameraVectors() {
         const float yawRad = glm::radians(yaw);
         const float pitchRad = glm::radians(pitch);

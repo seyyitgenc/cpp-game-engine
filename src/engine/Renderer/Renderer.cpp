@@ -26,10 +26,9 @@ namespace GNC {
 
 namespace {
 
-// Read straight through Shader instead of the ResourceManager: the manager
-// caches by id alone, so the vertex and fragment stage of "geometry_pass"
-// would collide in it. The modules are only needed until the pipelines
-// exist, so nothing has to keep them around either.
+// Not through the ResourceManager: it caches by id alone, so both stages of
+// "geometry_pass" would collide. The modules are only needed until the
+// pipelines exist.
 void LoadShader(Shader& shader, const ResourceContext& resourceContext) {
     shader.SetContext(&resourceContext);
     if (!shader.Load()) {
@@ -54,7 +53,6 @@ Renderer::Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Came
     sceneExtent = swapchain->GetExtent();
     UpdateCameraAspect();
 
-    // Set up render passes
     SetupRenderPasses();
 }
 
@@ -71,10 +69,9 @@ void Renderer::SetCamera(Camera* cam) {
 bool Renderer::Render(const std::vector<Entity*>& entities) {
     FrameData& frame = frames[currentFrame];
 
-    // Once this slot's fence is signaled, the GPU is done with everything in
-    // it, so its command buffer and camera buffer can be overwritten.
+    // Once this slot's fence signals, the GPU is done with its command buffer
+    // and uniform buffers.
     while (context.device->waitForFences(*frame.inFlightFence, vk::True, std::numeric_limits<std::uint64_t>::max()) == vk::Result::eTimeout) {
-        // Wait for previous frame to finish
     }
 
     // Reset the fence only after acquire succeeds: if it fails and the frame
@@ -87,10 +84,8 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     UpdateCameraBuffer(frame);
     UpdateLightsBuffer(frame, entities);
 
-    // Perform culling
     cullingSystem.CullScene(entities);
 
-    // Record commands
     frame.commandBuffer.reset();
     frame.commandBuffer.begin(vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 
@@ -103,9 +98,8 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     };
     renderPassManager.Execute(frameContext);
 
-    // Every pass leaves the image as a color attachment. Present waits on the
-    // semaphore the submit signals after everything in it, so nothing on the
-    // GPU side has to wait for this barrier: it only changes the layout.
+    // Present waits on the submit's semaphore, so this barrier only changes
+    // the layout.
     const vk::ImageMemoryBarrier2 presentBarrier = makeImageBarrier(frameContext.targetImage, vk::ImageAspectFlagBits::eColor,
         vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -117,8 +111,8 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
 
     frame.commandBuffer.end();
 
-    // The swapchain image is first written at eColorAttachmentOutput (by the
-    // ImGui pass), so that is where the wait for acquire goes.
+    // The swapchain image is first written at eColorAttachmentOutput (by
+    // ImGuiPass), so the acquire wait goes there.
     const vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     const vk::Semaphore imageAvailable = *frame.imageAvailableSemaphore;
     const vk::Semaphore renderFinished = swapchain->GetRenderFinishedSemaphore(*imageIndex);
@@ -173,10 +167,8 @@ void Renderer::CreateCommandPool() {
     commandPool = vk::raii::CommandPool(*context.device, poolInfo);
 }
 
-// Set 0 (shaders/common/frame.slang):
-//   binding 0: the camera. The fragment stage needs it as well, for the
-//              camera position in lighting.
-//   binding 1: the lights.
+// Set 0 (shaders/common/frame.slang): binding 0 the camera (fragment stage
+// too, for lighting), binding 1 the lights.
 void Renderer::CreateGlobalDescriptorSetLayout() {
     const std::array bindings {
         vk::DescriptorSetLayoutBinding {
@@ -291,10 +283,8 @@ void Renderer::CreateFrameResources() {
     }
 }
 
-// The memory is host coherent, so there is nothing to flush: the submit
-// that follows makes this write visible to the GPU.
-// Y is already flipped inside Camera::GetProjectionMatrix(), so the data
-// goes in as is (no proj[1][1] *= -1 here).
+// Host coherent: the following submit makes the write visible. Y is already
+// flipped in Camera::GetProjectionMatrix().
 void Renderer::UpdateCameraBuffer(FrameData& frame) {
     if (!camera) return;
 
@@ -335,9 +325,9 @@ GpuLight Renderer::MakeGpuLight(const LightComponent& light, const TransformComp
     gpuLight.intensity = light.GetIntensity();
     gpuLight.range = light.GetRange();
 
-    // Taken from the matrix rather than the position/rotation fields, so
-    // this keeps working once transforms have parents. Column 3 is the
-    // translation, column 2 the local Z axis (scaled, hence normalize).
+    // From the matrix, so this keeps working once transforms have parents.
+    // Column 3 is the translation, column 2 the local Z axis (scaled, hence
+    // normalize).
     if (transform) {
         const glm::mat4 world = transform->GetTransformMatrix();
         gpuLight.position = glm::vec3(world[3]);
@@ -383,29 +373,25 @@ void Renderer::SetupRenderPasses() {
         LoadShader(*shader, shaderContext);
     }
 
-    // Create geometry pass
     auto geometryPass = renderPassManager.AddRenderPass<GeometryPass>("GeometryPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *geometryVertex.GetShaderModule(), *geometryFragment.GetShaderModule() },
         &cullingSystem);
 
-    // Create lighting pass
     auto lightingPass = renderPassManager.AddRenderPass<LightingPass>("LightingPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *lightingVertex.GetShaderModule(), *lightingFragment.GetShaderModule() },
         geometryPass);
-    // The manager runs passes in dependency order, and without dependencies
-    // that order is whatever its hash map iterates in.
+    // Without dependencies, pass order is hash map order.
     lightingPass->AddDependency(geometryPass->GetName());
 
-    // Create post-process pass
     postProcessPass = renderPassManager.AddRenderPass<PostProcessPass>("PostProcessPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *postVertex.GetShaderModule(), *postFragment.GetShaderModule() },
         lightingPass);
     postProcessPass->AddDependency(lightingPass->GetName());
 
-    // The UI into the swapchain image, after the scene image it shows
+    // After the scene image it shows.
     auto imguiPass = renderPassManager.AddRenderPass<ImGuiPass>("ImGuiPass", swapchain->GetExtent());
     imguiPass->AddDependency(postProcessPass->GetName());
 

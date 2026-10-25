@@ -1,10 +1,6 @@
-// Set 0: per-frame data every pass shares. Bound once per pass from
-// FrameContext::globalSet; Renderer::CreateGlobalDescriptorSetLayout() builds
-// the matching layout.
-//
-// The C++ halves of these structs are CameraUniform (Camera/Camera.hpp) and
-// GpuLight / LightsUniform (Renderer/ShaderTypes.hpp). They have to match byte
-// for byte; ShaderTypes.hpp static_asserts the C++ side.
+// Set 0, shared by every pass (Renderer::CreateGlobalDescriptorSetLayout()).
+// The C++ halves, which must match byte for byte, are CameraUniform
+// (Camera/Camera.hpp) and GpuLight / LightsUniform (Renderer/ShaderTypes.hpp).
 
 // Renderer/ShaderTypes.hpp: MaxLights
 static const uint MAX_LIGHTS = 64;

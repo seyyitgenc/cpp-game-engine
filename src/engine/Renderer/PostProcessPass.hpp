@@ -29,9 +29,7 @@ private:
 
     Attachment output;
 
-    // Scales scene radiance before tonemapping. 1 suits the current scene;
-    // physically based light units will want it driven by a camera exposure
-    // model (EV100) later.
+    // Physical light units will want a camera exposure model (EV100) here.
     float exposure = 1.0f;
 
     // Set 1: the lighting output. The pool is declared before the set, so it

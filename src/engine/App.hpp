@@ -21,20 +21,13 @@
 namespace GNC {
 
 // App
-// Owns everything and runs the main loop. Each frame is three traversals, in
-// order: event (input and queued events are delivered), update (the world
-// moves on), render (the UI is built, the frame drawn and presented).
-//
-// Members are declared in dependency order and C++ destroys them in reverse,
-// which is exactly the teardown needed: listeners first, then ImGui (its
-// panels show the scene), the scene, the renderer (ImGui and the renderer
-// each wait for the GPU), then GPU resources, the device, the window, and
-// the event bus the window's callbacks enqueue onto last of all.
+// Owns everything and runs the main loop: an event, an update and a render
+// traversal per frame. Members are declared in dependency order, so C++
+// destroys them in the order Vulkan needs.
 class App {
 public:
-    // Longest step a single frame may advance the simulation by. After a stall
-    // (dragging the window, a breakpoint) one huge step would teleport the
-    // camera and everything that moves.
+    // After a stall (a window drag, a breakpoint), one huge step would
+    // teleport everything that moves.
     static constexpr float MaxDeltaTime = 0.1f;
 
 private:
@@ -42,7 +35,7 @@ private:
     Window window;
     VulkanContext vulkan;
 
-    // Command buffers for load time uploads (mesh buffers, later textures).
+    // For load time uploads.
     vk::raii::CommandPool uploadPool = nullptr;
     ResourceManager resources;
 
@@ -60,9 +53,7 @@ private:
     // After the scene, componentTypes and selection: its panels use them.
     ImGuiLayer gui;
 
-    // Set by the WindowResizeEvent listener, acted on by the render
-    // traversal: the listener runs at Flush(), and rebuilding the swapchain
-    // belongs at a known point of the frame, not inside a listener.
+    // Acted on by the render traversal, not inside the listener.
     bool resizePending = false;
     // Set when the last Renderer::Render() found the swapchain out of date.
     bool swapchainOutOfDate = false;

@@ -11,8 +11,7 @@ namespace GNC {
 
 CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : camera(cam), window(win) {
     // Both return false: tracking a key is not consuming it, and listeners
-    // below the camera (App's Esc binding) still need it. Swallowing a
-    // release would also leave the key held for everyone below.
+    // below (App's Esc binding) still need it.
     subscriptions.push_back(bus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
         if (!e.IsRepeat()) heldKeys.insert(e.GetKey());
         return false;
@@ -54,9 +53,8 @@ CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : ca
         return true;
     }));
 
-    // Alt-tabbing away while looking would otherwise leave the cursor
-    // captured, and the release events would go to some other window, so
-    // drop the held keys too.
+    // Alt-tabbing away while looking would leave the cursor captured, and the
+    // releases go to another window, so drop the held keys too.
     subscriptions.push_back(bus.Subscribe<WindowFocusEvent>([this](WindowFocusEvent& e) {
         if (!e.IsFocused()) {
             SetLooking(false);

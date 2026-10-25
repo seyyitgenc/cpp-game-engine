@@ -18,14 +18,9 @@
 namespace GNC {
 
 // Resource manager
-// Owns every resource in the engine, keyed by type and then by id. The two
-// levels mean a Texture called "wood" and a Mesh called "wood" never collide,
-// and both are an O(1) average lookup.
-//
-// The reference count is deliberately separate from the shared_ptr's: it counts
-// how many times the *game* asked for a resource, not how many pointers happen
-// to exist. That is what lets you pin something in memory across a level load
-// even while nothing is pointing at it.
+// Owns every resource, keyed by type and then id. The reference count is
+// separate from the shared_ptr's: it counts Load() calls, so a resource stays
+// pinned even while nothing points at it.
 //
 // FIXME: not thread safe
 class ResourceManager {
@@ -34,10 +29,8 @@ private:
         std::shared_ptr<Resource> resource;
         int refCount = 0;
 
-        // Rebuilds this resource from scratch with the same constructor
-        // arguments it was first loaded with. Stored because the table is type
-        // erased: by reload time the manager no longer knows what T was, and
-        // Shader in particular cannot be reconstructed from its id alone.
+        // Rebuilds it with its original constructor arguments: by reload
+        // time the type-erased table no longer knows T.
         std::function<std::shared_ptr<Resource>()> factory;
     };
 
@@ -59,8 +52,8 @@ public:
     void SetContext(const ResourceContext& ctx) { context = ctx; }
     const ResourceContext& GetContext() const { return context; }
 
-    // Cache first, disk second. Extra arguments are forwarded to T's
-    // constructor, which is how Shader gets told which stage it is.
+    // Cache first, disk second. Extra arguments go to T's constructor (a
+    // Shader's stage).
     template<typename T, typename... Args>
     ResourceHandle<T> Load(const std::string& resourceId, Args&&... args) {
         static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");
@@ -72,10 +65,7 @@ public:
             return ResourceHandle<T>(resourceId, this);
         }
 
-        // Built once and kept, so a later reload can construct an identical
-        // replacement without knowing T. Arguments are copied into the closure
-        // rather than forwarded, since they have to survive for the manager's
-        // lifetime and be usable more than once.
+        // Arguments copied, not forwarded: a reload uses them again.
         std::function<std::shared_ptr<Resource>()> factory =
             [id = resourceId, saved = std::make_tuple(args...)]() -> std::shared_ptr<Resource> {
                 return std::apply(
@@ -85,9 +75,7 @@ public:
         auto resource = factory();
         resource->SetContext(&context);
 
-        // A failed load leaves nothing in the cache, so the next Load() is free
-        // to try again once the file is fixed. The caller gets a handle that
-        // reports itself invalid rather than an exception.
+        // Cached only on success, so the next Load() retries.
         if (!resource->Load()) {
             return ResourceHandle<T>();
         }
@@ -144,8 +132,7 @@ public:
         return ids;
     }
 
-    // Pin a resource that is already loaded, for callers that want to keep it
-    // alive without going through Load() again.
+    // Pins a loaded resource without another Load().
     template<typename T>
     void AddRef(const std::string& resourceId) {
         auto table = resources.find(std::type_index(typeid(T)));
@@ -156,9 +143,6 @@ public:
         }
     }
 
-    // The tutorial's Release() takes only an id and has to sweep every type
-    // table to find it. Releasing with the type spelled out keeps it O(1) and
-    // matches how Load() was called in the first place.
     template<typename T>
     void Release(const std::string& resourceId) {
         auto table = resources.find(std::type_index(typeid(T)));
@@ -182,8 +166,7 @@ public:
         return it == table->second.end() ? 0 : it->second.refCount;
     }
 
-    // Shutdown path: drop everything regardless of reference counts. Must run
-    // while the device is still alive, since the GPU handles die with it.
+    // Ignores reference counts. Must run while the device is still alive.
     void UnloadAll() {
         for (auto& [type, table] : resources) {
             for (auto& [id, data] : table) {
@@ -194,18 +177,9 @@ public:
     }
 
 protected:
-    // Rebuild one resource in place. Used by the hot-reload watcher, which knows
-    // the type only as a type_index by the time a file changes.
-    //
-    // The replacement is built and loaded *before* the old one is touched, so a
-    // shader with a typo in it leaves the last good module running instead of
-    // taking the renderer down. Only on success does the slot change hands.
-    //
-    // Every ResourceHandle survives this: handles store an id, not a pointer, so
-    // the next Get() resolves to whatever is in the slot now.
-    //
-    // Destroys GPU objects, so the caller owns the synchronisation: no command
-    // buffer still referencing this resource may be in flight.
+    // For hot reload. The replacement loads before the old one is touched, so
+    // a broken file keeps the last good version; handles store ids, so they
+    // follow. Destroys GPU objects: nothing using them may be in flight.
     bool ReloadEntry(std::type_index type, const std::string& resourceId) {
         auto table = resources.find(type);
         if (table == resources.end()) return false;
