@@ -56,6 +56,11 @@ public:
     // scene image), on top of what the font atlas needs.
     static constexpr std::uint32_t MaxUserTextures = 8;
 
+    // At 100% scale. Icons fill the whole em, so at the text's size they
+    // would look too big.
+    static constexpr float TextFontSize = 13.0f;
+    static constexpr float IconFontSize = 10.0f;
+
 private:
     Window& window;
     const VulkanContext& vulkan;
@@ -134,6 +139,7 @@ public:
     void RenderPlatformWindows();
 
 private:
+    void LoadFonts();
     void NewFrame();
     void CreateMainPipeline(vk::Format format);
     void SubscribeToEvents(EventBus& bus);

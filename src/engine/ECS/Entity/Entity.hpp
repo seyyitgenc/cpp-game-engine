@@ -36,8 +36,12 @@ public:
     Entity& operator=(const Entity&) = delete;
 
     const std::string& GetName() const { return name; }
+    void SetName(const std::string& entityName) { name = entityName; }
     bool IsActive() const { return active; }
     void SetActive(bool isActive) { active = isActive; }
+
+    // In the order added.
+    const std::vector<std::unique_ptr<Component>>& GetComponents() const { return components; }
 
     void Initialize() {
         for (auto& component : components) {
@@ -117,14 +121,19 @@ public:
     bool HasComponent() const {
         static_assert(std::is_base_of<Component, T>::value, "T must derive from Component");
 
-        return componentMap.contains(ComponentTypeIDSystem::GetTypeID<T>());
+        return HasComponent(ComponentTypeIDSystem::GetTypeID<T>());
     }
+
+    bool HasComponent(ComponentTypeID typeID) const { return componentMap.contains(typeID); }
 
     template<typename T>
     bool RemoveComponent() {
         static_assert(std::is_base_of<Component, T>::value, "T must derive from Component");
 
-        const ComponentTypeID typeID = ComponentTypeIDSystem::GetTypeID<T>();
+        return RemoveComponent(ComponentTypeIDSystem::GetTypeID<T>());
+    }
+
+    bool RemoveComponent(ComponentTypeID typeID) {
         auto mapped = componentMap.find(typeID);
         if (mapped == componentMap.end()) return false;
 

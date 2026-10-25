@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,6 +30,21 @@ public:
         entity.Initialize();
         entityViews.push_back(&entity);
         return entity;
+    }
+
+    // name, or "name 1", "name 2", ... when an entity already has it.
+    std::string MakeUniqueName(const std::string& name) const {
+        auto taken = [this](const std::string& candidate) {
+            return std::ranges::any_of(entities, [&](const std::unique_ptr<Entity>& entity) {
+                return entity->GetName() == candidate;
+            });
+        };
+
+        if (!taken(name)) return name;
+        for (int number = 1;; ++number) {
+            std::string candidate = name + " " + std::to_string(number);
+            if (!taken(candidate)) return candidate;
+        }
     }
 
     Material* CreateMaterial(const Material& material) {

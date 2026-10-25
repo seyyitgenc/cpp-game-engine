@@ -4,6 +4,7 @@
 #include "ResourceContext.hpp"
 #include "ResourceHandle.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace GNC {
 
@@ -98,14 +100,18 @@ public:
     T* GetResource(const std::string& resourceId) {
         static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");
 
-        auto table = resources.find(std::type_index(typeid(T)));
+        // The outer key is the exact type, so this cast cannot be wrong.
+        return static_cast<T*>(GetResource(std::type_index(typeid(T)), resourceId));
+    }
+
+    Resource* GetResource(std::type_index type, const std::string& resourceId) {
+        auto table = resources.find(type);
         if (table == resources.end()) return nullptr;
 
         auto it = table->second.find(resourceId);
         if (it == table->second.end()) return nullptr;
 
-        // The outer key is the exact type, so this cast cannot be wrong.
-        return static_cast<T*>(it->second.resource.get());
+        return it->second.resource.get();
     }
 
     template<typename T>
@@ -116,6 +122,26 @@ public:
         if (table == resources.end()) return false;
 
         return table->second.contains(resourceId);
+    }
+
+    // Every loaded T's id, sorted.
+    template<typename T>
+    std::vector<std::string> GetResourceIds() const {
+        static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");
+
+        return GetResourceIds(std::type_index(typeid(T)));
+    }
+
+    std::vector<std::string> GetResourceIds(std::type_index type) const {
+        std::vector<std::string> ids;
+        auto table = resources.find(type);
+        if (table == resources.end()) return ids;
+
+        for (const auto& [id, data] : table->second) {
+            ids.push_back(id);
+        }
+        std::ranges::sort(ids);
+        return ids;
     }
 
     // Pin a resource that is already loaded, for callers that want to keep it

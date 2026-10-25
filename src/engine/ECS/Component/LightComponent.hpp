@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Component.hpp"
+#include "Property.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -45,6 +46,8 @@ private:
     float outerConeAngle = glm::quarter_pi<float>();
 
 public:
+    GNC_COMPONENT_TYPE(LightComponent, "Light")
+
     explicit LightComponent(LightType lightType = LightType::Point) : type(lightType) {}
 
     void SetType(LightType lightType) { type = lightType; }
@@ -64,6 +67,50 @@ public:
     float GetRange() const { return range; }
     float GetInnerConeAngle() const { return innerConeAngle; }
     float GetOuterConeAngle() const { return outerConeAngle; }
+
+    static void Reflect(PropertyList<LightComponent>& properties) {
+        properties.Add<int>(
+            { .name = "Type", .hint = PropertyHint::Enum, .enumNames = { "Directional", "Point", "Spot" } }, // LightType's order
+            [](const LightComponent& light) { return static_cast<int>(light.GetType()); },
+            [](LightComponent& light, int value) { light.SetType(static_cast<LightType>(value)); });
+
+        properties.Add<glm::vec3>(
+            { .name = "Color", .hint = PropertyHint::Color },
+            [](const LightComponent& light) { return light.GetColor(); },
+            [](LightComponent& light, const glm::vec3& value) { light.SetColor(value); });
+
+        properties.Add<float>(
+            { .name = "Intensity", .min = 0.0f, .proportional = true },
+            [](const LightComponent& light) { return light.GetIntensity(); },
+            [](LightComponent& light, float value) { light.SetIntensity(value); },
+            [](const LightComponent& light, PropertyInfo& info) {
+                info.format = light.GetType() == LightType::Directional ? "%.2f lux" : "%.2f cd";
+            });
+
+        properties.Add<float>(
+            { .name = "Range", .min = 0.0f, .step = 0.1f, .format = "%.2f" },
+            [](const LightComponent& light) { return light.GetRange(); },
+            [](LightComponent& light, float value) { light.SetRange(value); },
+            [](const LightComponent& light, PropertyInfo& info) {
+                info.visible = light.GetType() != LightType::Directional;
+                if (light.GetRange() == 0.0f) info.format = "no cutoff";
+            });
+
+        // Two properties, but one setter: SetSpotCone keeps inner <= outer.
+        auto spotOnly = [](const LightComponent& light, PropertyInfo& info) { info.visible = light.GetType() == LightType::Spot; };
+
+        properties.Add<float>(
+            { .name = "Inner Cone", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
+            [](const LightComponent& light) { return light.GetInnerConeAngle(); },
+            [](LightComponent& light, float value) { light.SetSpotCone(value, light.GetOuterConeAngle()); },
+            spotOnly);
+
+        properties.Add<float>(
+            { .name = "Outer Cone", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
+            [](const LightComponent& light) { return light.GetOuterConeAngle(); },
+            [](LightComponent& light, float value) { light.SetSpotCone(light.GetInnerConeAngle(), value); },
+            spotOnly);
+    }
 };
 
 } // namespace GNC

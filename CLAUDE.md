@@ -9,6 +9,7 @@ A C++23 game engine being ported from OpenGL to Vulkan, following the Khronos Vu
 ## Working conventions
 
 - **Answers:** if you are unsure about something, say so plainly instead of guessing or presenting a guess as fact.
+- **Code comments:** comment the why, not the what: constraints that would break silently, library quirks, ordering, units. Do not restate the code, explain library basics, or repeat this file. Keep class header comments to a few lines.
 - **Section comments:** separate logical sections of a file or function with a banner comment, the title in between two dash lines as long as the title:
 
   ```cpp
@@ -28,7 +29,7 @@ cmake --build build -j8
 cd bin/debug && ./engine.exe             # or ./run.sh
 ```
 
-- Output goes to `bin/debug/` (or `bin/release/`). The `shaders` CMake target compiles every `shaders/*.slang` into `bin/<config>/shaders/<name>.vert.spv` and `<name>.frag.spv`.
+- Output goes to `bin/debug/` (or `bin/release/`). The `shaders` CMake target compiles every `shaders/*.slang` into `bin/<config>/shaders/<name>.vert.spv` and `<name>.frag.spv`. The `fonts` target copies the icon font to `bin/<config>/fonts/`.
 - **Resource paths resolve against the exe's directory**, not the working directory. `main()` calls `FileSystem::init(argv[0])` (`src/engine/Utils/FileSystem.hpp`), and resources build their paths with `FileSystem::getPath("shaders/...")`. A bare name from a PATH lookup in `argv[0]` would resolve to the working directory instead.
 - **Re-run the configure step after adding a `.cpp` or `.slang` file.** Sources and shaders are collected with `file(GLOB)`, which only picks up new files when CMake reconfigures.
 - Warnings are `-Wall -Wextra -Wpedantic`; keep the build warning-free.
@@ -63,7 +64,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 
 ### Ownership and the frame loop
 
-`App` (`src/engine/App.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → ImGuiLayer → Scene → event subscriptions. When adding a member, place it after everything it depends on.
+`App` (`src/engine/App.hpp`) owns everything as plain members. Declaration order is load-bearing: C++ destroys in reverse, which gives the teardown Vulkan needs. The order is EventBus → Window → VulkanContext → upload command pool → ResourceManager → Camera → CameraController → Renderer → Scene → ComponentRegistry → Selection → ImGuiLayer → event subscriptions. When adding a member, place it after everything it depends on.
 
 `App::Run()` computes the frame time (capped at `App::MaxDeltaTime`), then runs three traversals in order, as OSG's viewer does:
 
@@ -83,6 +84,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 - **Event kinds:** each kind is its own class, following OSG's GUIEventAdapter set. The mapping is PUSH/RELEASE → `MouseButtonPressed/ReleasedEvent`, DOUBLECLICK → `MouseDoubleClickEvent`, MOVE → `MouseMovedEvent`, DRAG → `MouseDraggedEvent`, KEYDOWN/KEYUP → `KeyPressed/ReleasedEvent`, SCROLL → `MouseScrolledEvent`, RESIZE → `WindowResizeEvent`, CLOSE_WINDOW → `WindowCloseEvent`, FRAME → `FrameEvent` and QUIT_APPLICATION → `QuitApplicationEvent`. Game-defined events use `GNC_EVENT_TYPE` with `EventCategory::User`.
   - Unlike OSG, `Window` sends DOUBLECLICK *after* the second press, and DRAG *alongside* MOVE, never in place of them.
   - Beyond OSG's set: `WindowFocusEvent`, `CharTypedEvent`, and `MouseEnterEvent`/`MouseLeaveEvent` (the cursor crossing the window edge, which the ImGui backend needs).
+- **Scene requests** (`SceneEvents.hpp`): the UI creates entities and adds or removes components only by enqueuing `CreateEntityEvent`, `AddComponentEvent` or `RemoveComponentEvent`, which App applies at the next `Flush()`. It is mid-loop over the entities when a menu item is picked. A property (a value, a name, the active flag) it may set directly.
 - **Held keys come from events:** track `KeyPressed`/`KeyReleased` (ignoring repeats) and clear on focus loss, as `CameraController` does. `Window::IsKeyDown` bypasses the bus, so ImGui could not swallow the key. Never return true for a release event. Key codes are GLFW's, untranslated.
 
 ### Vulkan setup
@@ -118,12 +120,16 @@ How passes work together:
 ### ImGui (`src/engine/UI/ImGuiLayer`)
 
 - **Library:** Dear ImGui's docking branch, vendored as plain files in `src/external/ImGui` (core plus `backends/imgui_impl_glfw` and `imgui_impl_vulkan`, unmodified), built as the `imgui` static library. `CMakeLists.txt` records the upstream commit and how to update.
+- **Icons:** `ImGuiLayer::LoadFonts()` merges Font Awesome 6 Free Solid (`src/external/FontAwesome`) into the default font, and `UI/Icons.hpp` names its glyphs (`ICON_FA_*`, from `src/external/IconFontCppHeaders`). The header and the font must come from the same Font Awesome release; `CMakeLists.txt` records both.
+  - The default font keeps its explicit 13 px size: ImGui asserts when a font with explicit metrics merges into one whose size was left implicit.
 - **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format). On destruction it waits for the GPU and destroys its panels, so they can still free their textures, before shutting the backends down.
 - **Panels:** the UI is made of `ImGuiPanel`s (`UI/ImGuiPanel.hpp`), each with a name, a visibility flag and a `Render()` that opens its own window with `ImGui::Begin(GetName().c_str(), GetVisibleFlag())`. Passing the flag gives the window a close button. `ImGuiLayer` is their manager:
   - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels and menus in `App::BuildGui()`.
   - `gui.Render()` runs the whole ImGui frame: NewFrame, the main menu bar, a dockspace over the rest of the main window (not passthru), every *visible* panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
   - A panel whose `DocksInCentralNode()` returns true docks into the dockspace's central node the first time its window exists (`SetNextWindowDockID`, `ImGuiCond_FirstUseEver`). After that, `imgui.ini` decides.
-  - App-specific panels live in `UI/Panels/` (`ViewportPanel`: the scene; `EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+  - App-specific panels live in `UI/Panels/` (`ViewportPanel`: the scene image; `ScenePanel`: the entities as a tree with icons, each opening onto its components; `InspectorPanel`: the selected entity's properties; `EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+  - Panels hold references to what they show, so whatever a panel shows must be an `App` member declared before `gui`.
+- **Scene and Inspector panels** share App's `Selection` (one `Entity*`). The Inspector draws every component from its properties with `UI/PropertyEditor` (see Properties below).
 - **Viewport:** `ViewportPanel` shows the scene image and sizes the scene to its content area with `renderer.SetSceneExtent()`.
   - It registers the image with `ImGui_ImplVulkan_AddTexture` (the backend brings its own sampler). It re-registers whenever `Renderer::GetSceneVersion()` changes, since every pass rebuild replaces the image after a wait for the GPU. It compares versions, not view handles, because a recreated view can reuse the old handle value.
   - The backend's descriptor pool has room for `ImGuiLayer::MaxUserTextures` such textures on top of the font atlas.
@@ -132,7 +138,7 @@ How passes work together:
 - **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
   - The bar's submenus are its dropdown menus; an item added to the bar itself is a button on it.
   - The shortcut text is display only; bind the key with an event listener.
-  - Commands run inside the ImGui frame, before the frame is drawn. Anything outside the UI should be changed by enqueuing an event (File > Quit enqueues `QuitApplicationEvent`), not directly.
+  - Commands run inside the ImGui frame, before the frame is drawn. Anything outside the UI, other than a property, should be changed by enqueuing an event (File > Quit enqueues `QuitApplicationEvent`), not directly.
   - Which panels are visible is not saved; `imgui.ini` only keeps window positions and docking.
 - **Input comes from the bus**, not from GLFW callbacks: the GLFW backend is initialized with `install_callbacks = false`. Listeners at `ImGuiLayer::EventPriority` pass each event to the matching `ImGui_ImplGlfw_*Callback` and return `io.WantCaptureMouse`/`WantCaptureKeyboard` to swallow it. Releases, focus and enter/leave are never swallowed.
   - While the camera has the cursor captured, the layer ignores mouse input and sets `ImGuiConfigFlags_NoMouse`.
@@ -158,8 +164,15 @@ How passes work together:
 ### ECS, scene and resources
 
 - **`Entity`** owns its components. A component counts as active only after `Initialize()`; the renderer skips light components that are not active.
+  - Every concrete component declares `GNC_COMPONENT_TYPE(Class, "Name")`, as events declare `GNC_EVENT_TYPE`.
   - `Scene::CreateEntity` initializes the entity immediately, so components added afterwards are initialized as they are added.
   - `Scene` owns materials behind `unique_ptr`, because `MeshComponent` holds raw `Material*` pointers.
+  - Nothing destroys entities at run time yet. Scene events and `Selection` hold `Entity*`, so destroying one needs those cleared first.
+- **`ComponentRegistry`:** a new component type needs a `Register<T>` line in `App::RegisterComponents()` to appear in the Add Component menus and the Inspector.
+- **Properties** (`ECS/Component/Property.hpp`): the editor reaches a component's values only through its `static void Reflect(PropertyList<T>&)`; there are no hand-written editors.
+  - Describe what the component stores (a rotation is the `glm::quat`, not Euler angles), so scene files can later save it exactly.
+  - Mesh lists its material's factors as its own properties, so editing a shared material changes every mesh using it.
+  - A new kind of value needs a `PropertyValue` alternative and a widget in `UI/PropertyEditor`'s `EditValue`.
 - **Lights:** `LightComponent` uses glTF `KHR_lights_punctual` semantics and physical units: candela for point and spot lights, lux for directional. Exposure is 1.
   - The renderer collects lights from *all* entities each frame (lights are not culled), up to `MaxLights = 64`.
 - **Culling:** `FrustumCulling` uses `MeshComponent::GetBoundingBox()`, which is still a fixed ±32 placeholder.

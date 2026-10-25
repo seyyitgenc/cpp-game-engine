@@ -14,6 +14,8 @@
 //     frame, after Window::PollEvents() and before anything updates. Esc
 //     enqueues a QuitApplicationEvent, which App answers by closing the
 //     window.
+//   - The Scene and Inspector panels enqueue CreateEntityEvent,
+//     AddComponentEvent and RemoveComponentEvent, which App applies.
 //
 // Not wired yet:
 //
@@ -27,3 +29,4 @@
 #include "EventBus.hpp"
 #include "ApplicationEvents.hpp"
 #include "InputEvents.hpp"
+#include "SceneEvents.hpp"

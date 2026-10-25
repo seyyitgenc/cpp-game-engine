@@ -7,6 +7,7 @@
 
 #include "Camera/Camera.hpp"
 #include "Camera/CameraController.hpp"
+#include "ECS/Component/ComponentRegistry.hpp"
 #include "Event/EventBus.hpp"
 #include "Platform/Window.hpp"
 #include "Renderer/Renderer.hpp"
@@ -15,6 +16,7 @@
 #include "Resource/Types/Mesh.hpp"
 #include "Scene/Scene.hpp"
 #include "UI/ImGuiLayer.hpp"
+#include "UI/Selection.hpp"
 
 namespace GNC {
 
@@ -24,10 +26,10 @@ namespace GNC {
 // moves on), render (the UI is built, the frame drawn and presented).
 //
 // Members are declared in dependency order and C++ destroys them in reverse,
-// which is exactly the teardown needed: listeners and the scene first, then
-// ImGui and the renderer (each after waiting for the GPU), then GPU resources,
-// the device, the window, and the event bus the window's callbacks enqueue
-// onto last of all.
+// which is exactly the teardown needed: listeners first, then ImGui (its
+// panels show the scene), the scene, the renderer (ImGui and the renderer
+// each wait for the GPU), then GPU resources, the device, the window, and
+// the event bus the window's callbacks enqueue onto last of all.
 class App {
 public:
     // Longest step a single frame may advance the simulation by. After a stall
@@ -47,10 +49,16 @@ private:
     Camera camera;
     CameraController cameraController;
     Renderer renderer;
-    // After the renderer: its pipeline is built for the swapchain format.
-    ImGuiLayer gui;
 
     Scene scene;
+    // Its entries capture this.
+    ComponentRegistry componentTypes;
+    // After the scene, which it points into.
+    Selection selection;
+
+    // After the renderer: its pipeline is built for the swapchain format.
+    // After the scene, componentTypes and selection: its panels use them.
+    ImGuiLayer gui;
 
     // Set by the WindowResizeEvent listener, acted on by the render
     // traversal: the listener runs at Flush(), and rebuilding the swapchain
@@ -81,6 +89,7 @@ private:
     void SubscribeToEvents();
 
     Mesh* LoadMesh(const std::string& id, MeshData data);
+    void RegisterComponents();
     void BuildScene();
     void BuildGui();
 };

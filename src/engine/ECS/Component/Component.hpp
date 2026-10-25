@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ComponentTypeID.hpp"
+
 namespace GNC {
 
 // Forward declarations
@@ -58,6 +60,10 @@ public:
     virtual void Update(float deltaTime) { (void)deltaTime; }
     virtual void Render() {}
 
+    // Filled in by GNC_COMPONENT_TYPE.
+    virtual ComponentTypeID GetTypeID() const = 0;
+    virtual const char* GetTypeName() const = 0;
+
     State GetState() const { return state; }
     bool IsActive() const { return state == State::Active; }
 
@@ -66,3 +72,18 @@ public:
 };
 
 } // namespace GNC
+
+// Every concrete component declares its type id and display name with this,
+// as events do with GNC_EVENT_TYPE:
+//
+//     class LightComponent : public Component {
+//     public:
+//         GNC_COMPONENT_TYPE(LightComponent, "Light")
+//     };
+#define GNC_COMPONENT_TYPE(TypeName, DisplayName)                                    \
+    static ::GNC::ComponentTypeID StaticTypeID() {                                    \
+        return ::GNC::ComponentTypeIDSystem::GetTypeID<TypeName>();                   \
+    }                                                                                 \
+    static constexpr const char* StaticTypeName() { return DisplayName; }             \
+    ::GNC::ComponentTypeID GetTypeID() const override { return StaticTypeID(); }      \
+    const char* GetTypeName() const override { return StaticTypeName(); }

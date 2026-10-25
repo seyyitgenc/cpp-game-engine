@@ -146,6 +146,24 @@ endforeach()
 add_custom_target(shaders ALL DEPENDS ${SHADER_BINARIES})
 add_dependencies(${PROJECT_NAME} shaders)
 
+# Icon font
+# Font Awesome 6 Free Solid 6.7.1 (src/external/FontAwesome, SIL OFL 1.1),
+# whose glyphs IconsFontAwesome6.h names: IconFontCppHeaders commit 8a38118
+# (src/external/IconFontCppHeaders, zlib), generated for 6.7.1. Update the
+# two together. Copied next to the executable, to fonts/.
+set(ICON_FONT ${CMAKE_SOURCE_DIR}/src/external/FontAwesome/fa-solid-900.ttf)
+set(FONT_OUTPUT_DIR ${ENGINE_OUTPUT_DIR}/fonts)
+add_custom_command(
+    OUTPUT ${FONT_OUTPUT_DIR}/fa-solid-900.ttf
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FONT_OUTPUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ICON_FONT} ${FONT_OUTPUT_DIR}/fa-solid-900.ttf
+    DEPENDS ${ICON_FONT}
+    COMMENT "Copying fa-solid-900.ttf"
+    VERBATIM)
+
+add_custom_target(fonts ALL DEPENDS ${FONT_OUTPUT_DIR}/fa-solid-900.ttf)
+add_dependencies(${PROJECT_NAME} fonts)
+
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
 # target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)

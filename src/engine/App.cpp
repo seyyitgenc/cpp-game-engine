@@ -17,8 +17,11 @@
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
+#include "UI/Icons.hpp"
 #include "UI/Panels/DemoWindowPanel.hpp"
 #include "UI/Panels/EnginePanel.hpp"
+#include "UI/Panels/InspectorPanel.hpp"
+#include "UI/Panels/ScenePanel.hpp"
 #include "UI/Panels/ViewportPanel.hpp"
 #include "Utils/Log.hpp"
 
@@ -46,6 +49,7 @@ App::App()
       renderer(vulkan, window.GetFramebufferExtent(), &camera),
       gui(eventBus, window, vulkan, renderer) {
     SubscribeToEvents();
+    RegisterComponents();
     BuildScene();
     BuildGui();
 }
@@ -139,6 +143,26 @@ void App::SubscribeToEvents() {
         window.Close();
         return true;
     }));
+
+    // Scene requests from the UI (SceneEvents.hpp).
+    subscriptions.push_back(eventBus.Subscribe<CreateEntityEvent>([this](CreateEntityEvent& e) {
+        Entity& entity = scene.CreateEntity(scene.MakeUniqueName(e.GetEntityName()));
+        entity.AddComponent<TransformComponent>();
+        selection.Select(&entity);
+        return true;
+    }));
+
+    subscriptions.push_back(eventBus.Subscribe<AddComponentEvent>([this](AddComponentEvent& e) {
+        if (const ComponentRegistry::Entry* type = componentTypes.Find(e.GetComponentTypeID())) {
+            type->addTo(e.GetEntity());
+        }
+        return true;
+    }));
+
+    subscriptions.push_back(eventBus.Subscribe<RemoveComponentEvent>([](RemoveComponentEvent& e) {
+        e.GetEntity().RemoveComponent(e.GetComponentTypeID());
+        return true;
+    }));
 }
 
 Mesh* App::LoadMesh(const std::string& id, MeshData data) {
@@ -147,6 +171,33 @@ Mesh* App::LoadMesh(const std::string& id, MeshData data) {
         throw std::runtime_error("App: failed to upload mesh '" + id + "'");
     }
     return handle.Get();
+}
+
+// In the order the Add Component menus list them.
+void App::RegisterComponents() {
+    componentTypes.Register<TransformComponent>({ .icon = ICON_FA_UP_DOWN_LEFT_RIGHT });
+
+    // A material of its own, so it can be edited. The mesh is looked up when
+    // added, so this can run before BuildScene() loads it.
+    componentTypes.Register<MeshComponent>({
+        .icon = ICON_FA_DRAW_POLYGON,
+        .addTo = [this](Entity& entity) {
+            Material* material = scene.CreateMaterial({ .metallicFactor = 0.0f, .roughnessFactor = 0.5f });
+            entity.AddComponent<MeshComponent>(resources.GetResource<Mesh>("sphere"), material);
+        }
+    });
+
+    componentTypes.Register<LightComponent>({ .icon = ICON_FA_LIGHTBULB });
+
+    // Around where the entity is now.
+    componentTypes.Register<OrbitComponent>({
+        .icon = ICON_FA_SATELLITE,
+        .addTo = [](Entity& entity) {
+            const TransformComponent* transform = entity.GetComponent<TransformComponent>();
+            const glm::vec3 center = transform ? transform->GetPosition() : glm::vec3(0.0f);
+            entity.AddComponent<OrbitComponent>(center, 0.5f, 1.0f);
+        }
+    });
 }
 
 // A PBR showcase: a material chart over a ground plane, lit by a dim sun, a
@@ -290,6 +341,8 @@ void App::BuildGui() {
     // ----
     ImGuiMenu& view = menuBar.GetMenu("View");
     view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer));
+    view.AddPanelItem(*gui.AddPanel<ScenePanel>("Scene", scene, componentTypes, selection, eventBus));
+    view.AddPanelItem(*gui.AddPanel<InspectorPanel>("Inspector", selection, componentTypes, resources, eventBus));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
     view.AddSeparator();
     view.AddPanelItem(*gui.AddPanel<DemoWindowPanel>("ImGui Demo"));

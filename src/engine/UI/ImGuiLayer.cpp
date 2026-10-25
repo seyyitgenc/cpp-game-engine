@@ -17,6 +17,7 @@
 #include "Renderer/FrameData.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Renderer/VulkanContext.hpp"
+#include "UI/Icons.hpp"
 #include "Utils/FileSystem.hpp"
 #include "Utils/Log.hpp"
 
@@ -72,6 +73,9 @@ ImGuiLayer::ImGuiLayer(EventBus& bus, Window& win, const VulkanContext& vulkanCo
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+
+    // After the style: the default font is picked by the scaled size.
+    LoadFonts();
 
     // --------
     // Backends
@@ -181,6 +185,31 @@ void ImGuiLayer::NewFrame() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+}
+
+// ImGui's default font with Font Awesome's solid icons merged in. Glyphs load
+// as they are first drawn, so no glyph ranges are needed.
+void ImGuiLayer::LoadFonts() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    // The size ImGui picks anyway, but explicit: merging a font with explicit
+    // metrics into one with an implicit size asserts.
+    ImFontConfig textConfig;
+    textConfig.SizePixels = TextFontSize;
+    textConfig.PixelSnapH = true;
+    io.Fonts->AddFontDefault(&textConfig);
+
+    // Same width for every icon, so the labels after them line up.
+    ImFontConfig iconConfig;
+    iconConfig.MergeMode = true;
+    iconConfig.SizePixels = IconFontSize;
+    iconConfig.GlyphMinAdvanceX = IconFontSize;
+    iconConfig.Flags |= ImFontFlags_NoLoadError;
+
+    const std::string iconPath = FileSystem::getPath(std::string("fonts/") + FONT_ICON_FILE_NAME_FAS).string();
+    if (!io.Fonts->AddFontFromFileTTF(iconPath.c_str(), 0.0f, &iconConfig)) {
+        Log::write(Log::Warning, YELLOW_TEXT("[ImGui] "), "Could not load ", iconPath, ", icons will show as '?'\n");
+    }
 }
 
 // For the main window only; the backend builds the pipeline for the windows it
