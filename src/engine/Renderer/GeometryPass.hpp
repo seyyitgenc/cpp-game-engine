@@ -22,23 +22,28 @@ struct GBuffer {
     static constexpr vk::Format NormalFormat = vk::Format::eR16G16Sfloat;
     static constexpr vk::Format MaterialFormat = vk::Format::eR8G8B8A8Unorm;
     static constexpr vk::Format EmissiveFormat = vk::Format::eR16G16B16A16Sfloat;
+    static constexpr vk::Format EntityIdFormat = vk::Format::eR32Uint;
     static constexpr vk::Format DepthFormat = vk::Format::eD32Sfloat;
 
     // Same order as the SV_Target outputs in shaders/geometry_pass.slang.
-    static constexpr std::uint32_t ColorCount = 4;
+    static constexpr std::uint32_t ColorCount = 5;
     static constexpr std::array<vk::Format, ColorCount> ColorFormats {
-        BaseColorFormat, NormalFormat, MaterialFormat, EmissiveFormat
+        BaseColorFormat, NormalFormat, MaterialFormat, EmissiveFormat, EntityIdFormat
     };
+    static constexpr std::uint32_t EntityIdTarget = 4;
 
     Attachment baseColor;
     Attachment normal;
     Attachment material;
     Attachment emissive;
+    // Read by the post-process pass for outlines and copied out by
+    // Renderer for picking; lighting never reads it.
+    Attachment entityId;
     Attachment depth;
 
     // In ColorFormats order.
     std::array<const Attachment*, ColorCount> ColorAttachments() const {
-        return { &baseColor, &normal, &material, &emissive };
+        return { &baseColor, &normal, &material, &emissive, &entityId };
     }
 };
 

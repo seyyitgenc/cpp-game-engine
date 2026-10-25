@@ -97,10 +97,13 @@ void ScenePanel::RenderEntity(Entity& entity) {
 }
 
 void ScenePanel::RenderEntityMenu(Entity& entity) {
-    if (!ImGui::BeginMenu(ICON_FA_CIRCLE_PLUS " Add Component")) return;
+    if (ImGui::BeginMenu(ICON_FA_CIRCLE_PLUS " Add Component")) {
+        AddComponentMenuItems(entity, componentTypes, eventBus);
+        ImGui::EndMenu();
+    }
 
-    AddComponentMenuItems(entity, componentTypes, eventBus);
-    ImGui::EndMenu();
+    ImGui::Separator();
+    if (ImGui::MenuItem(ICON_FA_TRASH_CAN " Delete Entity", "Del")) eventBus.Enqueue<DestroyEntityEvent>(entity);
 }
 
 void ScenePanel::RenderComponentMenu(Entity& entity, const Component& component) {

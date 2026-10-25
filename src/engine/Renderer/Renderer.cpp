@@ -36,6 +36,28 @@ void LoadShader(Shader& shader, const ResourceContext& resourceContext) {
     }
 }
 
+// Entity ids in FrameData::pickBuffer.
+enum PickSlot : std::uint32_t {
+    ClickSlot,
+    HoverSlot,
+    PickSlotCount
+};
+
+// The viewport's fractional size truncates to the scene extent, so a pixel on
+// its far edge can land one outside.
+vk::BufferImageCopy MakePickCopy(vk::Offset2D pixel, vk::Extent2D extent, PickSlot slot) {
+    return vk::BufferImageCopy {
+        .bufferOffset = slot * sizeof(std::uint32_t),
+        .imageSubresource = { .aspectMask = vk::ImageAspectFlagBits::eColor, .layerCount = 1 },
+        .imageOffset = {
+            .x = std::clamp(pixel.x, 0, static_cast<std::int32_t>(extent.width) - 1),
+            .y = std::clamp(pixel.y, 0, static_cast<std::int32_t>(extent.height) - 1),
+            .z = 0
+        },
+        .imageExtent = { .width = 1, .height = 1, .depth = 1 }
+    };
+}
+
 } // namespace
 
 Renderer::Renderer(const VulkanContext& vulkanContext, vk::Extent2D extent, Camera* cam)
@@ -73,6 +95,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     // and uniform buffers.
     while (context.device->waitForFences(*frame.inFlightFence, vk::True, std::numeric_limits<std::uint64_t>::max()) == vk::Result::eTimeout) {
     }
+    ReadPick(frame);
 
     // Reset the fence only after acquire succeeds: if it fails and the frame
     // is skipped, an unsignaled fence would block the next wait forever.
@@ -85,6 +108,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
     UpdateLightsBuffer(frame, entities);
 
     cullingSystem.CullScene(entities);
+    postProcessPass->SetOutlinedIds(FindEntityId(outlinedSelected), FindEntityId(outlinedHovered));
 
     frame.commandBuffer.reset();
     frame.commandBuffer.begin(vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
@@ -97,6 +121,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
         .targetView = swapchain->GetImageView(*imageIndex)
     };
     renderPassManager.Execute(frameContext);
+    RecordPick(frame);
 
     // Present waits on the submit's semaphore, so this barrier only changes
     // the layout.
@@ -156,6 +181,22 @@ void Renderer::SetSceneExtent(vk::Extent2D extent) {
 
 vk::ImageView Renderer::GetSceneView() const {
     return *postProcessPass->GetOutput().view;
+}
+
+void Renderer::SetHoverPixel(std::optional<vk::Offset2D> pixel) {
+    hoverPixel = pixel;
+    if (!pixel) hoveredEntity = nullptr;
+}
+
+void Renderer::ForgetEntity(const Entity* entity) {
+    // nullptr, not erased: the ids index these lists.
+    for (FrameData& frame : frames) {
+        std::ranges::replace(frame.pickEntities, entity, nullptr);
+    }
+    if (pickResult == entity) pickResult.reset();
+    if (hoveredEntity == entity) hoveredEntity = nullptr;
+    if (outlinedSelected == entity) outlinedSelected = nullptr;
+    if (outlinedHovered == entity) outlinedHovered = nullptr;
 }
 
 void Renderer::CreateCommandPool() {
@@ -248,6 +289,13 @@ void Renderer::CreateFrameResources() {
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             frame.lightsBuffer, frame.lightsMemory);
         frame.lightsMapped = frame.lightsMemory.mapMemory(0, sizeof(LightsUniform));
+
+        const vk::DeviceSize pickSize = PickSlotCount * sizeof(std::uint32_t);
+        createBuffer(device, *context.physicalDevice, pickSize,
+            vk::BufferUsageFlagBits::eTransferDst,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            frame.pickBuffer, frame.pickMemory);
+        frame.pickMapped = frame.pickMemory.mapMemory(0, pickSize);
 
         frame.globalSet = std::move(descriptorSets[i]);
 
@@ -346,6 +394,69 @@ GpuLight Renderer::MakeGpuLight(const LightComponent& light, const TransformComp
     return gpuLight;
 }
 
+void Renderer::RecordPick(FrameData& frame) {
+    std::array<vk::BufferImageCopy, PickSlotCount> copies;
+    std::uint32_t copyCount = 0;
+    if (pickRequest) {
+        copies[copyCount++] = MakePickCopy(*pickRequest, sceneExtent, ClickSlot);
+        frame.clickPending = true;
+        pickRequest.reset();
+    }
+    if (hoverPixel) {
+        copies[copyCount++] = MakePickCopy(*hoverPixel, sceneExtent, HoverSlot);
+        frame.hoverPending = true;
+    }
+    if (copyCount == 0) return;
+
+    const vk::Image entityIds = *geometryPass->GetGBuffer().entityId.image;
+    const vk::ImageMemoryBarrier2 toCopy = makeImageBarrier(entityIds, vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eTransferSrcOptimal,
+        vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eNone,
+        vk::PipelineStageFlagBits2::eCopy, vk::AccessFlagBits2::eTransferRead);
+    frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo { .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &toCopy });
+
+    frame.commandBuffer.copyImageToBuffer(entityIds, vk::ImageLayout::eTransferSrcOptimal, *frame.pickBuffer,
+        vk::ArrayProxy<const vk::BufferImageCopy>(copyCount, copies.data()));
+
+    // The fence wait alone does not make the copy visible to the host.
+    const vk::MemoryBarrier2 toHost {
+        .srcStageMask = vk::PipelineStageFlagBits2::eCopy,
+        .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+        .dstStageMask = vk::PipelineStageFlagBits2::eHost,
+        .dstAccessMask = vk::AccessFlagBits2::eHostRead
+    };
+    frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &toHost });
+
+    // What GeometryPass numbered the ids by.
+    frame.pickEntities = cullingSystem.GetVisibleEntities();
+}
+
+void Renderer::ReadPick(FrameData& frame) {
+    if (!frame.clickPending && !frame.hoverPending) return;
+
+    std::array<std::uint32_t, PickSlotCount> ids {};
+    std::memcpy(ids.data(), frame.pickMapped, sizeof(ids));
+    auto toEntity = [&](std::uint32_t id) -> Entity* {
+        return id > 0 && id <= frame.pickEntities.size() ? frame.pickEntities[id - 1] : nullptr;
+    };
+
+    if (frame.clickPending) pickResult = toEntity(ids[ClickSlot]);
+    // Not once the cursor has left the scene since.
+    if (frame.hoverPending && hoverPixel) hoveredEntity = toEntity(ids[HoverSlot]);
+
+    frame.pickEntities.clear();
+    frame.clickPending = false;
+    frame.hoverPending = false;
+}
+
+std::uint32_t Renderer::FindEntityId(const Entity* entity) const {
+    if (!entity) return 0;
+
+    const std::vector<Entity*>& visible = cullingSystem.GetVisibleEntities();
+    const auto it = std::ranges::find(visible, entity);
+    return it != visible.end() ? static_cast<std::uint32_t>(it - visible.begin() + 1) : 0;
+}
+
 void Renderer::UpdateCameraAspect() {
     if (!camera) return;
 
@@ -353,6 +464,7 @@ void Renderer::UpdateCameraAspect() {
 }
 
 void Renderer::RebuildRenderPasses() {
+    geometryPass = nullptr;
     postProcessPass = nullptr;
     renderPassManager.Clear();
 
@@ -373,7 +485,7 @@ void Renderer::SetupRenderPasses() {
         LoadShader(*shader, shaderContext);
     }
 
-    auto geometryPass = renderPassManager.AddRenderPass<GeometryPass>("GeometryPass",
+    geometryPass = renderPassManager.AddRenderPass<GeometryPass>("GeometryPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *geometryVertex.GetShaderModule(), *geometryFragment.GetShaderModule() },
         &cullingSystem);
@@ -388,7 +500,8 @@ void Renderer::SetupRenderPasses() {
     postProcessPass = renderPassManager.AddRenderPass<PostProcessPass>("PostProcessPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *postVertex.GetShaderModule(), *postFragment.GetShaderModule() },
-        lightingPass);
+        geometryPass, lightingPass);
+    postProcessPass->AddDependency(geometryPass->GetName());
     postProcessPass->AddDependency(lightingPass->GetName());
 
     // After the scene image it shows.

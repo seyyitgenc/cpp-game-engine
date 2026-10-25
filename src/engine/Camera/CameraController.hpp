@@ -12,12 +12,15 @@ class Window;
 
 // Camera controller
 // Editor-style fly camera: hold the right mouse button to look (the cursor is
-// captured meanwhile), WASD to move, E/Space up, Q/Left Ctrl down, Left Shift
-// faster, the wheel zooms. Input comes from the bus, so ImGui can swallow it
-// first.
+// captured meanwhile) and, while it is held, WASD to move, E/Space up, Q/Left
+// Ctrl down, Left Shift faster. The wheel zooms. Input comes from the bus, so
+// ImGui can swallow it first.
 class CameraController {
 public:
     static constexpr float BoostMultiplier = 4.0f;
+
+    // Above the Viewport's gizmo shortcuts, which share the movement keys.
+    static constexpr int EventPriority = 100;
 
 private:
     Camera& camera;

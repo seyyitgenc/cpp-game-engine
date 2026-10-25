@@ -5,8 +5,9 @@ namespace GNC {
 class Entity;
 
 // Selection
-// The entity picked in the Scene panel and edited in the Inspector. It points
-// into the Scene, so clear it before destroying that entity.
+// The entity picked in the Scene panel or the Viewport and edited in the
+// Inspector. It points into the Scene, so clear it before destroying that
+// entity.
 class Selection {
 private:
     Entity* entity = nullptr;

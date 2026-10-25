@@ -3,6 +3,8 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -19,6 +21,7 @@ namespace GNC {
 
 class Camera;
 class Entity;
+class GeometryPass;
 class LightComponent;
 class PostProcessPass;
 class TransformComponent;
@@ -57,8 +60,18 @@ private:
 
     RenderPassManager renderPassManager;
     // Owned by renderPassManager.
+    GeometryPass* geometryPass = nullptr;
     PostProcessPass* postProcessPass = nullptr;
     FrustumCulling cullingSystem;
+
+    // Scene pixels, for the next frame recorded.
+    std::optional<vk::Offset2D> pickRequest;
+    std::optional<vk::Offset2D> hoverPixel;
+    std::optional<Entity*> pickResult;
+    Entity* hoveredEntity = nullptr;
+
+    const Entity* outlinedSelected = nullptr;
+    const Entity* outlinedHovered = nullptr;
 
 public:
     // extent: the framebuffer size; not 0x0.
@@ -104,6 +117,37 @@ public:
     vk::ImageView GetSceneView() const;
     std::uint64_t GetSceneVersion() const { return sceneVersion; }
 
+    // -------
+    // Picking
+    // -------
+
+    // Both queries ask which entity the next frame draws at a pixel, in scene
+    // image pixels, and are answered once the GPU has finished that frame
+    // and its slot comes round again. nullptr means no entity.
+
+    // A click. Each answer is returned once.
+    void RequestPick(vk::Offset2D pixel) { pickRequest = pixel; }
+    std::optional<Entity*> TakePickResult() { return std::exchange(pickResult, std::nullopt); }
+
+    // The cursor, every frame it is over the scene; nullopt clears the
+    // hovered entity at once.
+    void SetHoverPixel(std::optional<vk::Offset2D> pixel);
+    Entity* GetHoveredEntity() const { return hoveredEntity; }
+
+    // --------
+    // Outlines
+    // --------
+
+    // Drawn around the entities' visible pixels; either may be nullptr.
+    void SetOutlinedEntities(const Entity* selected, const Entity* hovered) {
+        outlinedSelected = selected;
+        outlinedHovered = hovered;
+    }
+
+    // Before the entity is destroyed: drops it from pending picks, the
+    // hovered entity and the outlines.
+    void ForgetEntity(const Entity* entity);
+
 private:
     void CreateCommandPool();
     void CreateGlobalDescriptorSetLayout();
@@ -113,6 +157,13 @@ private:
     void UpdateCameraBuffer(FrameData& frame);
     void UpdateLightsBuffer(FrameData& frame, const std::vector<Entity*>& entities);
     static GpuLight MakeGpuLight(const LightComponent& light, const TransformComponent* transform);
+
+    // After every pass, so the post-process pass has read the ids.
+    void RecordPick(FrameData& frame);
+    // Once the frame's fence has signaled.
+    void ReadPick(FrameData& frame);
+    // GeometryPass's id for the entity this frame; 0 when it is not drawn.
+    std::uint32_t FindEntityId(const Entity* entity) const;
 
     void UpdateCameraAspect();
     // The GPU must be idle.

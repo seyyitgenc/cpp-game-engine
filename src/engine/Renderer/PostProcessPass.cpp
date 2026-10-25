@@ -3,15 +3,28 @@
 #include <array>
 #include <cstdint>
 
+#include "GeometryPass.hpp"
 #include "LightingPass.hpp"
 #include "ShaderTypes.hpp"
 #include "Utils/VulkanHelpers.hpp"
 
 namespace GNC {
 
+namespace {
+
+// Bindings in set 1, as in shaders/post_process.slang.
+enum InputBinding : std::uint32_t {
+    HdrColorBinding = 0,
+    EntityIdBinding = 1,
+    InputBindingCount
+};
+
+} // namespace
+
 PostProcessPass::PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
-                                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders, LightingPass* lPass)
-    : RenderPass(name), context(renderContext), extent(renderExtent), lightingPass(lPass) {
+                                 vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders,
+                                 GeometryPass* gPass, LightingPass* lPass)
+    : RenderPass(name), context(renderContext), extent(renderExtent), geometryPass(gPass), lightingPass(lPass) {
     output = Attachment(context, extent, OutputFormat,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor);
@@ -67,7 +80,9 @@ void PostProcessPass::Render(const FrameContext& frame) {
     // The output is UNORM, so the shader encodes sRGB itself.
     const PostProcessPushConstants pushConstants {
         .exposure = exposure,
-        .encodeSrgb = 1u
+        .encodeSrgb = 1u,
+        .selectedId = selectedId,
+        .hoveredId = hoveredId
     };
     commandBuffer.pushConstants<PostProcessPushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, pushConstants);
 
@@ -92,22 +107,25 @@ void PostProcessPass::EndPass(const FrameContext& frame) {
 void PostProcessPass::CreateDescriptorSet() {
     const vk::raii::Device& device = *context.device;
 
-    // Read with Load(), one texel per pixel, so a sampled image without a
+    // Read with Load(), one texel per pixel, so sampled images without a
     // sampler, like the G-buffer in the lighting pass.
-    const vk::DescriptorSetLayoutBinding binding {
-        .binding = 0,
-        .descriptorType = vk::DescriptorType::eSampledImage,
-        .descriptorCount = 1,
-        .stageFlags = vk::ShaderStageFlagBits::eFragment
-    };
+    std::array<vk::DescriptorSetLayoutBinding, InputBindingCount> bindings;
+    for (std::uint32_t i = 0; i < InputBindingCount; ++i) {
+        bindings[i] = vk::DescriptorSetLayoutBinding {
+            .binding = i,
+            .descriptorType = vk::DescriptorType::eSampledImage,
+            .descriptorCount = 1,
+            .stageFlags = vk::ShaderStageFlagBits::eFragment
+        };
+    }
     inputSetLayout = vk::raii::DescriptorSetLayout(device, vk::DescriptorSetLayoutCreateInfo {
-        .bindingCount = 1,
-        .pBindings = &binding
+        .bindingCount = static_cast<std::uint32_t>(bindings.size()),
+        .pBindings = bindings.data()
     });
 
     const vk::DescriptorPoolSize poolSize {
         .type = vk::DescriptorType::eSampledImage,
-        .descriptorCount = 1
+        .descriptorCount = InputBindingCount
     };
     // eFreeDescriptorSet: a vk::raii::DescriptorSet frees itself into its pool.
     descriptorPool = vk::raii::DescriptorPool(device, vk::DescriptorPoolCreateInfo {
@@ -125,19 +143,23 @@ void PostProcessPass::CreateDescriptorSet() {
     });
     inputSet = std::move(sets.front());
 
-    // The layout LightingPass::EndPass leaves its output in.
-    const vk::DescriptorImageInfo imageInfo {
-        .imageView = *lightingPass->GetOutput().view,
-        .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-    };
-    device.updateDescriptorSets(vk::WriteDescriptorSet {
-        .dstSet = *inputSet,
-        .dstBinding = 0,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = vk::DescriptorType::eSampledImage,
-        .pImageInfo = &imageInfo
-    }, {});
+    // The layouts the lighting and geometry passes leave these in.
+    std::array<vk::DescriptorImageInfo, InputBindingCount> imageInfos;
+    imageInfos[HdrColorBinding] = { .imageView = *lightingPass->GetOutput().view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+    imageInfos[EntityIdBinding] = { .imageView = *geometryPass->GetGBuffer().entityId.view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+
+    std::array<vk::WriteDescriptorSet, InputBindingCount> writes;
+    for (std::uint32_t i = 0; i < InputBindingCount; ++i) {
+        writes[i] = vk::WriteDescriptorSet {
+            .dstSet = *inputSet,
+            .dstBinding = i,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eSampledImage,
+            .pImageInfo = &imageInfos[i]
+        };
+    }
+    device.updateDescriptorSets(writes, {});
 }
 
 void PostProcessPass::CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders) {

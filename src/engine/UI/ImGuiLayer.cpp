@@ -8,6 +8,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
+#include <ImGuizmo.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -180,6 +181,8 @@ void ImGuiLayer::NewFrame() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    // Moves ImGuizmo::IsOver() on to the frame that just ended.
+    ImGuizmo::BeginFrame();
 }
 
 // ImGui's default font with Font Awesome's solid icons merged in. Glyphs load

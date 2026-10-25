@@ -28,7 +28,8 @@ public:
     const std::string& GetEntityName() const { return entityName; }
 };
 
-// These two point at the entity, which must still exist at Flush().
+// These name an entity by address. A DestroyEntityEvent earlier in the same
+// Flush() may have destroyed it: check Scene::Contains() before using it.
 class AddComponentEvent : public Event {
 private:
     Entity* entity;
@@ -39,7 +40,7 @@ public:
 
     AddComponentEvent(Entity& target, ComponentTypeID typeID) : entity(&target), componentTypeID(typeID) {}
 
-    Entity& GetEntity() const { return *entity; }
+    Entity* GetEntity() const { return entity; }
     ComponentTypeID GetComponentTypeID() const { return componentTypeID; }
 };
 
@@ -53,8 +54,20 @@ public:
 
     RemoveComponentEvent(Entity& target, ComponentTypeID typeID) : entity(&target), componentTypeID(typeID) {}
 
-    Entity& GetEntity() const { return *entity; }
+    Entity* GetEntity() const { return entity; }
     ComponentTypeID GetComponentTypeID() const { return componentTypeID; }
+};
+
+class DestroyEntityEvent : public Event {
+private:
+    Entity* entity;
+
+public:
+    GNC_EVENT_TYPE(DestroyEntityEvent, EventCategory::Scene)
+
+    explicit DestroyEntityEvent(Entity& target) : entity(&target) {}
+
+    Entity* GetEntity() const { return entity; }
 };
 
 } // namespace GNC

@@ -9,6 +9,8 @@
 //   2  R8G8B8A8_UNORM       r occlusion, g roughness, b metallic: glTF's ORM
 //                           channel order, so a packed ORM texture maps 1:1
 //   3  R16G16B16A16_SFLOAT  rgb emitted radiance; HDR, so not 8 bit
+//   4  R32_UINT             entity id for picking and outlines, 0 where nothing
+//                           was drawn. Not read by lighting_pass
 //   D  D32_SFLOAT           depth; world position is rebuilt from it
 
 // Octahedral normal encoding (Cigolle et al. 2014, "A Survey of Efficient

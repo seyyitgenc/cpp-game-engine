@@ -70,6 +70,15 @@ target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
 target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 set(LIBS ${LIBS} imgui)
 
+# ImGuizmo, vendored as plain files: src/ImGuizmo.h, src/ImGuizmo.cpp and
+# LICENSE from https://github.com/CedricGuillemet/ImGuizmo at commit 105e4fd.
+# It includes imgui_internal.h, so update it together with ImGui.
+set(IMGUIZMO_DIR ${CMAKE_SOURCE_DIR}/src/external/ImGuizmo)
+add_library(imguizmo STATIC ${IMGUIZMO_DIR}/ImGuizmo.cpp)
+target_include_directories(imguizmo PUBLIC ${IMGUIZMO_DIR})
+target_link_libraries(imguizmo PUBLIC imgui)
+set(LIBS ${LIBS} imguizmo)
+
 #add all executables
 file(GLOB_RECURSE SOURCE
     src/engine/*.cpp

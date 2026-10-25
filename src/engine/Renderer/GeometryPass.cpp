@@ -1,6 +1,7 @@
 #include "GeometryPass.hpp"
 
 #include <stdexcept>
+#include <vector>
 
 #include "Culling/FrustumCulling.hpp"
 #include "ECS/Component/MeshComponent.hpp"
@@ -45,6 +46,8 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
             vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eNone,
             vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite);
     }
+    // Read by the post-process pass, and on pick frames by the pick copy.
+    barriers[GBuffer::EntityIdTarget].srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader | vk::PipelineStageFlagBits2::eCopy;
     barriers[GBuffer::ColorCount] = makeImageBarrier(*gBuffer.depth.image, vk::ImageAspectFlagBits::eDepth,
         vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal,
         vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eNone,
@@ -55,7 +58,8 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
         .pImageMemoryBarriers = barriers.data()
     });
 
-    // Cleared only for frame debuggers: lighting masks empty pixels by depth.
+    // Lighting masks empty pixels by depth, so the surface attributes are
+    // cleared only for frame debuggers. The entity ids must be: 0 is "none".
     std::array<vk::RenderingAttachmentInfo, GBuffer::ColorCount> colorInfos;
     for (std::uint32_t i = 0; i < GBuffer::ColorCount; ++i) {
         colorInfos[i] = vk::RenderingAttachmentInfo {
@@ -66,6 +70,7 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
             .clearValue = vk::ClearColorValue(std::array<float, 4> { 0.0f, 0.0f, 0.0f, 0.0f })
         };
     }
+    colorInfos[GBuffer::EntityIdTarget].clearValue = vk::ClearColorValue(std::array<std::uint32_t, 4> { 0, 0, 0, 0 });
 
     // Stored, not discarded: the lighting pass rebuilds positions from it.
     vk::RenderingAttachmentInfo depthInfo {
@@ -102,7 +107,9 @@ void GeometryPass::Render(const FrameContext& frame) {
 
     // Culling only lets through active entities that have both a mesh and a
     // transform component.
-    for (Entity* entity : cullingSystem->GetVisibleEntities()) {
+    const std::vector<Entity*>& entities = cullingSystem->GetVisibleEntities();
+    for (std::size_t index = 0; index < entities.size(); ++index) {
+        Entity* entity = entities[index];
         const MeshComponent* meshComponent = entity->GetComponent<MeshComponent>();
         const TransformComponent* transform = entity->GetComponent<TransformComponent>();
 
@@ -117,7 +124,9 @@ void GeometryPass::Render(const FrameContext& frame) {
             .baseColorFactor = material.baseColorFactor,
             .emissive = glm::vec4(material.emissiveFactor * material.emissiveStrength, 0.0f),
             .metallicFactor = material.metallicFactor,
-            .roughnessFactor = material.roughnessFactor
+            .roughnessFactor = material.roughnessFactor,
+            // Renderer::ReadPick() maps it back through the same list.
+            .entityId = static_cast<std::uint32_t>(index + 1)
         };
         commandBuffer.pushConstants<GeometryPushConstants>(*pipelineLayout, PushConstantStages, 0, pushConstants);
 
@@ -131,8 +140,8 @@ void GeometryPass::Render(const FrameContext& frame) {
 void GeometryPass::EndPass(const FrameContext& frame) {
     frame.commandBuffer.endRendering();
 
-    // To the lighting pass's fragment shader; the writes must be made
-    // visible, so both sides carry an access mask.
+    // To the lighting and post-process passes' fragment shaders; the writes
+    // must be made visible, so both sides carry an access mask.
     std::array<vk::ImageMemoryBarrier2, GBuffer::ColorCount + 1> barriers;
     const auto colorAttachments = gBuffer.ColorAttachments();
     for (std::uint32_t i = 0; i < GBuffer::ColorCount; ++i) {
@@ -171,6 +180,7 @@ void GeometryPass::CreateGBuffer() {
     gBuffer.normal = Attachment(context, extent, GBuffer::NormalFormat, colorUsage, color);
     gBuffer.material = Attachment(context, extent, GBuffer::MaterialFormat, colorUsage, color);
     gBuffer.emissive = Attachment(context, extent, GBuffer::EmissiveFormat, colorUsage, color);
+    gBuffer.entityId = Attachment(context, extent, GBuffer::EntityIdFormat, colorUsage | vk::ImageUsageFlagBits::eTransferSrc, color);
     gBuffer.depth = Attachment(context, extent, GBuffer::DepthFormat, depthUsage, vk::ImageAspectFlagBits::eDepth);
 }
 

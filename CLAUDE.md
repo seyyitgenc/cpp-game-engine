@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-A C++23 game engine being ported from OpenGL to Vulkan, following the Khronos Vulkan Tutorial's "Building a Simple Engine" series but adapted to this engine's own design. Active work happens on the `vulkan` branch; `opengl-develop` holds the old OpenGL engine. `ReadME.md` still describes the OpenGL engine and is out of date.
+A C++23 game engine being ported from OpenGL to Vulkan, following the Khronos Vulkan Tutorial's "Building a Simple Engine" series but adapted to this engine's own design. Active work happens on the `vulkan` branch; `opengl-develop` holds the old OpenGL engine. `ReadME.md` describes the Vulkan engine: features, build steps, controls and the TODO list.
 
 ## Working conventions
 
@@ -84,8 +84,10 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 - **Event kinds:** each kind is its own class, following OSG's GUIEventAdapter set. The mapping is PUSH/RELEASE → `MouseButtonPressed/ReleasedEvent`, DOUBLECLICK → `MouseDoubleClickEvent`, MOVE → `MouseMovedEvent`, DRAG → `MouseDraggedEvent`, KEYDOWN/KEYUP → `KeyPressed/ReleasedEvent`, SCROLL → `MouseScrolledEvent`, RESIZE → `WindowResizeEvent`, CLOSE_WINDOW → `WindowCloseEvent`, FRAME → `FrameEvent` and QUIT_APPLICATION → `QuitApplicationEvent`. Game-defined events use `GNC_EVENT_TYPE` with `EventCategory::User`.
   - Unlike OSG, `Window` sends DOUBLECLICK *after* the second press, and DRAG *alongside* MOVE, never in place of them.
   - Beyond OSG's set: `WindowFocusEvent`, `CharTypedEvent`, and `MouseEnterEvent`/`MouseLeaveEvent` (the cursor crossing the window edge, which the ImGui backend needs).
-- **Scene requests** (`SceneEvents.hpp`): the UI creates entities and adds or removes components only by enqueuing `CreateEntityEvent`, `AddComponentEvent` or `RemoveComponentEvent`, which App applies at the next `Flush()`. It is mid-loop over the entities when a menu item is picked. A property (a value, a name, the active flag) it may set directly.
+- **Scene requests** (`SceneEvents.hpp`): the UI creates and destroys entities and adds or removes components only by enqueuing `CreateEntityEvent`, `DestroyEntityEvent`, `AddComponentEvent` or `RemoveComponentEvent`, which App applies at the next `Flush()`. It is mid-loop over the entities when a menu item is picked. A property (a value, a name, the active flag) it may set directly.
+  - Requests made in one frame can meet in one `Flush()`, a destroy ahead of another request for the same entity. So every listener checks `Scene::Contains()` before using an event's `Entity*`.
 - **Held keys come from events:** track `KeyPressed`/`KeyReleased` (ignoring repeats) and clear on focus loss, as `CameraController` does. `Window::IsKeyDown` bypasses the bus, so ImGui could not swallow the key. Never return true for a release event. Key codes are GLFW's, untranslated.
+- **Camera vs editor keys:** the camera moves only while the right button is held. Its listeners run at `CameraController::EventPriority` (100), and while looking it swallows its movement keys, so the Viewport's W/E/R tool shortcuts below it do not fire mid-flight.
 
 ### Vulkan setup
 
@@ -94,7 +96,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
   - GCC warns when a designated initializer skips a field with no default value, such as the deprecated `DeviceCreateInfo` layer fields; use the setters for those structs.
   - `vk::OutOfDateKHRError` is caught in `Swapchain` and turned into "recreate".
 - **`Renderer/Renderer`** owns the swapchain, the per-frame data and the render passes:
-  - `MaxFramesInFlight = 2`. Each `FrameData` holds a command buffer, a fence, an image-available semaphore, mapped camera and light uniform buffers, and its descriptor set 0.
+  - `MaxFramesInFlight = 2`. Each `FrameData` holds a command buffer, a fence, an image-available semaphore, mapped camera and light uniform buffers, its descriptor set 0, and a pick readback buffer (see Picking).
   - Render-finished semaphores live in `Swapchain`, one per swapchain image, not per frame.
 - **Load-time uploads** go through `uploadBuffer()` in `Utils/VulkanHelpers`: staging buffer, copy, then wait for the queue.
 
@@ -102,9 +104,9 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 
 `RenderPassManager` orders passes by declared dependencies. **Passes must call `AddDependency`**; without it, order follows `unordered_map` iteration and is effectively random.
 
-1. **GeometryPass** draws every visible `MeshComponent` into the G-buffer: base color, octahedral-encoded normal, occlusion/roughness/metallic, emissive, and D32 depth. The formats live in the `GBuffer` struct (`GeometryPass.hpp`) and must match `shaders/common/gbuffer.slang`.
+1. **GeometryPass** draws every visible `MeshComponent` into the G-buffer: base color, octahedral-encoded normal, occlusion/roughness/metallic, emissive, an `R32_UINT` entity id (for picking, not lighting), and D32 depth. The formats live in the `GBuffer` struct (`GeometryPass.hpp`) and must match `shaders/common/gbuffer.slang`.
 2. **LightingPass** runs a fullscreen triangle. It rebuilds world position from depth with `inverseViewProjection`, loops over every light with the Cook-Torrance BRDF (`shaders/common/brdf.slang`), adds flat ambient and emissive, and writes linear HDR (`R16G16B16A16_SFLOAT`).
-3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into its own output, the *scene image* (`R8G8B8A8_UNORM`, `Renderer::GetSceneView()`). The shader applies the sRGB encoding itself, and `EndPass` leaves the image in `eShaderReadOnlyOptimal` for ImGui, which shows it in the Viewport panel.
+3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into its own output, the *scene image* (`R8G8B8A8_UNORM`, `Renderer::GetSceneView()`). The shader applies the sRGB encoding itself, then draws the editor's outlines from the entity ids (see Outlines). `EndPass` leaves the image in `eShaderReadOnlyOptimal` for ImGui, which shows it in the Viewport panel.
    - UNORM on purpose: ImGui copies texels to the swapchain as they are. An sRGB scene image would be decoded when sampled and show too dark.
    - The swapchain *prefers* a UNORM format too. ImGui's colors are already sRGB encoded; an sRGB swapchain would encode them again and wash the UI (and the scene in it) out.
 4. **ImGuiPass** is the only pass that writes the swapchain image (`FrameContext::targetImage`/`targetView`). It does the acquire barrier, clears the image, and draws ImGui's draw data with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
@@ -114,12 +116,17 @@ How passes work together:
 - **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers, which for the scene image are ImGui's (also in platform windows).
   - The swapchain image stays in `eColorAttachmentOptimal` through every pass. `Renderer::Render` transitions it to `ePresentSrcKHR` after the last one, so a pass can be added at the end without moving that barrier.
 - **Descriptor sets:** set 0 is always the global set (binding 0 camera, binding 1 lights) and every pipeline layout includes it. Set 1 holds the pass's inputs, which shaders read with `Texture2D.Load()`: sampled images, no samplers.
-- **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix plus material factors, which must stay ≤128 bytes).
+- **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix, material factors and entity id, which must stay ≤128 bytes).
+- **Picking:** the entity id is 1 + the draw's index in that frame's `FrustumCulling` visible list (0 = nothing drawn), so ids mean nothing outside their frame. GeometryPass leaves the id target in `eShaderReadOnlyOptimal` for the post-process pass.
+  - After all passes, `Renderer::RecordPick` transitions it to `eTransferSrcOptimal` and copies up to two texels into the frame's readback buffer, along with a copy of that frame's visible list. One texel is for a click (`RequestPick`), one for the cursor (`SetHoverPixel`, every frame it is over the scene). GeometryPass's first barrier therefore waits on both the fragment shader and the copy.
+  - After that frame's fence, the click answer comes from `TakePickResult()`, once, and the hover answer from `GetHoveredEntity()` (nullptr for the background). The Viewport sees them `MaxFramesInFlight + 1` frames after the request.
+- **Outlines:** `Renderer::SetOutlinedEntities(selected, hovered)` names entities. Each frame the Renderer looks up their ids in the visible list and passes them to PostProcessPass, whose shader marks pixels within `OUTLINE_RADIUS` outside each silhouette, after tonemapping and encoding. Id 0 means none, and the shader skips the outline work when both are 0.
 - **Shader modules** are loaded in `Renderer::SetupRenderPasses()` by constructing `Shader` objects directly, not through `ResourceManager`. The manager caches by id only, so the vertex and fragment stages of the same shader would collide in its cache.
 
 ### ImGui (`src/engine/UI/ImGuiLayer`)
 
 - **Library:** Dear ImGui's docking branch, vendored as plain files in `src/external/ImGui` (core plus `backends/imgui_impl_glfw` and `imgui_impl_vulkan`, unmodified), built as the `imgui` static library. `CMakeLists.txt` records the upstream commit and how to update.
+- **ImGuizmo** (`src/external/ImGuizmo`, the `imguizmo` library) draws the Viewport's gizmo. It includes `imgui_internal.h`, so update it with ImGui; `CMakeLists.txt` records the commit. `ImGuiLayer::NewFrame()` calls `ImGuizmo::BeginFrame()`, which advances `ImGuizmo::IsOver()` to the frame that just ended.
 - **Icons:** `ImGuiLayer::LoadFonts()` merges Font Awesome 6 Free Solid (`src/external/FontAwesome`) into the default font, and `UI/Icons.hpp` names its glyphs (`ICON_FA_*`, from `src/external/IconFontCppHeaders`). The header and the font must come from the same Font Awesome release; `CMakeLists.txt` records both.
   - The default font keeps its explicit 13 px size: ImGui asserts when a font with explicit metrics merges into one whose size was left implicit.
 - **Ownership:** `ImGuiLayer` owns the context and both backends. It is created after the `Renderer` (its pipeline is built for the swapchain format). On destruction it waits for the GPU and destroys its panels, so they can still free their textures, before shutting the backends down.
@@ -127,14 +134,19 @@ How passes work together:
   - `gui.AddPanel<T>(name, args...)` constructs `T(name, args...)`, like `RenderPassManager::AddRenderPass`. App adds its panels and menus in `App::BuildGui()`.
   - `gui.Render()` runs the whole ImGui frame: NewFrame, the main menu bar, a dockspace over the rest of the main window (not passthru), every *visible* panel in the order added, then `ImGui::Render()`. ImGui calls are only valid inside a panel's `Render()`.
   - A panel whose `DocksInCentralNode()` returns true docks into the dockspace's central node the first time its window exists (`SetNextWindowDockID`, `ImGuiCond_FirstUseEver`). After that, `imgui.ini` decides.
-  - App-specific panels live in `UI/Panels/` (`ViewportPanel`: the scene image; `ScenePanel`: the entities as a tree with icons, each opening onto its components; `InspectorPanel`: the selected entity's properties; `EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
+  - App-specific panels live in `UI/Panels/` (`ViewportPanel`: the scene image, click to select, gizmo; `ScenePanel`: the entities as a tree with icons, each opening onto its components; `InspectorPanel`: the selected entity's properties; `EnginePanel`: FPS and camera position; `DemoWindowPanel`: ImGui's demo window, hidden at start).
   - Panels hold references to what they show, so whatever a panel shows must be an `App` member declared before `gui`.
-- **Scene and Inspector panels** share App's `Selection` (one `Entity*`). The Inspector draws every component from its properties with `UI/PropertyEditor` (see Properties below).
+- **Scene, Viewport and Inspector panels** share App's `Selection` (one `Entity*`). The Inspector draws every component from its properties with `UI/PropertyEditor` (see Properties below).
 - **Viewport:** `ViewportPanel` shows the scene image and sizes the scene to its content area with `renderer.SetSceneExtent()`.
   - It registers the image with `ImGui_ImplVulkan_AddTexture` (the backend brings its own sampler). It re-registers whenever `Renderer::GetSceneVersion()` changes, since every pass rebuild replaces the image after a wait for the GPU. It compares versions, not view handles, because a recreated view can reuse the old handle value.
   - The backend's descriptor pool has room for `ImGuiLayer::MaxUserTextures` such textures on top of the font atlas.
-  - An `InvisibleButton` over the image takes left clicks, so a floating viewport is not dragged. While the image is hovered, the panel calls `SetNextFrameWantCaptureMouse(false)`, so the layer lets mouse events through to the camera. Holding the left button on it makes ImGui capture the keyboard (an active item); right-drag + WASD is unaffected.
-  - Dragged out into its own OS window, the viewport still shows the scene, but that window's input bypasses the bus, so the camera does not respond there.
+  - An `InvisibleButton` over the image takes left clicks, so a floating viewport is not dragged. A click that did not pass ImGui's drag threshold picks at the press position (see Picking); the panel applies the answer to `Selection` when it arrives, and the background clears it. While the image is hovered, the panel sends the hover pixel and calls `SetNextFrameWantCaptureMouse(false)`, so the layer lets mouse events through to the camera. Holding the left button on it makes ImGui capture the keyboard (an active item); right-drag + WASD is unaffected.
+  - Every frame it sets the outlines to the selection and the hovered entity.
+  - **Gizmo:** the selection, if it has a transform, gets an ImGuizmo gizmo. The tool is chosen with W/E/R (a bus listener below `CameraController::EventPriority`) or the toolbar over the image, which the button lets overlap it (`SetNextItemAllowOverlap`). Only what the tool changes is written back to `TransformComponent`.
+    - ImGuizmo only takes a press while no ImGui item is hovered or active. So while `ImGuizmo::IsOver()` (last frame's), the panel leaves out the button and sets `ImGuiWindowFlags_NoMove`. A press in the first frame or two after reaching the gizmo can still miss it.
+    - ImGuizmo ends a drag only inside `Manipulate()`. When the selection has no transform (deleted mid-drag), the panel ends the drag with `Enable(false)`/`Enable(true)`, or `IsOver()` would stay true.
+    - ImGuizmo expects OpenGL's clip space, Y up: the panel undoes `Camera`'s Y flip on a copy of the projection. The 0..1 depth needs no change.
+  - Dragged out into its own OS window, the viewport still shows the scene, picks and manipulates (ImGui gets that window's input), but that input bypasses the bus, so the camera does not respond there.
 - **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
   - The bar's submenus are its dropdown menus; an item added to the bar itself is a button on it.
   - The shortcut text is display only; bind the key with an event listener.
@@ -167,7 +179,7 @@ How passes work together:
   - Every concrete component declares `GNC_COMPONENT_TYPE(Class, "Name")`, as events declare `GNC_EVENT_TYPE`.
   - `Scene::CreateEntity` initializes the entity immediately, so components added afterwards are initialized as they are added.
   - `Scene` owns materials behind `unique_ptr`, because `MeshComponent` holds raw `Material*` pointers.
-  - Nothing destroys entities at run time yet. Scene events and `Selection` hold `Entity*`, so destroying one needs those cleared first.
+  - **Destroying:** App's `DestroyEntityEvent` listener clears `Selection` and calls `Renderer::ForgetEntity()` (pending picks, the untaken result, the hovered and outlined entities) before `Scene::DestroyEntity()`. Anything new that keeps an `Entity*` must be cleared there too. The GPU holds nothing of an entity's, so no wait is needed. Its materials stay in the scene.
 - **`ComponentRegistry`:** a new component type needs a `Register<T>` line in `App::RegisterComponents()` to appear in the Add Component menus and the Inspector.
 - **Properties** (`ECS/Component/Property.hpp`): the editor reaches a component's values only through its `static void Reflect(PropertyList<T>&)`; there are no hand-written editors.
   - Describe what the component stores (a rotation is the `glm::quat`, not Euler angles), so scene files can later save it exactly.

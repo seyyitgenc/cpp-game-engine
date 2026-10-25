@@ -42,13 +42,18 @@ struct GeometryPushConstants {
     glm::vec4 emissive {0.0f};
     float metallicFactor = 1.0f;
     float roughnessFactor = 1.0f;
-    float pad[2] {};
+    // 1 + the index into the frame's visible entities; 0 is the background.
+    std::uint32_t entityId = 0;
+    float pad = 0.0f;
 };
 
 // shaders/post_process.slang: PostData (push constants)
 struct PostProcessPushConstants {
     float exposure = 1.0f;
     std::uint32_t encodeSrgb = 0;
+    // GeometryPushConstants::entityId of the entities to outline; 0 for none.
+    std::uint32_t selectedId = 0;
+    std::uint32_t hoveredId = 0;
 };
 
 static_assert(offsetof(GpuLight, type) == 12);
@@ -68,11 +73,14 @@ static_assert(offsetof(GeometryPushConstants, baseColorFactor) == 64);
 static_assert(offsetof(GeometryPushConstants, emissive) == 80);
 static_assert(offsetof(GeometryPushConstants, metallicFactor) == 96);
 static_assert(offsetof(GeometryPushConstants, roughnessFactor) == 100);
+static_assert(offsetof(GeometryPushConstants, entityId) == 104);
 static_assert(sizeof(GeometryPushConstants) == 112);
 // The only push constant budget every Vulkan implementation guarantees.
 static_assert(sizeof(GeometryPushConstants) <= 128);
 
 static_assert(offsetof(PostProcessPushConstants, encodeSrgb) == 4);
-static_assert(sizeof(PostProcessPushConstants) == 8);
+static_assert(offsetof(PostProcessPushConstants, selectedId) == 8);
+static_assert(offsetof(PostProcessPushConstants, hoveredId) == 12);
+static_assert(sizeof(PostProcessPushConstants) == 16);
 
 } // namespace GNC

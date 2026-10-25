@@ -46,6 +46,18 @@ public:
         }
     }
 
+    // Compares addresses only, so it is safe on one already destroyed.
+    bool Contains(const Entity* entity) const {
+        return std::ranges::find(entityViews, entity) != entityViews.end();
+    }
+
+    // Its components go with it; its materials stay. Whatever else points at
+    // it (Selection, Renderer::ForgetEntity()) must let go first.
+    void DestroyEntity(const Entity* entity) {
+        std::erase(entityViews, entity);
+        std::erase_if(entities, [entity](const std::unique_ptr<Entity>& owned) { return owned.get() == entity; });
+    }
+
     Material* CreateMaterial(const Material& material) {
         materials.push_back(std::make_unique<Material>(material));
         return materials.back().get();

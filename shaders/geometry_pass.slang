@@ -12,7 +12,8 @@ struct DrawData {
     float4 emissive;        // rgb = emissiveFactor * emissiveStrength, a unused
     float metallicFactor;
     float roughnessFactor;
-    float2 _pad;
+    uint entityId;
+    float _pad;
 };
 
 [[vk::push_constant]] ConstantBuffer<DrawData> draw;
@@ -61,6 +62,7 @@ struct GBufferOutput {
     float2 normal    : SV_Target1;
     float4 material  : SV_Target2;
     float4 emissive  : SV_Target3;
+    uint entityId    : SV_Target4;
 };
 
 [shader("fragment")]
@@ -74,5 +76,6 @@ GBufferOutput fragMain(VSOutput input) {
     // No occlusion map yet, so nothing is occluded.
     output.material = float4(1.0, draw.roughnessFactor, draw.metallicFactor, 1.0);
     output.emissive = float4(draw.emissive.rgb, 1.0);
+    output.entityId = draw.entityId;
     return output;
 }

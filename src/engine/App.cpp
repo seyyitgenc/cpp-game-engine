@@ -55,7 +55,8 @@ App::App()
 }
 
 void App::Run() {
-    Log::write(Log::Info, "Controls: hold right mouse to look, WASD to move, E/Q up/down, Shift faster, wheel zooms, Esc quits\n");
+    Log::write(Log::Info, "Controls: hold right mouse to look and WASD to fly, E/Q up/down, Shift faster, wheel zooms; "
+                          "left click selects, W/E/R move/rotate/scale it; Esc quits\n");
 
     auto previousTime = std::chrono::steady_clock::now();
 
@@ -138,6 +139,13 @@ void App::SubscribeToEvents() {
         return true;
     }));
 
+    // Through the same request as the menus, delivered at the next Flush().
+    subscriptions.push_back(eventBus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
+        if (e.GetKey() != GLFW_KEY_DELETE || e.IsRepeat() || !selection.GetEntity()) return false;
+        eventBus.Enqueue<DestroyEntityEvent>(*selection.GetEntity());
+        return true;
+    }));
+
     subscriptions.push_back(eventBus.Subscribe<QuitApplicationEvent>([this](QuitApplicationEvent&) {
         window.Close();
         return true;
@@ -152,14 +160,24 @@ void App::SubscribeToEvents() {
     }));
 
     subscriptions.push_back(eventBus.Subscribe<AddComponentEvent>([this](AddComponentEvent& e) {
-        if (const ComponentRegistry::Entry* type = componentTypes.Find(e.GetComponentTypeID())) {
-            type->addTo(e.GetEntity());
-        }
+        const ComponentRegistry::Entry* type = componentTypes.Find(e.GetComponentTypeID());
+        if (type && scene.Contains(e.GetEntity())) type->addTo(*e.GetEntity());
         return true;
     }));
 
-    subscriptions.push_back(eventBus.Subscribe<RemoveComponentEvent>([](RemoveComponentEvent& e) {
-        e.GetEntity().RemoveComponent(e.GetComponentTypeID());
+    subscriptions.push_back(eventBus.Subscribe<RemoveComponentEvent>([this](RemoveComponentEvent& e) {
+        if (scene.Contains(e.GetEntity())) e.GetEntity()->RemoveComponent(e.GetComponentTypeID());
+        return true;
+    }));
+
+    // Everything else that points at the entity lets go first.
+    subscriptions.push_back(eventBus.Subscribe<DestroyEntityEvent>([this](DestroyEntityEvent& e) {
+        Entity* entity = e.GetEntity();
+        if (!scene.Contains(entity)) return true;
+
+        if (selection.IsSelected(entity)) selection.Clear();
+        renderer.ForgetEntity(entity);
+        scene.DestroyEntity(entity);
         return true;
     }));
 }
@@ -335,10 +353,19 @@ void App::BuildGui() {
     menuBar.GetMenu("File").AddItem("Quit", [this] { eventBus.Enqueue<QuitApplicationEvent>(); }, { .shortcut = "Esc" });
 
     // ----
+    // Edit
+    // ----
+    // As the Delete key does (see SubscribeToEvents()).
+    menuBar.GetMenu("Edit").AddItem("Delete", [this] { eventBus.Enqueue<DestroyEntityEvent>(*selection.GetEntity()); }, {
+        .shortcut = "Del",
+        .enabled = [this] { return selection.GetEntity() != nullptr; }
+    });
+
+    // ----
     // View
     // ----
     ImGuiMenu& view = menuBar.GetMenu("View");
-    view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer));
+    view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer, selection, camera, eventBus));
     view.AddPanelItem(*gui.AddPanel<ScenePanel>("Scene", scene, componentTypes, selection, eventBus));
     view.AddPanelItem(*gui.AddPanel<InspectorPanel>("Inspector", selection, componentTypes, resources, eventBus));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));

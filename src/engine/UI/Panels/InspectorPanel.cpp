@@ -44,7 +44,7 @@ void InspectorPanel::Render() {
         if (Entity* entity = selection.GetEntity()) {
             RenderEntity(*entity);
         } else {
-            ImGui::TextDisabled("Select an entity in the Scene panel.");
+            ImGui::TextDisabled("Select an entity in the Scene panel or the Viewport.");
         }
     }
     ImGui::End();

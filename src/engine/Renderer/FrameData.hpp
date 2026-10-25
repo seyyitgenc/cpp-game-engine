@@ -1,10 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
 namespace GNC {
+
+class Entity;
 
 // How many frames the CPU may record ahead of the GPU; whatever it rewrites
 // every frame needs this many copies.
@@ -30,6 +33,17 @@ struct FrameData {
     void* lightsMapped = nullptr;
 
     vk::raii::DescriptorSet globalSet = nullptr;
+
+    // The entity id texels under the click and the cursor, copied when the
+    // frame carries those queries; read after the fence signals. Host
+    // visible and coherent.
+    vk::raii::Buffer pickBuffer = nullptr;
+    vk::raii::DeviceMemory pickMemory = nullptr;
+    void* pickMapped = nullptr;
+    bool clickPending = false;
+    bool hoverPending = false;
+    // The visible entities the frame drew; an id indexes it at id - 1.
+    std::vector<Entity*> pickEntities;
 };
 
 // Frame context
