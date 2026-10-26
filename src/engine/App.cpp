@@ -13,6 +13,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "ECS/Component/BoundingVolumeComponent.hpp"
 #include "ECS/Component/LightComponent.hpp"
 #include "ECS/Component/MeshComponent.hpp"
 #include "ECS/Component/OrbitComponent.hpp"
@@ -223,15 +224,19 @@ Mesh* App::LoadMesh(const std::string& id, MeshData data) {
 void App::RegisterComponents() {
     componentTypes.Register<TransformComponent>({ .icon = ICON_FA_UP_DOWN_LEFT_RIGHT });
 
-    // A material of its own, so it can be edited. The mesh is looked up when
-    // added, so this can run before BuildScene() loads it.
+    // A material of its own, so it can be edited, and a bounding volume, so
+    // it is culled. The mesh is looked up when added, so this can run before
+    // BuildScene() loads it.
     componentTypes.Register<MeshComponent>({
         .icon = ICON_FA_DRAW_POLYGON,
         .addTo = [this](Entity& entity) {
             Material* material = scene.CreateMaterial({ .metallicFactor = 0.0f, .roughnessFactor = 0.5f });
             entity.AddComponent<MeshComponent>(resources.GetResource<Mesh>("sphere"), material);
+            entity.AddComponent<BoundingVolumeComponent>();
         }
     });
+
+    componentTypes.Register<BoundingVolumeComponent>({ .icon = ICON_FA_VECTOR_SQUARE });
 
     componentTypes.Register<LightComponent>({ .icon = ICON_FA_LIGHTBULB });
 
@@ -269,6 +274,7 @@ void App::BuildScene() {
         .metallicFactor = 0.0f,
         .roughnessFactor = 0.9f
     }));
+    ground.AddComponent<BoundingVolumeComponent>();
 
     // --------------
     // Material Chart
@@ -303,6 +309,7 @@ void App::BuildScene() {
                 .metallicFactor = row.metallic,
                 .roughnessFactor = glm::mix(0.05f, 1.0f, t)
             }));
+            sphere.AddComponent<BoundingVolumeComponent>(BoundingVolumeComponent::Shape::Sphere);
         }
     }
 
@@ -361,6 +368,7 @@ void App::BuildScene() {
             .emissiveFactor = orbiter.color,
             .emissiveStrength = 8.0f
         }));
+        entity.AddComponent<BoundingVolumeComponent>(BoundingVolumeComponent::Shape::Sphere);
 
         auto* light = entity.AddComponent<LightComponent>(LightType::Point);
         light->SetColor(orbiter.color);

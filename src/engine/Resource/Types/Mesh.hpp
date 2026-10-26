@@ -13,7 +13,6 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
-#include "../../BoundingBox.hpp"
 #include "../../Utils/VulkanHelpers.hpp"
 
 namespace GNC {
@@ -115,8 +114,6 @@ private:
     vk::raii::DeviceMemory indexBufferMemory{nullptr};
     std::uint32_t indexCount = 0;
 
-    AABBBoundingBox3D bounds;
-
     // Kept after upload, so Unload() + Load() can rebuild the buffers.
     MeshData data;
 
@@ -129,8 +126,8 @@ public:
     std::uint32_t GetVertexCount() const { return vertexCount; }
     std::uint32_t GetIndexCount() const { return indexCount; }
 
-    // In model space.
-    const AABBBoundingBox3D& GetBounds() const { return bounds; }
+    // In model space, loaded or not.
+    const std::vector<Vertex>& GetVertices() const { return data.vertices; }
 
 protected:
     bool doLoad() override {
@@ -144,11 +141,6 @@ protected:
 
         vertexCount = static_cast<std::uint32_t>(data.vertices.size());
         indexCount = static_cast<std::uint32_t>(data.indices.size());
-
-        bounds = AABBBoundingBox3D::Empty();
-        for (const Vertex& vertex : data.vertices) {
-            bounds.Grow(vertex.position);
-        }
         return true;
     }
 
@@ -160,7 +152,6 @@ protected:
 
         vertexCount = 0;
         indexCount = 0;
-        bounds = {};
     }
 
 private:

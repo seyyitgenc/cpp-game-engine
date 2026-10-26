@@ -11,8 +11,6 @@
 #include "../../Resource/Types/Texture.hpp"
 #include "../../Renderer/Material.hpp"
 
-#include "../../BoundingBox.hpp"
-
 namespace GNC {
 
 // Mesh component
@@ -35,9 +33,6 @@ public:
 
     Mesh* GetMesh() const { return mesh; }
     Material* GetMaterial() const { return material; }
-
-    // The mesh's, in model space; a unit box until there is a mesh.
-    AABBBoundingBox3D GetBoundingBox() const { return mesh ? mesh->GetBounds() : AABBBoundingBox3D {}; }
 
     // The material's factors are listed as the mesh's own, so editing a
     // material that several meshes share changes all of them.

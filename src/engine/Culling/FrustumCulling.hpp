@@ -2,15 +2,17 @@
 
 #include "../ECS/Entity/Entity.hpp"
 
+#include "../ECS/Component/BoundingVolumeComponent.hpp"
 #include "../ECS/Component/MeshComponent.hpp"
 #include "../ECS/Component/TransformsComponent.hpp"
 
-#include "../BoundingBox.hpp"
 #include "../Camera/Camera.hpp"
+
+#include "BoundingVolume.hpp"
 
 #include <glm/glm.hpp>
 
-#include <cmath>
+#include <variant>
 #include <vector>
 
 namespace GNC {
@@ -53,19 +55,19 @@ struct Frustum {
         return frustum;
     }
 
-    // Conservative test: false only when the box is provably outside.
-    bool Intersects(const AABBBoundingBox3D& bbox) const {
-        const glm::vec3 center = bbox.Center();
-        const glm::vec3 extents = bbox.Extents();
+    // Conservative test: false only when the volume is provably outside.
+    // The planes move into the volume's model space rather than the volume
+    // into world space, so the test stays exact under rotation, shear and
+    // uneven scale. model must be affine.
+    bool Intersects(const BoundingVolume& volume, const glm::mat4& model) const {
+        const glm::mat3 linearTranspose = glm::transpose(glm::mat3(model));
+        const glm::vec3 translation(model[3]);
 
         for (const Plane& plane : planes) {
-            // How far the box reaches from its center along the plane normal.
-            const float radius = extents.x * std::abs(plane.normal.x)
-                               + extents.y * std::abs(plane.normal.y)
-                               + extents.z * std::abs(plane.normal.z);
-
-            // Even the corner closest to the inside is behind the plane.
-            if (plane.SignedDistance(center) < -radius) return false;
+            // dot(n, M p + t) + d = dot(transpose(M) n, p) + dot(n, t) + d
+            const glm::vec3 normal = linearTranspose * plane.normal;
+            const float distance = plane.SignedDistance(translation);
+            if (std::visit([&](const auto& shape) { return shape.IsBehind(normal, distance); }, volume)) return false;
         }
         return true;
     }
@@ -105,11 +107,10 @@ public:
             auto transformComponent = entity->GetComponent<TransformComponent>();
             if (!transformComponent) continue;
 
-            // Model space to world space, where the planes are.
-            AABBBoundingBox3D boundingBox = meshComponent->GetBoundingBox();
-            boundingBox.Transform(transformComponent->GetWorldMatrix());
-
-            if (frustum.Intersects(boundingBox)) {
+            // Without a volume, it could be anywhere.
+            auto boundsComponent = entity->GetComponent<BoundingVolumeComponent>();
+            const BoundingVolume* volume = boundsComponent && boundsComponent->IsActive() ? boundsComponent->GetVolume() : nullptr;
+            if (!volume || frustum.Intersects(*volume, transformComponent->GetWorldMatrix())) {
                 visibleEntities.push_back(entity);
             }
         }

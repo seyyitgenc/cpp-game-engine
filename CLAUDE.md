@@ -198,7 +198,9 @@ How passes work together:
   - A new kind of value needs a `PropertyValue` alternative and a widget in `UI/PropertyEditor`'s `EditValue`.
 - **Lights:** `LightComponent` uses glTF `KHR_lights_punctual` semantics and physical units: candela for point and spot lights, lux for directional. Exposure is 1.
   - The renderer collects lights from *all* entities each frame (lights are not culled), up to `MaxLights = 64`.
-- **Culling:** `FrustumCulling` uses `MeshComponent::GetBoundingBox()`, the mesh's model-space bounds from its vertices, moved by the world matrix.
+- **Culling:** `FrustumCulling` tests each mesh entity's `BoundingVolumeComponent`: a box, a sphere or a convex hull (`Culling/BoundingVolume`), fitted in model space to the mesh's vertices and refitted when the mesh or the shape changes. It moves the frustum planes into model space, so the test is exact under any affine world matrix.
+  - An entity with a mesh but no bounding volume is never culled. The Mesh entry of the Add Component menu, the model importer and `BuildScene()` add one with every mesh.
+  - The hull is Quickhull without face merging: a point it leaves outside a face becomes a corner too, and flat meshes get their box's corners. Fitting one to a big mesh takes up to about 0.1 s.
 - **Resources:** `ResourceManager` caches resources by (type, id). A `Resource` implements `doLoad`/`doUnload`.
   - A `Mesh` is always built from `MeshData` passed as the extra `Load` argument, e.g. `resources.Load<Mesh>("sphere", CreateSphere(...))` (see `Resource/Primitives.hpp`), or by the model importer. Uploads need the transfer queue and pool in `ResourceContext`.
   - A `Texture` is an encoded image (a file, or bytes embedded in a model file) plus `TextureSettings` (color space, the glTF sampler). It decodes with stb_image to RGBA8, uploads with a blitted mip chain, and adds itself to the `TextureTable` in `ResourceContext`.

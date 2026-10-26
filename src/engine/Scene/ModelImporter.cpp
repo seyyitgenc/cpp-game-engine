@@ -23,6 +23,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "ECS/Component/BoundingVolumeComponent.hpp"
 #include "ECS/Component/LightComponent.hpp"
 #include "ECS/Component/MeshComponent.hpp"
 #include "ECS/Component/TransformsComponent.hpp"
@@ -432,6 +433,7 @@ private:
             // named after its material.
             Entity& target = parts.size() == 1 ? entity : AddEntity(PartName(*source), &entity, glm::mat4(1.0f));
             target.AddComponent<MeshComponent>(mesh, GetMaterial(source->mMaterialIndex));
+            target.AddComponent<BoundingVolumeComponent>();
         }
 
         if (const auto light = lights.find(node.mName.C_Str()); light != lights.end()) ImportLight(*light->second, node, entity);
