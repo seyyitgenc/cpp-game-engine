@@ -48,7 +48,8 @@ void ImGuiMenu::Render() const {
             // Toggles the panel's flag by itself when clicked.
             ImGui::MenuItem(entry.label.c_str(), shortcut, entry.panel->GetVisibleFlag(), enabled);
         } else if (entry.action) {
-            if (ImGui::MenuItem(entry.label.c_str(), shortcut, false, enabled)) entry.action();
+            const bool checked = entry.options.checked && entry.options.checked();
+            if (ImGui::MenuItem(entry.label.c_str(), shortcut, checked, enabled)) entry.action();
         } else {
             ImGui::Separator();
         }

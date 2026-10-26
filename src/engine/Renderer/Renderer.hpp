@@ -11,6 +11,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "Culling/FrustumCulling.hpp"
+#include "DebugDraw.hpp"
 #include "FrameData.hpp"
 #include "RenderPassManager.hpp"
 #include "RenderTarget.hpp"
@@ -59,6 +60,10 @@ private:
     vk::Extent2D sceneExtent;
     // Bumped by every pass rebuild, which replaces the scene image.
     std::uint64_t sceneVersion = 0;
+
+    // Before the passes, which read it.
+    DebugDraw debugDraw;
+    bool showBoundingVolumes = false;
 
     RenderPassManager renderPassManager;
     // Owned by renderPassManager.
@@ -152,6 +157,18 @@ public:
     // hovered entity and the outlines.
     void ForgetEntity(const Entity* entity);
 
+    // -----
+    // Debug
+    // -----
+
+    // Shapes for the next frame drawn; cleared once it is recorded.
+    DebugDraw& GetDebugDraw() { return debugDraw; }
+
+    // The bounding volumes of what culling lets through, as it tests them,
+    // the selected ones in the selection's outline color.
+    void SetShowBoundingVolumes(bool show) { showBoundingVolumes = show; }
+    bool GetShowBoundingVolumes() const { return showBoundingVolumes; }
+
 private:
     void CreateCommandPool();
     void CreateGlobalDescriptorSetLayout();
@@ -168,6 +185,7 @@ private:
     void ReadPick(FrameData& frame);
     // Reorders this frame's visible list; after culling, before the passes.
     void OrderForOutlines();
+    void AddBoundingVolumes();
 
     void UpdateCameraAspect();
     // The GPU must be idle.

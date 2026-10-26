@@ -14,6 +14,9 @@ struct MenuItemOptions {
     std::string shortcut {};
 
     std::function<bool()> enabled {};
+
+    // A command shows a check mark while this returns true.
+    std::function<bool()> checked {};
 };
 
 // ImGui menu

@@ -86,6 +86,15 @@ public:
         return corners;
     }
 
+    // As indices into the input, after Build().
+    std::vector<glm::uvec3> GetTriangles() const {
+        std::vector<glm::uvec3> triangles;
+        for (const HullFace& face : faces) {
+            if (!face.removed) triangles.emplace_back(face.vertices[0], face.vertices[1], face.vertices[2]);
+        }
+        return triangles;
+    }
+
     bool IsOutside(std::uint32_t point) const {
         for (const HullFace& face : faces) {
             if (!face.removed && Distance(face, points[point]) > epsilon) return true;
@@ -359,17 +368,24 @@ ConvexHull ConvexHull::FromPoints(std::span<const glm::vec3> points) {
         for (std::uint32_t corner = 0; corner < 8; ++corner) {
             hull.vertices.emplace_back(corner & 1 ? box.max.x : box.min.x, corner & 2 ? box.max.y : box.min.y, corner & 4 ? box.max.z : box.min.z);
         }
+        for (std::size_t i = 0; i + 2 < BoxStrip.size(); ++i) {
+            hull.triangles.emplace_back(BoxStrip[i], BoxStrip[i + 1], BoxStrip[i + 2]);
+        }
         return hull;
     }
 
-    std::vector<bool> isCorner(points.size(), false);
+    constexpr std::uint32_t NotCorner = std::numeric_limits<std::uint32_t>::max();
+    std::vector<std::uint32_t> vertexOf(points.size(), NotCorner);
     for (const std::uint32_t corner : *corners) {
+        vertexOf[corner] = static_cast<std::uint32_t>(hull.vertices.size());
         hull.vertices.push_back(points[corner]);
-        isCorner[corner] = true;
+    }
+    for (const glm::uvec3& triangle : quickhull.GetTriangles()) {
+        hull.triangles.emplace_back(vertexOf[triangle.x], vertexOf[triangle.y], vertexOf[triangle.z]);
     }
     // Points the hull left outside it (see Quickhull).
     for (std::uint32_t i = 0; i < points.size(); ++i) {
-        if (!isCorner[i] && quickhull.IsOutside(i)) hull.vertices.push_back(points[i]);
+        if (vertexOf[i] == NotCorner && quickhull.IsOutside(i)) hull.vertices.push_back(points[i]);
     }
     // A point epsilon above two faces at a sharp edge is farther than
     // epsilon from the hull.

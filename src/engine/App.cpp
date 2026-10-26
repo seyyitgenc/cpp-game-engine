@@ -416,6 +416,10 @@ void App::BuildGui() {
     view.AddPanelItem(*gui.AddPanel<InspectorPanel>("Inspector", selection, componentTypes, resources, eventBus));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
     view.AddSeparator();
+    // A display setting, read when the frame is drawn, so set directly.
+    view.AddItem("Bounding Volumes", [this] { renderer.SetShowBoundingVolumes(!renderer.GetShowBoundingVolumes()); },
+        { .checked = [this] { return renderer.GetShowBoundingVolumes(); } });
+    view.AddSeparator();
     view.AddPanelItem(*gui.AddPanel<DemoWindowPanel>("ImGui Demo"));
 }
 

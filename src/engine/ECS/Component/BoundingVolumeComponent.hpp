@@ -8,6 +8,7 @@
 
 #include "../../Culling/BoundingVolume.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -37,6 +38,11 @@ private:
     const Mesh* fittedMesh = nullptr;
     std::optional<Shape> fittedShape;
 
+    // Unique across components, so whatever is made from a volume (the
+    // renderer's copy of a hull) can be keyed by it.
+    inline static std::uint64_t fitCount = 0;
+    std::uint64_t fitId = 0;
+
 public:
     GNC_COMPONENT_TYPE(BoundingVolumeComponent, "Bounding Volume")
 
@@ -55,6 +61,9 @@ public:
         if (mesh != fittedMesh || shape != fittedShape) Fit(*mesh);
         return &volume;
     }
+
+    // Changes with every fit, which GetVolume() may do.
+    std::uint64_t GetFitId() const { return fitId; }
 
     static void Reflect(PropertyList<BoundingVolumeComponent>& properties) {
         properties.Add<int>(
@@ -78,6 +87,7 @@ private:
         }
         fittedMesh = &mesh;
         fittedShape = shape;
+        fitId = ++fitCount;
     }
 };
 

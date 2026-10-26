@@ -74,6 +74,13 @@ struct PostProcessPushConstants {
     std::uint32_t hoveredEnd = 0;
 };
 
+// shaders/debug_draw.slang: DrawData (push constants)
+struct DebugDrawPushConstants {
+    glm::mat4 model {1.0f};
+    // sRGB encoded, as the scene image holds it.
+    glm::vec4 color {1.0f};
+};
+
 static_assert(offsetof(GpuLight, type) == 12);
 static_assert(offsetof(GpuLight, direction) == 16);
 static_assert(offsetof(GpuLight, range) == 28);
@@ -112,5 +119,8 @@ static_assert(offsetof(PostProcessPushConstants, selectedEnd) == 12);
 static_assert(offsetof(PostProcessPushConstants, hoveredBegin) == 16);
 static_assert(offsetof(PostProcessPushConstants, hoveredEnd) == 20);
 static_assert(sizeof(PostProcessPushConstants) == 24);
+
+static_assert(offsetof(DebugDrawPushConstants, color) == 64);
+static_assert(sizeof(DebugDrawPushConstants) == 80);
 
 } // namespace GNC

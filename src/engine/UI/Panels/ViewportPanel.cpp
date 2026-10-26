@@ -237,6 +237,13 @@ void ViewportPanel::RenderToolbar(const ImVec2& min) {
     ImGui::BeginDisabled(gizmoTool == GizmoTool::Scale);
     if (ImGui::Button(gizmoLocal ? ICON_FA_CUBE " Local###space" : ICON_FA_GLOBE " Global###space")) gizmoLocal = !gizmoLocal;
     ImGui::EndDisabled();
+    ImGui::SameLine();
+
+    const bool showBounds = renderer.GetShowBoundingVolumes();
+    if (showBounds) ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+    if (ImGui::Button(ICON_FA_VECTOR_SQUARE)) renderer.SetShowBoundingVolumes(!showBounds);
+    if (showBounds) ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("Bounding Volumes");
 }
 
 } // namespace GNC

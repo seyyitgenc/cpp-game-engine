@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <limits>
 #include <span>
 #include <variant>
@@ -16,6 +18,10 @@ namespace GNC {
 // dot(normal, p) + distance = 0. The normal need not be unit length: a
 // world-space plane moved into model space works as it is, and distances
 // come out in world units.
+
+// All six sides of a box as one triangle strip, by corner: corner i takes the
+// maximum along each axis whose bit is set (1 x, 2 y, 4 z).
+inline constexpr std::array<std::uint32_t, 14> BoxStrip { 6, 7, 4, 5, 1, 7, 3, 6, 2, 4, 0, 1, 2, 3 };
 
 // Axis aligned bounding box, as its two opposite corners.
 struct AABBBoundingBox3D {
@@ -68,6 +74,8 @@ struct BoundingSphere {
 // The hull's corners: the points it was fitted to, less those inside it.
 struct ConvexHull {
     std::vector<glm::vec3> vertices;
+    // Of vertices, for drawing.
+    std::vector<glm::uvec3> triangles;
     // How far rounding may leave a point outside the hull, in model units.
     float tolerance = 0.0f;
 

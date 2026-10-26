@@ -76,9 +76,11 @@ void GeometryPass::BeginPass(const FrameContext& frame) {
     }
     // Read by the post-process pass, and on pick frames by the pick copy.
     barriers[GBuffer::EntityIdTarget].srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader | vk::PipelineStageFlagBits2::eCopy;
+    // Sampled by the lighting and post-process passes, and tested against by
+    // the debug draw pass.
     barriers[GBuffer::ColorCount] = makeImageBarrier(*gBuffer.depth.image, vk::ImageAspectFlagBits::eDepth,
         vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal,
-        vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eNone,
+        vk::PipelineStageFlagBits2::eFragmentShader | DepthStages, vk::AccessFlagBits2::eNone,
         DepthStages, vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite);
 
     frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo {

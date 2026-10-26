@@ -32,6 +32,7 @@ cd bin/debug && ./engine.exe             # or ./run.sh
 - Output goes to `bin/debug/` (or `bin/release/`). The `shaders` CMake target compiles every `shaders/*.slang` into `bin/<config>/shaders/<name>.vert.spv` and `<name>.frag.spv`. The `fonts` target copies the icon font to `bin/<config>/fonts/`. The `models` target copies every folder under `resources/objects` that holds a `.gltf`, `.glb`, `.obj`, `.fbx` or `.dae` (`MODEL_EXTENSIONS`) to `bin/<config>/models/` (it needs CMake 3.26 for `copy_directory_if_different`).
 - **Resource paths resolve against the exe's directory**, not the working directory. `main()` calls `FileSystem::init(argv[0])` (`src/engine/Utils/FileSystem.hpp`), and resources build their paths with `FileSystem::getPath("shaders/...")`. A bare name from a PATH lookup in `argv[0]` would resolve to the working directory instead.
 - **Re-run the configure step after adding a `.cpp`, `.slang` or model file.** Sources, shaders and model folders are collected with `file(GLOB)`, which only picks up new files when CMake reconfigures.
+- Configuring writes the build type into `src/configuration/config.h`, which is tracked, so configuring a Release build changes it. Don't commit that change.
 - Warnings are `-Wall -Wextra -Wpedantic`; keep the build warning-free.
 - There are no tests and no lint step. `.clang-format` (WebKit based) exists, but existing files are not uniformly formatted with it, so do not reformat code you are not changing.
 - **Debug builds enable `VK_LAYER_KHRONOS_validation`** when it is installed. Messages print to stdout as `[Vulkan] ...`. A clean run prints no validation output; treat any as a bug.
@@ -91,7 +92,7 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 
 ### Vulkan setup
 
-- **`Renderer/VulkanContext`** creates the instance, surface, GPU choice and device. It requires Vulkan 1.3 with `dynamicRendering`, `synchronization2`, `samplerAnisotropy` and `shaderSampledImageArrayDynamicIndexing` (for `TextureTable`). One queue family does graphics, present and uploads.
+- **`Renderer/VulkanContext`** creates the instance, surface, GPU choice and device. It requires Vulkan 1.3 with `dynamicRendering`, `synchronization2`, `samplerAnisotropy`, `shaderSampledImageArrayDynamicIndexing` (for `TextureTable`) and `fillModeNonSolid` (for DebugDrawPass's wireframe). One queue family does graphics, present and uploads.
 - **Vulkan-Hpp style:** all objects are `vk::raii`, and `VULKAN_HPP_NO_STRUCT_CONSTRUCTORS` is defined, so structs use designated initializers.
   - GCC warns when a designated initializer skips a field with no default value, such as the deprecated `DeviceCreateInfo` layer fields; use the setters for those structs.
   - `vk::OutOfDateKHRError` is caught in `Swapchain` and turned into "recreate".
@@ -111,12 +112,17 @@ feat(Renderer): Frames in flight, kamera UBO ve FrameContext eklendi.
 3. **PostProcessPass** applies exposure and the Khronos PBR Neutral tonemapper into its own output, the *scene image* (`R8G8B8A8_UNORM`, `Renderer::GetSceneView()`). The shader applies the sRGB encoding itself, then draws the editor's outlines from the entity ids and depth (see Outlines). `EndPass` leaves the image in `eShaderReadOnlyOptimal` for ImGui, which shows it in the Viewport panel.
    - UNORM on purpose: ImGui copies texels to the swapchain as they are. An sRGB scene image would be decoded when sampled and show too dark.
    - The swapchain *prefers* a UNORM format too. ImGui's colors are already sRGB encoded; an sRGB swapchain would encode them again and wash the UI (and the scene in it) out.
-4. **ImGuiPass** is the only pass that writes the swapchain image (`FrameContext::targetImage`/`targetView`). It does the acquire barrier, clears the image, and draws ImGui's draw data with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
+4. **DebugDrawPass** draws `Renderer::GetDebugDraw()`'s bounding volumes into the scene image as wireframe: triangle strips (primitive restart between strips) with polygon mode line. It depth tests against the G-buffer depth, attached read-only, drawing every shape twice: `eGreater` at `HiddenOpacity`, then `eLessOrEqual` at full strength. It is skipped when there is nothing to draw, and otherwise returns the scene image to `eShaderReadOnlyOptimal`.
+   - Boxes and spheres share a unit mesh each (`BoxStrip`, a latitude-band sphere), placed by the push constant model matrix. A hull's triangles become a mesh of their own the first time it is drawn, kept by `BoundingVolumeComponent::GetFitId()` and dropped `MaxFramesInFlight` frames after it was last drawn.
+   - Colors are sRGB encoded, as the scene image holds them. The shader pulls every point 0.1 % of its distance towards the camera, so a wire lying on a surface does not fight it for depth.
+   - The Renderer adds the visible entities' volumes while `SetShowBoundingVolumes(true)` (the Viewport toolbar button, View > Bounding Volumes), the selection's in its outline color, and clears the list after recording each frame.
+5. **ImGuiPass** is the only pass that writes the swapchain image (`FrameContext::targetImage`/`targetView`). It does the acquire barrier, clears the image, and draws ImGui's draw data with `ImGui_ImplVulkan_RenderDrawData`. It owns no GPU objects (see ImGui below).
 
 How passes work together:
 - **Sizes:** the G-buffer, the HDR target and the scene image are all `Renderer`'s *scene extent* (the Viewport panel's size, `SetSceneExtent()`), not the swapchain's. Only ImGuiPass is swapchain-sized. The lighting shader takes the size from `gDepth.GetDimensions`, so the targets must be exactly the scene's size.
 - **Layout transitions:** each pass does its own `pipelineBarrier2` in `BeginPass`/`EndPass`. Offscreen targets are shared by all frames in flight; the barrier at the start of each pass waits for the previous frame's readers, which for the scene image are ImGui's (also in platform windows).
   - The swapchain image stays in `eColorAttachmentOptimal` through every pass. `Renderer::Render` transitions it to `ePresentSrcKHR` after the last one, so a pass can be added at the end without moving that barrier.
+  - GeometryPass's depth barrier waits on the fragment shader (the lighting and post-process passes sample depth) and on the depth tests (DebugDrawPass).
 - **Descriptor sets:** set 0 is always the global set (binding 0 camera, binding 1 lights) and every pipeline layout includes it. Set 1 holds the pass's inputs, which the fullscreen passes read with `Texture2D.Load()`: sampled images, no samplers. GeometryPass's set 1 is the `TextureTable` instead (combined image samplers).
 - **Per-draw data** goes in push constants (`GeometryPushConstants`: model matrix, material index and entity id, which must stay ≤128 bytes); material data goes in the material buffer.
 - **Textures** (`Renderer/TextureTable`): one array of `Capacity` combined image samplers, which materials index. Free slots hold a white texture, so the whole array is always valid without descriptor indexing features; slot 0 is white and slot 1 a flat normal, the defaults for a missing map.
@@ -152,11 +158,12 @@ How passes work together:
     - ImGuizmo only takes a press while no ImGui item is hovered or active. So while `ImGuizmo::IsOver()` (last frame's), the panel leaves out the button and sets `ImGuiWindowFlags_NoMove`. A press in the first frame or two after reaching the gizmo can still miss it.
     - ImGuizmo ends a drag only inside `Manipulate()`. When the selection has no transform (deleted mid-drag), the panel ends the drag with `Enable(false)`/`Enable(true)`, or `IsOver()` would stay true.
     - ImGuizmo expects OpenGL's clip space, Y up: the panel undoes `Camera`'s Y flip on a copy of the projection. The 0..1 depth needs no change.
+  - The toolbar's last button shows and hides the bounding volumes (see DebugDrawPass).
   - Dragged out into its own OS window, the viewport still shows the scene, picks and manipulates (ImGui gets that window's input), but that input bypasses the bus, so the camera does not respond there.
-- **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
+- **Menu bar:** `gui.GetMenuBar()` is an `ImGuiMenu` tree (`UI/ImGuiMenu.hpp`): `GetMenu(label)` finds or adds a submenu, `AddItem(label, action, { .shortcut, .enabled, .checked })` adds a command, `AddPanelItem(panel)` a check mark item that shows and hides a panel, and `AddSeparator()` a line.
   - The bar's submenus are its dropdown menus; an item added to the bar itself is a button on it.
   - The shortcut text is display only; bind the key with an event listener.
-  - Commands run inside the ImGui frame, before the frame is drawn. Anything outside the UI, other than a property, should be changed by enqueuing an event (File > Quit enqueues `QuitApplicationEvent`), not directly.
+  - Commands run inside the ImGui frame, before the frame is drawn. Anything outside the UI, other than a property or a display setting (View > Bounding Volumes), should be changed by enqueuing an event (File > Quit enqueues `QuitApplicationEvent`), not directly.
   - Which panels are visible is not saved; `imgui.ini` only keeps window positions and docking.
 - **Input comes from the bus**, not from GLFW callbacks: the GLFW backend is initialized with `install_callbacks = false`. Listeners at `ImGuiLayer::EventPriority` pass each event to the matching `ImGui_ImplGlfw_*Callback` and return `io.WantCaptureMouse`/`WantCaptureKeyboard` to swallow it. Releases, focus and enter/leave are never swallowed.
   - While the camera has the cursor captured, the layer ignores mouse input and sets `ImGuiConfigFlags_NoMouse`.
@@ -200,7 +207,7 @@ How passes work together:
   - The renderer collects lights from *all* entities each frame (lights are not culled), up to `MaxLights = 64`.
 - **Culling:** `FrustumCulling` tests each mesh entity's `BoundingVolumeComponent`: a box, a sphere or a convex hull (`Culling/BoundingVolume`), fitted in model space to the mesh's vertices and refitted when the mesh or the shape changes. It moves the frustum planes into model space, so the test is exact under any affine world matrix.
   - An entity with a mesh but no bounding volume is never culled. The Mesh entry of the Add Component menu, the model importer and `BuildScene()` add one with every mesh.
-  - The hull is Quickhull without face merging: a point it leaves outside a face becomes a corner too, and flat meshes get their box's corners. Fitting one to a big mesh takes up to about 0.1 s.
+  - The hull is Quickhull without face merging: a point it leaves outside a face becomes a corner too, and flat meshes get their box's corners. It keeps its triangles for drawing. Fitting one to a big mesh takes up to about 0.1 s.
 - **Resources:** `ResourceManager` caches resources by (type, id). A `Resource` implements `doLoad`/`doUnload`.
   - A `Mesh` is always built from `MeshData` passed as the extra `Load` argument, e.g. `resources.Load<Mesh>("sphere", CreateSphere(...))` (see `Resource/Primitives.hpp`), or by the model importer. Uploads need the transfer queue and pool in `ResourceContext`.
   - A `Texture` is an encoded image (a file, or bytes embedded in a model file) plus `TextureSettings` (color space, the glTF sampler). It decodes with stb_image to RGBA8, uploads with a blitted mip chain, and adds itself to the `TextureTable` in `ResourceContext`.

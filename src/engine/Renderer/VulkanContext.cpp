@@ -67,7 +67,7 @@ bool IsSuitable(const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::
     const auto features = physicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features>();
     const auto& core = features.get<vk::PhysicalDeviceFeatures2>().features;
     const auto& vulkan13 = features.get<vk::PhysicalDeviceVulkan13Features>();
-    if (!core.samplerAnisotropy || !core.shaderSampledImageArrayDynamicIndexing) return false;
+    if (!core.fillModeNonSolid || !core.samplerAnisotropy || !core.shaderSampledImageArrayDynamicIndexing) return false;
     if (!vulkan13.dynamicRendering || !vulkan13.synchronization2) return false;
 
     return FindGraphicsPresentFamily(physicalDevice, surface).has_value();
@@ -155,7 +155,7 @@ void VulkanContext::PickPhysicalDevice() {
         if (!chosen) chosen = &candidate;
     }
     if (!chosen) {
-        throw std::runtime_error("VulkanContext: no GPU with Vulkan 1.3, dynamic rendering, synchronization2, "
+        throw std::runtime_error("VulkanContext: no GPU with Vulkan 1.3, dynamic rendering, synchronization2, wireframe, "
                                  "anisotropic filtering, dynamic sampled image indexing and presentation support");
     }
 
@@ -174,9 +174,10 @@ void VulkanContext::CreateDevice() {
     };
 
     // Dynamic indexing: materials pick their textures from TextureTable's
-    // array by an index the shader reads.
+    // array by an index the shader reads. Fill mode non-solid: DebugDrawPass
+    // draws its shapes as wireframe.
     const vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features> features {
-        { .features = { .samplerAnisotropy = vk::True, .shaderSampledImageArrayDynamicIndexing = vk::True } },
+        { .features = { .fillModeNonSolid = vk::True, .samplerAnisotropy = vk::True, .shaderSampledImageArrayDynamicIndexing = vk::True } },
         { .synchronization2 = vk::True, .dynamicRendering = vk::True }
     };
 

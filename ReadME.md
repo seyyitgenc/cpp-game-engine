@@ -25,6 +25,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Viewport panel: the scene, rendered at the panel's size
 - Click an object in the Viewport to select it (GPU picking, exact to the pixel): the first click selects the whole model, the next one the part. The selection and what a click would select are outlined.
 - Move, rotate and scale the selection with a gizmo (ImGuizmo), in global or local space
+- Show the bounding volumes as wireframe, faint where the scene hides them (the Viewport toolbar or View > Bounding Volumes)
 - Entity hierarchy: transforms are relative to the parent, and deleting or deactivating an entity takes its children with it
 - Scene panel: the hierarchy, with each entity's components
 - Inspector: edits the selected entity's components

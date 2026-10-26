@@ -9,6 +9,7 @@
 #include <string>
 
 #include "Camera/Camera.hpp"
+#include "ECS/Component/BoundingVolumeComponent.hpp"
 #include "ECS/Component/LightComponent.hpp"
 #include "ECS/Component/TransformsComponent.hpp"
 #include "ECS/Entity/Entity.hpp"
@@ -18,6 +19,7 @@
 #include "VulkanContext.hpp"
 #include "Utils/Log.hpp"
 
+#include "DebugDrawPass.hpp"
 #include "GeometryPass.hpp"
 #include "ImGuiPass.hpp"
 #include "LightingPass.hpp"
@@ -58,6 +60,11 @@ vk::BufferImageCopy MakePickCopy(vk::Offset2D pixel, vk::Extent2D extent, PickSl
         .imageExtent = { .width = 1, .height = 1, .depth = 1 }
     };
 }
+
+// sRGB encoded, as DebugDraw takes them. The selected one is the outline's
+// (shaders/post_process.slang: SELECTED_OUTLINE).
+const glm::vec4 BoundingVolumeColor { 0.35f, 0.85f, 0.45f, 1.0f };
+const glm::vec4 SelectedBoundingVolumeColor { 1.0f, 0.6f, 0.1f, 1.0f };
 
 } // namespace
 
@@ -111,6 +118,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
 
     cullingSystem.CullScene(entities);
     OrderForOutlines();
+    if (showBoundingVolumes) AddBoundingVolumes();
 
     frame.commandBuffer.reset();
     frame.commandBuffer.begin(vk::CommandBufferBeginInfo { .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
@@ -123,6 +131,7 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
         .targetView = swapchain->GetImageView(*imageIndex)
     };
     renderPassManager.Execute(frameContext);
+    debugDraw.Clear();
     RecordPick(frame);
 
     // Present waits on the submit's semaphore, so this barrier only changes
@@ -466,6 +475,19 @@ void Renderer::OrderForOutlines() {
     postProcessPass->SetOutlinedIds({ toId(visible.begin()), toId(selectedEnd) }, { toId(bothBegin), toId(hoveredEnd) });
 }
 
+// Only what culling let through: the rest is off screen. Culling lets
+// through only entities with a transform.
+void Renderer::AddBoundingVolumes() {
+    for (Entity* entity : cullingSystem.GetVisibleEntities()) {
+        auto* bounds = entity->GetComponent<BoundingVolumeComponent>();
+        const BoundingVolume* volume = bounds && bounds->IsActive() ? bounds->GetVolume() : nullptr;
+        if (!volume) continue;
+
+        const glm::vec4& color = entity->IsInSubtree(outlinedSelected) ? SelectedBoundingVolumeColor : BoundingVolumeColor;
+        debugDraw.AddVolume(*volume, bounds->GetFitId(), entity->GetComponent<TransformComponent>()->GetWorldMatrix(), color);
+    }
+}
+
 void Renderer::UpdateCameraAspect() {
     if (!camera) return;
 
@@ -490,7 +512,10 @@ void Renderer::SetupRenderPasses() {
     Shader lightingFragment("lighting_pass", vk::ShaderStageFlagBits::eFragment);
     Shader postVertex("post_process", vk::ShaderStageFlagBits::eVertex);
     Shader postFragment("post_process", vk::ShaderStageFlagBits::eFragment);
-    for (Shader* shader : { &geometryVertex, &geometryFragment, &lightingVertex, &lightingFragment, &postVertex, &postFragment }) {
+    Shader debugVertex("debug_draw", vk::ShaderStageFlagBits::eVertex);
+    Shader debugFragment("debug_draw", vk::ShaderStageFlagBits::eFragment);
+    for (Shader* shader : { &geometryVertex, &geometryFragment, &lightingVertex, &lightingFragment, &postVertex, &postFragment,
+                            &debugVertex, &debugFragment }) {
         LoadShader(*shader, shaderContext);
     }
 
@@ -513,9 +538,15 @@ void Renderer::SetupRenderPasses() {
     postProcessPass->AddDependency(geometryPass->GetName());
     postProcessPass->AddDependency(lightingPass->GetName());
 
+    auto debugDrawPass = renderPassManager.AddRenderPass<DebugDrawPass>("DebugDrawPass",
+        context, sceneExtent, *globalSetLayout,
+        PassShaders { *debugVertex.GetShaderModule(), *debugFragment.GetShaderModule() },
+        debugDraw, geometryPass, postProcessPass);
+    debugDrawPass->AddDependency(postProcessPass->GetName());
+
     // After the scene image it shows.
     auto imguiPass = renderPassManager.AddRenderPass<ImGuiPass>("ImGuiPass", swapchain->GetExtent());
-    imguiPass->AddDependency(postProcessPass->GetName());
+    imguiPass->AddDependency(debugDrawPass->GetName());
 
     ++sceneVersion;
 }
