@@ -21,6 +21,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "ECS/Component/BoundingVolumeComponent.hpp"
@@ -169,8 +170,44 @@ void MakeFlatNormals(MeshData& meshData) {
     std::iota(meshData.indices.begin(), meshData.indices.end(), 0u);
 }
 
+// Appends part as transform places it. A mirroring transform reverses the
+// winding, so it is put back; normals and tangents follow the geometry
+// pass's vertex shader.
+void AppendPlaced(MeshData& meshData, const MeshData& part, const glm::mat4& transform) {
+    const glm::mat3 basis(transform);
+    const glm::mat3 normalMatrix = glm::inverseTranspose(basis);
+    const bool mirrored = glm::determinant(basis) < 0.0f;
+
+    const auto baseVertex = static_cast<std::uint32_t>(meshData.vertices.size());
+    for (Vertex vertex : part.vertices) {
+        vertex.position = glm::vec3(transform * glm::vec4(vertex.position, 1.0f));
+        const glm::vec3 normal = normalMatrix * vertex.normal;
+        if (glm::dot(normal, normal) > 0.0f) vertex.normal = glm::normalize(normal);
+        const glm::vec3 tangent = basis * glm::vec3(vertex.tangent);
+        if (glm::dot(tangent, tangent) > 0.0f) vertex.tangent = glm::vec4(glm::normalize(tangent), mirrored ? -vertex.tangent.w : vertex.tangent.w);
+        meshData.vertices.push_back(vertex);
+    }
+
+    for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3) {
+        meshData.indices.push_back(baseVertex + part.indices[i]);
+        meshData.indices.push_back(baseVertex + part.indices[i + (mirrored ? 2 : 1)]);
+        meshData.indices.push_back(baseVertex + part.indices[i + (mirrored ? 1 : 2)]);
+    }
+}
+
 class Importer {
 private:
+    // Where a node puts something, relative to assimp's root node.
+    struct PlacedMesh {
+        unsigned int mesh;
+        glm::mat4 transform;
+    };
+    struct PlacedLight {
+        const aiLight* light;
+        const aiNode* node;
+        glm::mat4 transform;
+    };
+
     const std::filesystem::path& path;
     const std::string key;
     const aiScene& model;
@@ -181,6 +218,8 @@ private:
     std::vector<Material*> materials;
     // By node name, which is how assimp ties a light to its node.
     std::unordered_map<std::string, const aiLight*> lights;
+    std::vector<PlacedMesh> placedMeshes;
+    std::vector<PlacedLight> placedLights;
     std::size_t entityCount = 0;
     std::size_t meshCount = 0;
     std::size_t textureCount = 0;
@@ -196,10 +235,18 @@ public:
         }
     }
 
+    // The model is one entity holding one mesh, so its parts cannot be
+    // selected on their own, with its lights as children. assimp's root is
+    // the file's lone root node, or one it adds above several; the entity
+    // takes its transform.
     Entity* Run(std::chrono::steady_clock::time_point start) {
-        // assimp's root is the file's lone root node, or one it adds above
-        // several.
-        Entity& root = ImportNode(*model.mRootNode, nullptr, path.stem().string());
+        Entity& root = AddEntity(path.stem().string(), nullptr, ToMat4(model.mRootNode->mTransformation));
+        PlaceNode(*model.mRootNode, glm::mat4(1.0f));
+
+        ImportMesh(root);
+        for (const PlacedLight& placed : placedLights) {
+            ImportLight(*placed.light, *placed.node, root, placed.transform);
+        }
 
         if (model.HasAnimations()) unsupported.insert("animations");
         if (model.HasCameras()) unsupported.insert("cameras");
@@ -364,16 +411,55 @@ private:
     // ------
     // Meshes
     // ------
-    Mesh* ImportMesh(unsigned int index) {
-        const aiMesh& mesh = *model.mMeshes[index];
-        const std::string id = key + "/" + (mesh.mName.length > 0 ? mesh.mName.C_Str() : "mesh") + "/" + std::to_string(index);
-        if (Mesh* existing = resources.GetResource<Mesh>(id)) return existing;
-
-        // SortByPType leaves each mesh one kind of primitive.
-        if (!(mesh.mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) {
-            unsupported.insert("points and lines (skipped)");
-            return nullptr;
+    // Every node's meshes, baked where the node puts them and merged by
+    // material, a submesh each (as Unreal's Combine Meshes does). The file's
+    // node hierarchy is not kept.
+    void ImportMesh(Entity& root) {
+        // The assimp material of each slot, in the order they are first used.
+        std::vector<unsigned int> slotMaterials;
+        for (const PlacedMesh& placed : placedMeshes) {
+            const unsigned int material = model.mMeshes[placed.mesh]->mMaterialIndex;
+            if (std::ranges::find(slotMaterials, material) == slotMaterials.end()) slotMaterials.push_back(material);
         }
+
+        // Built the same way every time, so a second import can reuse it.
+        Mesh* mesh = resources.GetResource<Mesh>(key);
+        if (!mesh) mesh = BuildMesh(slotMaterials);
+        if (!mesh) return;
+
+        std::vector<Material*> slots;
+        for (const unsigned int material : slotMaterials) {
+            slots.push_back(GetMaterial(material));
+        }
+        root.AddComponent<MeshComponent>(mesh, std::move(slots));
+        root.AddComponent<BoundingVolumeComponent>();
+    }
+
+    Mesh* BuildMesh(const std::vector<unsigned int>& slotMaterials) {
+        // Each assimp mesh is read once, however many nodes place it.
+        std::unordered_map<unsigned int, MeshData> parts;
+        MeshData meshData;
+        for (const unsigned int material : slotMaterials) {
+            const auto firstIndex = static_cast<std::uint32_t>(meshData.indices.size());
+            for (const PlacedMesh& placed : placedMeshes) {
+                const aiMesh& source = *model.mMeshes[placed.mesh];
+                if (source.mMaterialIndex != material) continue;
+
+                auto [part, added] = parts.try_emplace(placed.mesh);
+                if (added) part->second = ImportPart(source);
+                AppendPlaced(meshData, part->second, placed.transform);
+            }
+            meshData.subMeshes.push_back({ firstIndex, static_cast<std::uint32_t>(meshData.indices.size()) - firstIndex });
+        }
+        if (meshData.indices.empty()) return nullptr;
+
+        const ResourceHandle<Mesh> handle = resources.Load<Mesh>(key, std::move(meshData));
+        if (!handle) return nullptr;
+        ++meshCount;
+        return handle.Get();
+    }
+
+    MeshData ImportPart(const aiMesh& mesh) {
         if (mesh.HasBones()) unsupported.insert("skins (meshes stay in their bind pose)");
         if (mesh.mNumAnimMeshes > 0) unsupported.insert("morph targets");
         if (mesh.HasVertexColors(0)) unsupported.insert("vertex colors");
@@ -405,50 +491,42 @@ private:
             const aiFace& face = mesh.mFaces[i];
             if (face.mNumIndices == 3) meshData.indices.insert(meshData.indices.end(), face.mIndices, face.mIndices + 3);
         }
-        if (meshData.indices.empty()) return nullptr;
+        if (meshData.indices.empty()) return meshData;
 
         if (!mesh.HasNormals()) MakeFlatNormals(meshData);
         if (!hasTangents) GenerateTangents(meshData);
-
-        const ResourceHandle<Mesh> handle = resources.Load<Mesh>(id, std::move(meshData));
-        if (!handle) return nullptr;
-        ++meshCount;
-        return handle.Get();
+        return meshData;
     }
 
     // -----
     // Nodes
     // -----
-    // An entity per node, at the node's local transform, under its parent's.
-    Entity& ImportNode(const aiNode& node, Entity* parent, const std::string& name) {
-        Entity& entity = AddEntity(name, parent, ToMat4(node.mTransformation));
-
-        // Skipped meshes do not count towards needing children.
-        std::vector<std::pair<Mesh*, const aiMesh*>> parts;
+    // transform: the node's, relative to assimp's root node.
+    void PlaceNode(const aiNode& node, const glm::mat4& transform) {
+        // SortByPType leaves each assimp mesh one kind of primitive.
         for (unsigned int i = 0; i < node.mNumMeshes; ++i) {
-            if (Mesh* mesh = ImportMesh(node.mMeshes[i])) parts.emplace_back(mesh, model.mMeshes[node.mMeshes[i]]);
+            if (model.mMeshes[node.mMeshes[i]]->mPrimitiveTypes & aiPrimitiveType_TRIANGLE) {
+                placedMeshes.push_back({ node.mMeshes[i], transform });
+            } else {
+                unsupported.insert("points and lines (skipped)");
+            }
         }
-        for (const auto& [mesh, source] : parts) {
-            // An entity holds one mesh, so each of several gets a child,
-            // named after its material.
-            Entity& target = parts.size() == 1 ? entity : AddEntity(PartName(*source), &entity, glm::mat4(1.0f));
-            target.AddComponent<MeshComponent>(mesh, GetMaterial(source->mMaterialIndex));
-            target.AddComponent<BoundingVolumeComponent>();
+        if (const auto light = lights.find(node.mName.C_Str()); light != lights.end()) {
+            placedLights.push_back({ light->second, &node, transform });
         }
-
-        if (const auto light = lights.find(node.mName.C_Str()); light != lights.end()) ImportLight(*light->second, node, entity);
 
         for (unsigned int i = 0; i < node.mNumChildren; ++i) {
-            ImportNode(*node.mChildren[i], &entity, NodeName(*node.mChildren[i]));
+            const aiNode& child = *node.mChildren[i];
+            PlaceNode(child, transform * ToMat4(child.mTransformation));
         }
-        return entity;
     }
 
+    // A child entity of the model's, named after the light's node.
     // KHR_lights_punctual's units and axes survive assimp, which also puts
     // other formats' lights down the node's -Z axis, but it multiplies the
     // intensity into the color. Splitting them again is exact when the
     // color's brightest channel was 1.
-    void ImportLight(const aiLight& source, const aiNode& node, Entity& entity) {
+    void ImportLight(const aiLight& source, const aiNode& node, Entity& root, const glm::mat4& transform) {
         LightType type = LightType::Point;
         switch (source.mType) {
             case aiLightSource_DIRECTIONAL: type = LightType::Directional; break;
@@ -459,6 +537,7 @@ private:
                 return;
         }
 
+        Entity& entity = AddEntity(NodeName(node), &root, transform);
         const glm::vec3 color = ToVec3(source.mColorDiffuse);
         const float intensity = std::max({ color.r, color.g, color.b });
         LightComponent* light = entity.AddComponent<LightComponent>(type);
@@ -480,12 +559,6 @@ private:
     // Scene::MakeUniqueName() numbers the repeats.
     static std::string NodeName(const aiNode& node) {
         return node.mName.length > 0 ? node.mName.C_Str() : "Node";
-    }
-
-    std::string PartName(const aiMesh& mesh) const {
-        aiString name;
-        if (model.mMaterials[mesh.mMaterialIndex]->Get(AI_MATKEY_NAME, name) == AI_SUCCESS && name.length > 0) return name.C_Str();
-        return mesh.mName.length > 0 ? mesh.mName.C_Str() : "Mesh";
     }
 };
 

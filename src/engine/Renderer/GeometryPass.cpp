@@ -144,17 +144,26 @@ void GeometryPass::Render(const FrameContext& frame) {
         const Mesh* mesh = meshComponent->GetMesh();
         if (!mesh || !mesh->IsLoaded() || mesh->GetIndexCount() == 0) continue;
 
-        const Material* material = meshComponent->GetMaterial();
-        const Material& drawn = material ? *material : DefaultMaterial;
-        draws.push_back(Draw {
-            .mesh = mesh,
-            .model = entity->GetComponent<TransformComponent>()->GetWorldMatrix(),
-            .materialIndex = AddMaterial(material, materialCount, materialBuffer.mapped),
-            // Renderer::ReadPick() maps it back through the same list.
-            .entityId = static_cast<std::uint32_t>(index + 1),
-            .masked = drawn.alphaMode == AlphaMode::Mask,
-            .doubleSided = drawn.doubleSided
-        });
+        const glm::mat4 model = entity->GetComponent<TransformComponent>()->GetWorldMatrix();
+        const std::vector<SubMesh>& subMeshes = mesh->GetSubMeshes();
+        for (std::size_t slot = 0; slot < subMeshes.size(); ++slot) {
+            if (subMeshes[slot].indexCount == 0) continue;
+
+            const Material* material = meshComponent->GetMaterial(slot);
+            const Material& drawn = material ? *material : DefaultMaterial;
+            draws.push_back(Draw {
+                .mesh = mesh,
+                .firstIndex = subMeshes[slot].firstIndex,
+                .indexCount = subMeshes[slot].indexCount,
+                .model = model,
+                .materialIndex = AddMaterial(material, materialCount, materialBuffer.mapped),
+                // Per entity, not per submesh: Renderer::ReadPick() maps it
+                // back through the same list.
+                .entityId = static_cast<std::uint32_t>(index + 1),
+                .masked = drawn.alphaMode == AlphaMode::Mask,
+                .doubleSided = drawn.doubleSided
+            });
+        }
     }
 
     // Opaque first, so the depth they write rejects masked fragments behind
@@ -177,6 +186,7 @@ void GeometryPass::Render(const FrameContext& frame) {
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, descriptorSets, nullptr);
 
     std::optional<bool> boundMasked;
+    const Mesh* boundMesh = nullptr;
     for (const Draw& draw : draws) {
         if (boundMasked != draw.masked) {
             commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, draw.masked ? *maskedPipeline : *opaquePipeline);
@@ -191,10 +201,13 @@ void GeometryPass::Render(const FrameContext& frame) {
         };
         commandBuffer.pushConstants<GeometryPushConstants>(*pipelineLayout, PushConstantStages, 0, pushConstants);
 
-        const vk::DeviceSize vertexOffset = 0;
-        commandBuffer.bindVertexBuffers(0, *draw.mesh->GetVertexBuffer(), vertexOffset);
-        commandBuffer.bindIndexBuffer(*draw.mesh->GetIndexBuffer(), 0, vk::IndexType::eUint32);
-        commandBuffer.drawIndexed(draw.mesh->GetIndexCount(), 1, 0, 0, 0);
+        if (boundMesh != draw.mesh) {
+            const vk::DeviceSize vertexOffset = 0;
+            commandBuffer.bindVertexBuffers(0, *draw.mesh->GetVertexBuffer(), vertexOffset);
+            commandBuffer.bindIndexBuffer(*draw.mesh->GetIndexBuffer(), 0, vk::IndexType::eUint32);
+            boundMesh = draw.mesh;
+        }
+        commandBuffer.drawIndexed(draw.indexCount, 1, draw.firstIndex, 0, 0);
     }
 }
 

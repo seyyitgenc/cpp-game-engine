@@ -72,8 +72,11 @@ private:
         vk::raii::DescriptorSet set = nullptr;
     };
 
+    // One per submesh.
     struct Draw {
         const Mesh* mesh;
+        std::uint32_t firstIndex;
+        std::uint32_t indexCount;
         glm::mat4 model;
         std::uint32_t materialIndex;
         std::uint32_t entityId;

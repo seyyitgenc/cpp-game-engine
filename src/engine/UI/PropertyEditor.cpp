@@ -4,6 +4,7 @@
 #include <cfloat>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <string>
 #include <typeindex>
 #include <variant>
@@ -171,28 +172,58 @@ bool EditValue(const Field& field, PropertyValue& value) {
     }, value);
 }
 
+// category: of the last visible property, which saves repeating a heading.
+bool EditProperty(Component& component, const Property& property, std::size_t element, std::string& category, ResourceManager& resources) {
+    PropertyInfo info = property.info;
+    if (property.adjust) property.adjust(component, element, info);
+    if (!info.visible) return false;
+
+    if (!info.category.empty() && info.category != category) {
+        ImGui::SeparatorText(info.category.c_str());
+    }
+    category = info.category;
+
+    PropertyValue value = property.get(component, element);
+    if (!EditValue({ component, property, info, resources }, value)) return false;
+
+    property.set(component, element, value);
+    return true;
+}
+
 } // namespace
 
 bool EditProperties(Component& component, const std::vector<Property>& properties, ResourceManager& resources) {
     bool changed = false;
-    // Of the last visible property.
     std::string category;
 
-    for (const Property& property : properties) {
-        PropertyInfo info = property.info;
-        if (property.adjust) property.adjust(component, info);
-        if (!info.visible) continue;
-
-        if (!info.category.empty() && info.category != category) {
-            ImGui::SeparatorText(info.category.c_str());
+    for (auto first = properties.begin(); first != properties.end();) {
+        if (!first->count) {
+            changed |= EditProperty(component, *first, 0, category, resources);
+            ++first;
+            continue;
         }
-        category = info.category;
 
-        PropertyValue value = property.get(component);
-        if (EditValue({ component, property, info, resources }, value)) {
-            property.set(component, value);
-            changed = true;
+        // A run of element properties with one category. Several elements
+        // get a tree node each, closed at first, so a long list stays short
+        // (Sponza has 103 material slots).
+        const auto last = std::find_if(first + 1, properties.end(), [&](const Property& property) {
+            return !property.count || property.info.category != first->info.category;
+        });
+        const std::size_t count = first->count(component);
+        for (std::size_t element = 0; element < count; ++element) {
+            const bool nested = count > 1;
+            if (nested) {
+                const std::string label = first->info.category + " " + std::to_string(element);
+                if (!ImGui::TreeNode(reinterpret_cast<void*>(element), "%s", label.c_str())) continue;
+                // The node stands in for the heading.
+                category = first->info.category;
+            }
+            for (auto property = first; property != last; ++property) {
+                changed |= EditProperty(component, *property, element, category, resources);
+            }
+            if (nested) ImGui::TreePop();
         }
+        first = last;
     }
     return changed;
 }

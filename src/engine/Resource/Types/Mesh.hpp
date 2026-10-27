@@ -45,11 +45,19 @@ struct Vertex {
     }
 };
 
+// A range of a mesh's indices drawn with one material: the mesh's material
+// slot of the same index.
+struct SubMesh {
+    std::uint32_t firstIndex = 0;
+    std::uint32_t indexCount = 0;
+};
+
 // CPU-side geometry; also how procedural meshes (Resource/Primitives.hpp)
-// reach a Mesh.
+// reach a Mesh. Without submeshes, Mesh makes one of all the indices.
 struct MeshData {
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
+    std::vector<SubMesh> subMeshes {};
 };
 
 // Tangents from positions, normals and texture coordinates (Lengyel's
@@ -103,7 +111,8 @@ inline void GenerateTangents(MeshData& data) {
 // Built from MeshData handed in up front, procedural or imported
 // (Scene/ModelImporter):
 //     resources.Load<Mesh>("sphere", CreateSphere(1.0f, 64, 128));
-// Uploading needs the transfer queue and pool in the ResourceContext.
+// Uploading needs the transfer queue and pool in the ResourceContext. Its
+// submeshes share the buffers; MeshComponent gives each a material.
 class Mesh : public Resource {
 private:
     vk::raii::Buffer vertexBuffer{nullptr};
@@ -118,13 +127,18 @@ private:
     MeshData data;
 
 public:
-    Mesh(const std::string& id, MeshData meshData) : Resource(id), data(std::move(meshData)) {}
+    Mesh(const std::string& id, MeshData meshData) : Resource(id), data(std::move(meshData)) {
+        if (data.subMeshes.empty()) data.subMeshes.push_back({ 0, static_cast<std::uint32_t>(data.indices.size()) });
+    }
 
     const vk::raii::Buffer& GetVertexBuffer() const { return vertexBuffer; }
     const vk::raii::Buffer& GetIndexBuffer() const { return indexBuffer; }
 
     std::uint32_t GetVertexCount() const { return vertexCount; }
     std::uint32_t GetIndexCount() const { return indexCount; }
+
+    // Never empty, loaded or not.
+    const std::vector<SubMesh>& GetSubMeshes() const { return data.subMeshes; }
 
     // In model space, loaded or not.
     const std::vector<Vertex>& GetVertices() const { return data.vertices; }

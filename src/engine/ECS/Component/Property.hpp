@@ -2,6 +2,7 @@
 
 #include "Component.hpp"
 
+#include <cstddef>
 #include <functional>
 #include <optional>
 #include <string>
@@ -65,14 +66,17 @@ struct PropertyInfo {
 // Property
 // --------
 // get and set must only be given components of the type the property was
-// described for.
+// described for. The size_t is the element's index for an element property,
+// and ignored by the others.
 struct Property {
     PropertyInfo info;
-    std::function<PropertyValue(const Component&)> get;
-    std::function<void(Component&, const PropertyValue&)> set;
+    std::function<PropertyValue(const Component&, std::size_t)> get;
+    std::function<void(Component&, std::size_t, const PropertyValue&)> set;
     // Optional: changes a copy of info for one component before it is drawn
     // (hides a property that does not apply, switches a unit).
-    std::function<void(const Component&, PropertyInfo&)> adjust;
+    std::function<void(const Component&, std::size_t, PropertyInfo&)> adjust;
+    // Element properties only: how many elements the component has now.
+    std::function<std::size_t(const Component&)> count;
 };
 
 template<typename Value, typename Variant>
@@ -97,22 +101,48 @@ public:
 
         properties.push_back(Property {
             .info = std::move(info),
-            .get = [get](const Component& component) -> PropertyValue {
+            .get = [get](const Component& component, std::size_t) -> PropertyValue {
                 return Value(get(static_cast<const T&>(component)));
             },
-            .set = [set](Component& component, const PropertyValue& value) {
+            .set = [set](Component& component, std::size_t, const PropertyValue& value) {
                 set(static_cast<T&>(component), std::get<Value>(value));
             },
-            .adjust = {}
+            .adjust = {},
+            .count = {}
         });
     }
 
     template<typename Value, typename Get, typename Set, typename Adjust>
     void Add(PropertyInfo info, Get get, Set set, Adjust adjust) {
         Add<Value>(std::move(info), get, set);
-        properties.back().adjust = [adjust](const Component& component, PropertyInfo& adjusted) {
+        properties.back().adjust = [adjust](const Component& component, std::size_t, PropertyInfo& adjusted) {
             adjust(static_cast<const T&>(component), adjusted);
         };
+    }
+
+    // A value per element of a list the component holds (a mesh's material
+    // slots). get, set and adjust take the element's index after the
+    // component. The editor shows a run of them with one category element
+    // by element.
+    template<typename Value, typename Count, typename Get, typename Set, typename Adjust>
+    void AddElement(PropertyInfo info, Count count, Get get, Set set, Adjust adjust) {
+        static_assert(IsAlternativeOf<Value, PropertyValue>::value, "Value must be one of PropertyValue's types");
+
+        properties.push_back(Property {
+            .info = std::move(info),
+            .get = [get](const Component& component, std::size_t element) -> PropertyValue {
+                return Value(get(static_cast<const T&>(component), element));
+            },
+            .set = [set](Component& component, std::size_t element, const PropertyValue& value) {
+                set(static_cast<T&>(component), element, std::get<Value>(value));
+            },
+            .adjust = [adjust](const Component& component, std::size_t element, PropertyInfo& adjusted) {
+                adjust(static_cast<const T&>(component), element, adjusted);
+            },
+            .count = [count](const Component& component) -> std::size_t {
+                return count(static_cast<const T&>(component));
+            }
+        });
     }
 
     std::vector<Property> Release() && { return std::move(properties); }
