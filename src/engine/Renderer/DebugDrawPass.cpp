@@ -12,6 +12,7 @@
 
 #include "GeometryPass.hpp"
 #include "PostProcessPass.hpp"
+#include "Utils/Overloaded.hpp"
 #include "Utils/VulkanHelpers.hpp"
 
 namespace GNC {
@@ -26,8 +27,53 @@ constexpr vk::ShaderStageFlags PushConstantStages = vk::ShaderStageFlagBits::eVe
 // Ends one strip and starts the next (primitive restart, 32-bit indices).
 constexpr std::uint32_t RestartIndex = std::numeric_limits<std::uint32_t>::max();
 
+// Even, so the hemisphere is half the sphere's bands.
 constexpr std::uint32_t SphereStacks = 12;
-constexpr std::uint32_t SphereSlices = 24;
+constexpr std::uint32_t RingSlices = 24;
+
+struct Rings {
+    std::vector<glm::vec3> positions;
+    std::vector<std::uint32_t> indices;
+};
+
+// Circles around Y, each (radius, height), and a strip for each band between
+// two of them.
+Rings MakeRings(std::span<const glm::vec2> circles) {
+    Rings rings;
+    for (const glm::vec2& circle : circles) {
+        // The seam's point twice, so the strip closes.
+        for (std::uint32_t slice = 0; slice <= RingSlices; ++slice) {
+            const float azimuth = glm::two_pi<float>() * static_cast<float>(slice) / RingSlices;
+            rings.positions.emplace_back(circle.x * std::cos(azimuth), circle.y, circle.x * std::sin(azimuth));
+        }
+    }
+    for (std::uint32_t band = 0; band + 1 < circles.size(); ++band) {
+        for (std::uint32_t slice = 0; slice <= RingSlices; ++slice) {
+            rings.indices.push_back(band * (RingSlices + 1) + slice);
+            rings.indices.push_back((band + 1) * (RingSlices + 1) + slice);
+        }
+        rings.indices.push_back(RestartIndex);
+    }
+    return rings;
+}
+
+// The unit sphere's latitudes, from the +Y pole down stacks of SphereStacks.
+std::vector<glm::vec2> Latitudes(std::uint32_t stacks) {
+    std::vector<glm::vec2> circles;
+    for (std::uint32_t stack = 0; stack <= stacks; ++stack) {
+        const float polar = glm::pi<float>() * static_cast<float>(stack) / SphereStacks;
+        circles.emplace_back(std::sin(polar), std::cos(polar));
+    }
+    return circles;
+}
+
+// Turns +Y onto axis, which must be unit length.
+glm::mat4 AlongAxis(const glm::vec3& axis) {
+    const glm::vec3 helper = std::abs(axis.x) < 0.9f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 0.0f, 1.0f);
+    const glm::vec3 x = glm::normalize(glm::cross(axis, helper));
+    const glm::vec3 z = glm::cross(x, axis);
+    return glm::mat4(glm::vec4(x, 0.0f), glm::vec4(axis, 0.0f), glm::vec4(z, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+}
 
 } // namespace
 
@@ -38,33 +84,24 @@ DebugDrawPass::DebugDrawPass(const std::string& name, const RenderTargetContext&
     // ---
     // Box
     // ---
-    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> corners;
     for (std::uint32_t corner = 0; corner < 8; ++corner) {
-        positions.emplace_back(corner & 1 ? 1.0f : -1.0f, corner & 2 ? 1.0f : -1.0f, corner & 4 ? 1.0f : -1.0f);
+        corners.emplace_back(corner & 1 ? 1.0f : -1.0f, corner & 2 ? 1.0f : -1.0f, corner & 4 ? 1.0f : -1.0f);
     }
-    unitBox = MakeMesh(positions, BoxStrip);
+    unitBox = MakeMesh(corners, BoxStrip);
 
-    // ------
-    // Sphere
-    // ------
-    // One strip for each band between two latitudes.
-    positions.clear();
-    for (std::uint32_t stack = 0; stack <= SphereStacks; ++stack) {
-        const float polar = glm::pi<float>() * static_cast<float>(stack) / SphereStacks;
-        for (std::uint32_t slice = 0; slice <= SphereSlices; ++slice) {
-            const float azimuth = glm::two_pi<float>() * static_cast<float>(slice) / SphereSlices;
-            positions.emplace_back(std::sin(polar) * std::cos(azimuth), std::cos(polar), std::sin(polar) * std::sin(azimuth));
-        }
-    }
-    std::vector<std::uint32_t> indices;
-    for (std::uint32_t stack = 0; stack < SphereStacks; ++stack) {
-        for (std::uint32_t slice = 0; slice <= SphereSlices; ++slice) {
-            indices.push_back(stack * (SphereSlices + 1) + slice);
-            indices.push_back((stack + 1) * (SphereSlices + 1) + slice);
-        }
-        indices.push_back(RestartIndex);
-    }
-    unitSphere = MakeMesh(positions, indices);
+    // ------------
+    // Round Shapes
+    // ------------
+    const Rings sphere = MakeRings(Latitudes(SphereStacks));
+    unitSphere = MakeMesh(sphere.positions, sphere.indices);
+
+    const Rings hemisphere = MakeRings(Latitudes(SphereStacks / 2));
+    unitHemisphere = MakeMesh(hemisphere.positions, hemisphere.indices);
+
+    const std::array cylinderEnds { glm::vec2(1.0f, -1.0f), glm::vec2(1.0f, 1.0f) };
+    const Rings cylinder = MakeRings(cylinderEnds);
+    unitCylinder = MakeMesh(cylinder.positions, cylinder.indices);
 
     CreatePipeline(globalSetLayout, shaders);
 }
@@ -128,9 +165,7 @@ void DebugDrawPass::Render(const FrameContext& frame) {
 
     draws.clear();
     for (const DebugDraw::Volume& volume : debugDraw.GetVolumes()) {
-        glm::mat4 model = volume.model;
-        const ShapeMesh& mesh = GetMesh(volume, model);
-        draws.push_back({ &mesh, DebugDrawPushConstants { .model = model, .color = volume.color } });
+        AddDraws(volume);
     }
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
@@ -199,20 +234,43 @@ DebugDrawPass::ShapeMesh DebugDrawPass::MakeMesh(std::span<const glm::vec3> posi
     return mesh;
 }
 
-const DebugDrawPass::ShapeMesh& DebugDrawPass::GetMesh(const DebugDraw::Volume& volume, glm::mat4& model) {
-    if (const auto* box = std::get_if<AABBBoundingBox3D>(volume.volume)) {
-        model = glm::scale(glm::translate(model, box->Center()), box->Extents());
-        return unitBox;
-    }
-    if (const auto* sphere = std::get_if<BoundingSphere>(volume.volume)) {
-        model = glm::scale(glm::translate(model, sphere->center), glm::vec3(sphere->radius));
-        return unitSphere;
-    }
+void DebugDrawPass::AddDraws(const DebugDraw::Volume& volume) {
+    auto add = [&](const ShapeMesh& mesh, const glm::mat4& model) {
+        draws.push_back({ &mesh, DebugDrawPushConstants { .model = model, .color = volume.color } });
+    };
 
-    // Each triangle a strip of its own.
-    auto [entry, added] = hullMeshes.try_emplace(volume.id);
+    std::visit(Overloaded {
+        [&](const AABBBoundingBox3D& box) {
+            add(unitBox, glm::scale(glm::translate(volume.model, box.Center()), box.Extents()));
+        },
+        [&](const BoundingSphere& sphere) {
+            add(unitSphere, glm::scale(glm::translate(volume.model, sphere.center), glm::vec3(sphere.radius)));
+        },
+        [&](const BoundingCapsule& capsule) {
+            const glm::vec3 segment = capsule.end - capsule.start;
+            const float length = glm::length(segment);
+            // A capsule of no length is a sphere, whose axis can be any.
+            const glm::mat4 turn = AlongAxis(length > 0.0f ? segment / length : glm::vec3(0.0f, 1.0f, 0.0f));
+            const float radius = capsule.radius;
+
+            if (length > 0.0f) {
+                const glm::vec3 middle = (capsule.start + capsule.end) * 0.5f;
+                add(unitCylinder, glm::scale(glm::translate(volume.model, middle) * turn, glm::vec3(radius, length * 0.5f, radius)));
+            }
+            add(unitHemisphere, glm::scale(glm::translate(volume.model, capsule.end) * turn, glm::vec3(radius)));
+            // Mirrored, to bulge away from the other end.
+            add(unitHemisphere, glm::scale(glm::translate(volume.model, capsule.start) * turn, glm::vec3(radius, -radius, radius)));
+        },
+        [&](const ConvexHull& hull) {
+            add(GetHullMesh(volume.id, hull), volume.model);
+        }
+    }, *volume.volume);
+}
+
+// Each triangle a strip of its own.
+const DebugDrawPass::ShapeMesh& DebugDrawPass::GetHullMesh(std::uint64_t id, const ConvexHull& hull) {
+    auto [entry, added] = hullMeshes.try_emplace(id);
     if (added) {
-        const ConvexHull& hull = std::get<ConvexHull>(*volume.volume);
         std::vector<std::uint32_t> indices;
         indices.reserve(hull.triangles.size() * 4);
         for (const glm::uvec3& triangle : hull.triangles) {

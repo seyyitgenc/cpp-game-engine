@@ -26,6 +26,7 @@ public:
     enum class Shape {
         Box,
         Sphere,
+        Capsule,
         ConvexHull
     };
 
@@ -67,7 +68,7 @@ public:
 
     static void Reflect(PropertyList<BoundingVolumeComponent>& properties) {
         properties.Add<int>(
-            { .name = "Shape", .hint = PropertyHint::Enum, .enumNames = { "Box", "Sphere", "Convex Hull" } }, // Shape's order
+            { .name = "Shape", .hint = PropertyHint::Enum, .enumNames = { "Box", "Sphere", "Capsule", "Convex Hull" } }, // Shape's order
             [](const BoundingVolumeComponent& bounds) { return static_cast<int>(bounds.GetShape()); },
             [](BoundingVolumeComponent& bounds, int value) { bounds.SetShape(static_cast<Shape>(value)); });
     }
@@ -83,6 +84,7 @@ private:
         switch (shape) {
             case Shape::Box: volume = AABBBoundingBox3D::FromPoints(positions); break;
             case Shape::Sphere: volume = BoundingSphere::FromPoints(positions); break;
+            case Shape::Capsule: volume = BoundingCapsule::FromPoints(positions); break;
             case Shape::ConvexHull: volume = ConvexHull::FromPoints(positions); break;
         }
         fittedMesh = &mesh;

@@ -23,10 +23,11 @@ class PostProcessPass;
 // DebugDraw's bounding volumes as wireframe: triangle strips drawn with
 // polygon mode line, into the scene image after post-processing. Depth tested
 // against the G-buffer: at full strength in front of the scene, faint behind
-// it. Boxes and spheres share a unit mesh each, placed by the model matrix;
-// a hull gets a mesh of its own, made the first time it is drawn. Skipped
-// when there is nothing to draw. Leaves the scene image in
-// eShaderReadOnlyOptimal, as PostProcessPass does. shaders/debug_draw.slang.
+// it. Boxes, spheres and capsules (a cylinder and two hemispheres) are made
+// of shared unit meshes, placed by the model matrix; a hull gets a mesh of
+// its own, made the first time it is drawn. Skipped when there is nothing to
+// draw. Leaves the scene image in eShaderReadOnlyOptimal, as PostProcessPass
+// does. shaders/debug_draw.slang.
 class DebugDrawPass : public RenderPass {
 public:
     // How strongly shapes behind the scene show.
@@ -58,9 +59,13 @@ private:
     GeometryPass* geometryPass;
     PostProcessPass* postProcessPass;
 
-    // [-1, 1] along each axis, and radius 1.
+    // [-1, 1] along each axis.
     ShapeMesh unitBox;
+    // Radius 1. The hemisphere is the +Y half; the cylinder runs along Y
+    // from -1 to 1, open.
     ShapeMesh unitSphere;
+    ShapeMesh unitHemisphere;
+    ShapeMesh unitCylinder;
     // By DebugDraw::Volume::id.
     std::unordered_map<std::uint64_t, HullMesh> hullMeshes;
     std::uint64_t frameNumber = 0;
@@ -88,8 +93,9 @@ private:
     void CreatePipeline(vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders);
     // Triangle strips, cut apart by RestartIndex.
     ShapeMesh MakeMesh(std::span<const glm::vec3> positions, std::span<const std::uint32_t> indices) const;
-    // The volume's mesh, and model made to place it.
-    const ShapeMesh& GetMesh(const DebugDraw::Volume& volume, glm::mat4& model);
+    // One draw for each unit shape the volume is made of.
+    void AddDraws(const DebugDraw::Volume& volume);
+    const ShapeMesh& GetHullMesh(std::uint64_t id, const ConvexHull& hull);
 };
 
 } // namespace GNC

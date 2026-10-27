@@ -71,6 +71,22 @@ struct BoundingSphere {
     }
 };
 
+// Every point within radius of the segment from start to end: a cylinder
+// with round ends, or a sphere when start and end meet.
+struct BoundingCapsule {
+    glm::vec3 start {0.0f, -1.0f, 0.0f};
+    glm::vec3 end {0.0f, 1.0f, 0.0f};
+    float radius = 1.0f;
+
+    // Along the points' principal axis, as thin as that axis allows and no
+    // longer than the round ends need.
+    static BoundingCapsule FromPoints(std::span<const glm::vec3> points);
+
+    bool IsBehind(const glm::vec3& normal, float distance) const {
+        return std::max(glm::dot(normal, start), glm::dot(normal, end)) + distance < -radius * glm::length(normal);
+    }
+};
+
 // The hull's corners: the points it was fitted to, less those inside it.
 struct ConvexHull {
     std::vector<glm::vec3> vertices;
@@ -90,6 +106,6 @@ struct ConvexHull {
     }
 };
 
-using BoundingVolume = std::variant<AABBBoundingBox3D, BoundingSphere, ConvexHull>;
+using BoundingVolume = std::variant<AABBBoundingBox3D, BoundingSphere, BoundingCapsule, ConvexHull>;
 
 } // namespace GNC

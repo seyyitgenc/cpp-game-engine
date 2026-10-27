@@ -16,15 +16,11 @@
 #include "ECS/Component/Property.hpp"
 #include "Resource/Resource.hpp"
 #include "Resource/ResourceManager.hpp"
+#include "Utils/Overloaded.hpp"
 
 namespace GNC {
 
 namespace {
-
-template<typename... Lambdas>
-struct Overloaded : Lambdas... {
-    using Lambdas::operator()...;
-};
 
 struct Field {
     const Component& component;

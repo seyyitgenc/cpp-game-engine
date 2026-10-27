@@ -15,7 +15,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Alpha-masked and double-sided materials
 - Directional, point and spot lights in physical units (lux, candela), after glTF's `KHR_lights_punctual`; up to 64 per scene
 - Exposure and the Khronos PBR Neutral tonemapper
-- Frustum culling against a bounding volume component on each entity: a box, a sphere or a convex hull, fitted to its mesh
+- Frustum culling against a bounding volume component on each entity: a box, a sphere, a capsule or a convex hull, fitted to its mesh
 - Shaders written in Slang and compiled to SPIR-V at build time
 - Vulkan validation layers in Debug builds
 

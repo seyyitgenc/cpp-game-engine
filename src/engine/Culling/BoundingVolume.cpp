@@ -358,6 +358,83 @@ BoundingSphere BoundingSphere::FromPoints(std::span<const glm::vec3> points) {
     return sphere;
 }
 
+BoundingCapsule BoundingCapsule::FromPoints(std::span<const glm::vec3> points) {
+    if (points.empty()) return {};
+
+    // ----
+    // Axis
+    // ----
+    // The way the points spread furthest: the covariance's dominant
+    // eigenvector, by power iteration. A slow convergence only costs
+    // tightness, since the rest fits any axis.
+    glm::dvec3 mean(0.0);
+    for (const glm::vec3& point : points) {
+        mean += glm::dvec3(point);
+    }
+    mean /= static_cast<double>(points.size());
+
+    glm::dmat3 covariance(0.0);
+    for (const glm::vec3& point : points) {
+        const glm::dvec3 offset = glm::dvec3(point) - mean;
+        covariance += glm::outerProduct(offset, offset);
+    }
+    // Started from its longest column, which is zero only when the points
+    // are all one point.
+    glm::dvec3 axis = covariance[0];
+    for (int column = 1; column < 3; ++column) {
+        if (LengthSquared(covariance[column]) > LengthSquared(axis)) axis = covariance[column];
+    }
+    if (LengthSquared(axis) == 0.0) {
+        axis = glm::dvec3(0.0, 1.0, 0.0);
+    } else {
+        for (int iteration = 0; iteration < 32; ++iteration) {
+            axis = glm::normalize(covariance * axis);
+        }
+    }
+
+    // ------
+    // Radius
+    // ------
+    // The line along the axis through the center of the smallest circle
+    // around the points, seen down the axis.
+    std::vector<glm::vec3> flattened;
+    flattened.reserve(points.size());
+    for (const glm::vec3& point : points) {
+        const glm::dvec3 position(point);
+        flattened.emplace_back(position - axis * glm::dot(position, axis));
+    }
+    const glm::dvec3 center(BoundingSphere::FromPoints(flattened).center);
+
+    double radiusSquared = 0.0;
+    for (const glm::vec3& point : points) {
+        const glm::dvec3 offset = glm::dvec3(point) - center;
+        radiusSquared = std::max(radiusSquared, LengthSquared(offset - axis * glm::dot(offset, axis)));
+    }
+
+    // ----
+    // Ends
+    // ----
+    // A point off the segment's end is inside if the end is within the
+    // height of the round end above the point's distance from the axis.
+    double first = std::numeric_limits<double>::max();
+    double last = std::numeric_limits<double>::lowest();
+    for (const glm::vec3& point : points) {
+        const glm::dvec3 offset = glm::dvec3(point) - center;
+        const double along = glm::dot(offset, axis);
+        const double cap = std::sqrt(std::max(radiusSquared - LengthSquared(offset - axis * along), 0.0));
+        first = std::min(first, along + cap);
+        last = std::max(last, along - cap);
+    }
+    // Short enough for one sphere: any point between the two does.
+    if (first > last) first = last = (first + last) * 0.5;
+
+    return BoundingCapsule {
+        .start = glm::vec3(center + axis * first),
+        .end = glm::vec3(center + axis * last),
+        .radius = static_cast<float>(std::sqrt(radiusSquared))
+    };
+}
+
 ConvexHull ConvexHull::FromPoints(std::span<const glm::vec3> points) {
     Quickhull quickhull(points);
     const std::optional<std::vector<std::uint32_t>> corners = quickhull.Build();
