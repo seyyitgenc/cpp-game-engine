@@ -112,5 +112,10 @@ The executable, compiled shaders, fonts and models go to `bin/debug/` (or `bin/r
 - [ ] Free materials no entity uses any more (deleting an entity keeps its material)
 - [ ] Model import: skins, animations, `KHR_texture_transform`, a second UV set, separate metalness and roughness maps
 - [ ] Load textures on worker threads (a big import stalls the editor)
+- [ ] Colliders
+  - [ ] Collider component (box, sphere, capsule) with its own stored center, size and axis, upright by default and not refitted when the mesh changes
+  - [ ] "Fit to mesh" as a first guess from the mesh's box: bottom at its base, centered on the box, the radius left to the user
+  - [ ] A defined rule for non-uniform scale (a scaled capsule is no longer a capsule)
+  - [ ] Collision tests between colliders
 - [ ] Third person camera
 - [ ] Scope stopwatch

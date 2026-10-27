@@ -30,7 +30,7 @@ public:
     static constexpr int EventPriority = 1000;
 
     // Lets panels leave the main window (ImGuiConfigFlags_ViewportsEnable).
-    static constexpr bool EnableViewports = true;
+    static constexpr bool EnableViewports = false;
 
     // ImGui_ImplVulkan_AddTexture images (the Viewport's), beyond the font
     // atlas.
