@@ -16,6 +16,7 @@ namespace GNC {
 class Camera;
 class Entity;
 class Renderer;
+class Scene;
 class Selection;
 
 // Viewport panel
@@ -23,8 +24,10 @@ class Selection;
 // model under it, a second one the entity, and the selection gets a gizmo
 // (W/E/R pick move, rotate, scale); other mouse input goes to the camera,
 // not ImGui. The orientation gizmo in the bottom right corner turns the
-// camera to view along an axis. In a dragged-out OS window it still shows
-// the scene, picks and manipulates, but the camera gets no input there.
+// camera to view along an axis. In a 2D scene the gizmo keeps to the XY
+// plane, and there is no orientation gizmo: the view does not turn. In a
+// dragged-out OS window it still shows the scene, picks and manipulates, but
+// the camera gets no input there.
 class ViewportPanel : public ImGuiPanel {
 public:
     enum class GizmoTool { Move, Rotate, Scale };
@@ -37,6 +40,8 @@ private:
     Renderer& renderer;
     Selection& selection;
     const Camera& camera;
+    // For its dimension.
+    const Scene& scene;
     EventBus& eventBus;
 
     // As registered with the Vulkan backend, for this scene version.
@@ -50,8 +55,8 @@ private:
     std::vector<EventSubscription> subscriptions;
 
 public:
-    // The renderer, selection and camera must outlive the panel.
-    ViewportPanel(const std::string& name, Renderer& rend, Selection& selected, const Camera& cam, EventBus& bus);
+    // The renderer, selection, camera and scene must outlive the panel.
+    ViewportPanel(const std::string& name, Renderer& rend, Selection& selected, const Camera& cam, const Scene& source, EventBus& bus);
     // Needs the Vulkan backend, which ImGuiLayer shuts down after its panels.
     ~ViewportPanel() override;
 
@@ -64,7 +69,7 @@ public:
 private:
     Entity* ClickTarget(Entity* picked) const;
     void UpdateTexture();
-    void RenderGizmo(const ImVec2& min, const ImVec2& size);
+    void RenderGizmo(const ImVec2& min, const ImVec2& size, bool twoD);
     void RenderToolbar(const ImVec2& min);
     // Returns whether it is hovered.
     bool RenderOrientationGizmo(const ImVec2& min, const ImVec2& size);

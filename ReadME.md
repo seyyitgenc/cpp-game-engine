@@ -34,6 +34,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Create and delete entities, and add or remove components, from menus
 - Import models with assimp (glTF, OBJ, FBX, Collada, ...) from File > Import Model, as one entity tree: meshes, materials, textures and lights
 - Scenes saved as `.gncscene` files (JSON, see [docs/SceneFormat.md](docs/SceneFormat.md)) and opened from the File menu; new scenes are 2D or 3D
+- 2D scenes get a 2D editor: an orthographic view that pans and zooms, and a gizmo kept to the XY plane
 - Engine panel: FPS and camera position
 
 ### Core
@@ -76,11 +77,11 @@ Scenes are not copied: the editor opens and saves the `.gncscene` files in `reso
 
 | Input | Action |
 |---|---|
-| Hold right mouse | Look around |
-| W A S D, while holding right mouse | Fly |
+| Hold right mouse | Look around (2D scenes: drag the view) |
+| W A S D, while holding right mouse | Fly (2D scenes: pan) |
 | E or Space / Q or Left Ctrl, while holding right mouse | Up / down |
 | Left Shift, while holding right mouse | Fly faster |
-| Mouse wheel | Zoom |
+| Mouse wheel | Zoom (2D scenes: zoom the orthographic view) |
 | Left click in the Viewport | Select a model; click again to select the part |
 | W / E / R | Move / rotate / scale gizmo |
 | Delete | Delete the selected entity |
@@ -112,7 +113,7 @@ Scenes are not copied: the editor opens and saves the `.gncscene` files in `reso
 - [ ] Remember the editor camera per scene and per user, instead of starting at the scene's camera
 - [ ] Choose the scene's camera, and edit the scene's environment (ambient light, exposure), in the editor
 - [ ] A material picker for mesh slots
-- [ ] 2D scenes: an editor camera that pans, a gizmo kept to the plane, 2D components (sprite, 2D camera) in the menus
+- [ ] 2D scenes: 2D components (sprite, 2D camera) in the menus, zoom towards the cursor
 
 ### Engine
 

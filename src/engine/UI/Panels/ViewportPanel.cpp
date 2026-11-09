@@ -21,6 +21,7 @@
 #include "ECS/Entity/Entity.hpp"
 #include "Event/Events.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Scene/Scene.hpp"
 #include "UI/Icons.hpp"
 #include "UI/OrientationGizmo.hpp"
 #include "UI/Selection.hpp"
@@ -29,19 +30,20 @@ namespace GNC {
 
 namespace {
 
-ImGuizmo::OPERATION ToOperation(ViewportPanel::GizmoTool tool) {
+// In 2D, only what stays in the XY plane.
+ImGuizmo::OPERATION ToOperation(ViewportPanel::GizmoTool tool, bool twoD) {
     switch (tool) {
-        case ViewportPanel::GizmoTool::Move: return ImGuizmo::TRANSLATE;
-        case ViewportPanel::GizmoTool::Rotate: return ImGuizmo::ROTATE;
-        case ViewportPanel::GizmoTool::Scale: return ImGuizmo::SCALE;
+        case ViewportPanel::GizmoTool::Move: return twoD ? ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y : ImGuizmo::TRANSLATE;
+        case ViewportPanel::GizmoTool::Rotate: return twoD ? ImGuizmo::ROTATE_Z : ImGuizmo::ROTATE;
+        case ViewportPanel::GizmoTool::Scale: return twoD ? ImGuizmo::SCALE_X | ImGuizmo::SCALE_Y : ImGuizmo::SCALE;
     }
     return ImGuizmo::TRANSLATE;
 }
 
 } // namespace
 
-ViewportPanel::ViewportPanel(const std::string& name, Renderer& rend, Selection& selected, const Camera& cam, EventBus& bus)
-    : ImGuiPanel(name), renderer(rend), selection(selected), camera(cam), eventBus(bus) {
+ViewportPanel::ViewportPanel(const std::string& name, Renderer& rend, Selection& selected, const Camera& cam, const Scene& source, EventBus& bus)
+    : ImGuiPanel(name), renderer(rend), selection(selected), camera(cam), scene(source), eventBus(bus) {
     // Below the camera, which keeps W and E while it looks.
     subscriptions.push_back(bus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
         if (e.IsRepeat() || e.GetMods() != 0) return false;
@@ -113,10 +115,11 @@ void ViewportPanel::Render() {
         const ImTextureID textureId = reinterpret_cast<std::uintptr_t>(static_cast<VkDescriptorSet>(texture));
         ImGui::GetWindowDrawList()->AddImage(textureId, min, ImVec2(min.x + size.x, min.y + size.y));
 
-        RenderGizmo(min, size);
+        const bool twoD = scene.GetDimension() == SceneDimension::TwoD;
+        RenderGizmo(min, size, twoD);
         RenderToolbar(min);
         // Over the image, which then is not hovered.
-        const bool orientationHovered = RenderOrientationGizmo(min, size);
+        const bool orientationHovered = !twoD && RenderOrientationGizmo(min, size);
 
         // Not hovered while the camera looks: the cursor is captured.
         if (imageHovered) hoverPixel = toScenePixel(ImGui::GetMousePos());
@@ -151,7 +154,7 @@ void ViewportPanel::UpdateTexture() {
     textureVersion = renderer.GetSceneVersion();
 }
 
-void ViewportPanel::RenderGizmo(const ImVec2& min, const ImVec2& size) {
+void ViewportPanel::RenderGizmo(const ImVec2& min, const ImVec2& size, bool twoD) {
     Entity* entity = selection.GetEntity();
     TransformComponent* transform = entity ? entity->GetComponent<TransformComponent>() : nullptr;
     if (!transform) {
@@ -178,7 +181,7 @@ void ViewportPanel::RenderGizmo(const ImVec2& min, const ImVec2& size) {
     if (glm::determinant(parent) == 0.0f) return;
 
     glm::mat4 world = parent * transform->GetLocalMatrix();
-    if (!ImGuizmo::Manipulate(glm::value_ptr(camera.GetViewMatrix()), glm::value_ptr(projection), ToOperation(gizmoTool),
+    if (!ImGuizmo::Manipulate(glm::value_ptr(camera.GetViewMatrix()), glm::value_ptr(projection), ToOperation(gizmoTool, twoD),
             gizmoLocal ? ImGuizmo::LOCAL : ImGuizmo::WORLD, glm::value_ptr(world))) {
         return;
     }

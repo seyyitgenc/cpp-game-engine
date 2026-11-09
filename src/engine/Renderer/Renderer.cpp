@@ -493,7 +493,7 @@ void Renderer::AddBoundingVolumes() {
 void Renderer::UpdateCameraAspect() {
     if (!camera) return;
 
-    camera->SetAspectRatio(static_cast<float>(sceneExtent.width) / static_cast<float>(sceneExtent.height));
+    camera->SetViewportSize(static_cast<float>(sceneExtent.width), static_cast<float>(sceneExtent.height));
 }
 
 void Renderer::RebuildRenderPasses() {

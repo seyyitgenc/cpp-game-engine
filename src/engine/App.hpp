@@ -109,8 +109,11 @@ private:
     void SaveOrAskForName();
 
     void ReplaceScene(Scene&& next, std::filesystem::path path);
-    // The editor camera takes the scene camera's place and projection.
-    void MoveCameraToSceneCamera();
+    // Fits the editor camera and its controller to the scene's dimension.
+    void ResetEditorCamera();
+    // The editor camera takes the scene camera's place and projection;
+    // false if the scene has none.
+    bool MoveCameraToSceneCamera();
     void UpdateSceneMenu();
 };
 

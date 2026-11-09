@@ -86,6 +86,8 @@ private:
     float farPlane = 1000.0f;
     // Of the orthographic view volume; the width follows the aspect ratio.
     float orthoHalfHeight = 10.0f;
+    // Of the image drawn from it, in pixels: how far a pixel reaches.
+    float viewportHeight = 1.0f;
 
     mutable glm::mat4 viewMatrix {1.0f};
     mutable glm::mat4 projectionMatrix {1.0f};
@@ -230,6 +232,22 @@ public:
         aspectRatio = aspect;
         projectionDirty = true;
     }
+
+    // In pixels; sets the aspect ratio too.
+    void SetViewportSize(float width, float height) {
+        viewportHeight = std::max(height, 1.0f);
+        SetAspectRatio(width / viewportHeight);
+    }
+
+    float GetViewportHeight() const { return viewportHeight; }
+
+    // Zooms an orthographic view.
+    void SetOrthographicHalfHeight(float halfHeight) {
+        orthoHalfHeight = halfHeight;
+        projectionDirty = true;
+    }
+
+    float GetOrthographicHalfHeight() const { return orthoHalfHeight; }
 
     void SetFov(float fovDegrees) {
         fov = std::clamp(fovDegrees, MinFov, MaxFov);

@@ -331,7 +331,7 @@ void App::BuildGui() {
     // View
     // ----
     ImGuiMenu& view = menuBar.GetMenu("View");
-    view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer, selection, camera, eventBus));
+    view.AddPanelItem(*gui.AddPanel<ViewportPanel>("Viewport", renderer, selection, camera, scene, eventBus));
     view.AddPanelItem(*gui.AddPanel<ScenePanel>("Scene", scene, componentTypes, selection, eventBus));
     view.AddPanelItem(*gui.AddPanel<InspectorPanel>("Inspector", selection, componentTypes, resources, eventBus));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
@@ -406,15 +406,30 @@ void App::ReplaceScene(Scene&& next, std::filesystem::path path) {
     scenePath = std::move(path);
 
     window.SetTitle("GNC Engine - " + scene.GetName());
-    MoveCameraToSceneCamera();
+    ResetEditorCamera();
 }
 
 // Until there is a play mode, the scene's camera is only where the editor
-// starts looking from.
-void App::MoveCameraToSceneCamera() {
+// starts looking from. A 2D scene's editor camera is orthographic and looks
+// down -Z, whatever its scene camera does, and only pans and zooms.
+void App::ResetEditorCamera() {
+    const bool twoD = scene.GetDimension() == SceneDimension::TwoD;
+    cameraController.SetTwoD(twoD);
+
+    if (!MoveCameraToSceneCamera()) {
+        if (twoD) camera.SetPosition({ 0.0f, 0.0f, 10.0f });
+        else if (camera.GetProjectionType() == ProjectionType::Orthographic) camera.SetPerspective(Camera::DefaultFov, camera.GetAspectRatio(), 0.1f, 1000.0f);
+    }
+    if (twoD) {
+        camera.SetRotation(Camera::DefaultYaw, 0.0f);
+        if (camera.GetProjectionType() != ProjectionType::Orthographic) camera.SetOrthographic(5.0f, 0.1f, 1000.0f);
+    }
+}
+
+bool App::MoveCameraToSceneCamera() {
     Entity* entity = scene.GetCamera();
     const CameraComponent* sceneCamera = entity ? entity->GetComponent<CameraComponent>() : nullptr;
-    if (!sceneCamera) return;
+    if (!sceneCamera) return false;
 
     const TransformComponent* transform = entity->GetComponent<TransformComponent>();
     const glm::mat4 world = transform ? transform->GetWorldMatrix() : glm::mat4(1.0f);
@@ -427,6 +442,7 @@ void App::MoveCameraToSceneCamera() {
     } else {
         camera.SetOrthographic(sceneCamera->GetYMag(), sceneCamera->GetZNear(), sceneCamera->GetZFar());
     }
+    return true;
 }
 
 void App::UpdateSceneMenu() {

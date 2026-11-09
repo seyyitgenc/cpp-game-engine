@@ -55,7 +55,9 @@ CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : ca
     subscriptions.push_back(bus.Subscribe<MouseMovedEvent>([this](MouseMovedEvent& e) {
         if (!looking) return false;
 
-        if (hasLastCursor) {
+        if (hasLastCursor && twoD) {
+            Pan(e.GetX() - lastCursorX, e.GetY() - lastCursorY);
+        } else if (hasLastCursor) {
             // Screen Y grows downwards and pitch upwards, hence last - current.
             camera.ProcessMouseMovement(static_cast<float>(e.GetX() - lastCursorX),
                                         static_cast<float>(lastCursorY - e.GetY()));
@@ -67,7 +69,12 @@ CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : ca
     }, EventPriority));
 
     subscriptions.push_back(bus.Subscribe<MouseScrolledEvent>([this](MouseScrolledEvent& e) {
-        camera.ProcessMouseScroll(static_cast<float>(e.GetOffsetY()));
+        if (twoD) {
+            const float halfHeight = camera.GetOrthographicHalfHeight() * std::pow(ZoomStep, static_cast<float>(e.GetOffsetY()));
+            camera.SetOrthographicHalfHeight(std::clamp(halfHeight, MinHalfHeight, MaxHalfHeight));
+        } else {
+            camera.ProcessMouseScroll(static_cast<float>(e.GetOffsetY()));
+        }
         return true;
     }, EventPriority));
 
@@ -95,6 +102,15 @@ void CameraController::Update(float deltaTime) {
 
     const float step = IsHeld(GLFW_KEY_LEFT_SHIFT) ? deltaTime * BoostMultiplier : deltaTime;
 
+    // Within the plane, at a speed that follows the zoom.
+    if (twoD) {
+        const glm::vec2 direction((IsHeld(GLFW_KEY_D) ? 1.0f : 0.0f) - (IsHeld(GLFW_KEY_A) ? 1.0f : 0.0f),
+                                  (IsHeld(GLFW_KEY_W) ? 1.0f : 0.0f) - (IsHeld(GLFW_KEY_S) ? 1.0f : 0.0f));
+        const float distance = camera.GetOrthographicHalfHeight() * 2.0f * PanSpeed * step;
+        camera.SetPosition(camera.GetPosition() + (camera.GetRight() * direction.x + camera.GetUp() * direction.y) * distance);
+        return;
+    }
+
     if (IsHeld(GLFW_KEY_W)) camera.ProcessKeyboard(CameraMovement::Forward, step);
     if (IsHeld(GLFW_KEY_S)) camera.ProcessKeyboard(CameraMovement::Backward, step);
     if (IsHeld(GLFW_KEY_A)) camera.ProcessKeyboard(CameraMovement::Left, step);
@@ -117,8 +133,14 @@ void CameraController::SetLooking(bool look) {
     if (look) alignment.reset();
 }
 
+void CameraController::SetTwoD(bool twoDScene) {
+    twoD = twoDScene;
+    alignment.reset();
+}
+
+// A 2D camera does not turn.
 void CameraController::Align(const glm::vec3& viewDirection, const glm::vec3& pivot) {
-    if (looking || glm::dot(viewDirection, viewDirection) <= 0.0f) return;
+    if (twoD || looking || glm::dot(viewDirection, viewDirection) <= 0.0f) return;
 
     const glm::vec3 direction = glm::normalize(viewDirection);
     // Straight up or down has no heading of its own: keep the current one.
@@ -148,6 +170,14 @@ void CameraController::Animate(float deltaTime) {
     camera.SetPosition(center - camera.GetFront() * alignment->distance);
 
     if (t >= 1.0f) alignment.reset();
+}
+
+// Screen y grows downwards. One pixel is the view's height over the
+// viewport's: GLFW's cursor coordinates are pixels on Windows.
+void CameraController::Pan(double deltaX, double deltaY) {
+    const float metersPerPixel = camera.GetOrthographicHalfHeight() * 2.0f / camera.GetViewportHeight();
+    const glm::vec3 offset = camera.GetRight() * static_cast<float>(-deltaX) + camera.GetUp() * static_cast<float>(deltaY);
+    camera.SetPosition(camera.GetPosition() + offset * metersPerPixel);
 }
 
 } // namespace GNC

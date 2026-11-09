@@ -18,12 +18,21 @@ class Window;
 // captured meanwhile) and, while it is held, WASD to move, E/Space up, Q/Left
 // Ctrl down, Left Shift faster. The wheel zooms. Input comes from the bus, so
 // ImGui can swallow it first. An AlignCameraEvent orbits it to a view
-// direction, until looking takes over.
+// direction, until looking takes over. In a 2D scene (SetTwoD) the camera
+// never turns: the right button drags the view instead, WASD pans while it
+// is held, and the wheel zooms the orthographic view.
 class CameraController {
 public:
     static constexpr float BoostMultiplier = 4.0f;
     // Seconds an AlignCameraEvent's orbit takes.
     static constexpr float AlignDuration = 0.25f;
+
+    // 2D: a wheel step scales the view by this; the half height stays in
+    // these limits, in meters. WASD pans this many view heights a second.
+    static constexpr float ZoomStep = 0.9f;
+    static constexpr float MinHalfHeight = 0.05f;
+    static constexpr float MaxHalfHeight = 10000.0f;
+    static constexpr float PanSpeed = 1.0f;
 
     // Above the Viewport's gizmo shortcuts, which share the movement keys.
     static constexpr int EventPriority = 100;
@@ -32,6 +41,8 @@ private:
     Camera& camera;
     Window& window;
 
+    bool twoD = false;
+    // In 2D: dragging the view, not looking around.
     bool looking = false;
     // The first cursor event after capture only sets the reference point, or
     // the view would jump by however far the cursor moved while free.
@@ -69,10 +80,16 @@ public:
     // deltaTime in seconds.
     void Update(float deltaTime);
 
+    // The camera itself must already look down -Z, orthographic (App sets
+    // both when a 2D scene opens).
+    void SetTwoD(bool twoDScene);
+
 private:
     void SetLooking(bool look);
     void Align(const glm::vec3& viewDirection, const glm::vec3& pivot);
     void Animate(float deltaTime);
+    // Cursor movement in pixels; the scene follows the cursor.
+    void Pan(double deltaX, double deltaY);
     bool IsHeld(int key) const { return heldKeys.contains(key); }
 };
 

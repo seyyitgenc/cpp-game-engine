@@ -83,9 +83,12 @@ type.
 
 In a 2D scene, x and y are the plane, z is only draw order, and rotation is
 about z. File > New Scene > 2D makes one with an orthographic camera at
-z = 10, looking down -z, which the editor camera starts from. Still to come:
-an editor camera that pans instead of flying, a gizmo kept to the plane, and
-Add Component menus that offer the 2D components (a sprite, a 2D camera).
+z = 10, looking down -z, which the editor camera starts from. In a 2D scene
+the editor camera stays orthographic and looks down -z: the right button
+drags the view and the wheel zooms. The gizmo moves and scales in x and y
+and rotates about z, the grid lies on z = 0, and there is no orientation
+gizmo. Still to come: Add Component menus that offer the 2D components (a
+sprite, a 2D camera).
 
 ## Values
 
