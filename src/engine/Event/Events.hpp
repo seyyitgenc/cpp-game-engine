@@ -5,5 +5,6 @@
 #include "Event.hpp"
 #include "EventBus.hpp"
 #include "ApplicationEvents.hpp"
+#include "CameraEvents.hpp"
 #include "InputEvents.hpp"
 #include "SceneEvents.hpp"

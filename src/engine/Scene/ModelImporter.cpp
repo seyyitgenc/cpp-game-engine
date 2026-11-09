@@ -13,6 +13,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <assimp/GltfMaterial.h>
@@ -63,6 +64,9 @@ std::string ModelKey(const std::filesystem::path& path) {
     if (error || relative.empty() || *relative.begin() == "..") return path.filename().string();
     return relative.generic_string();
 }
+
+// How a scene file names the model.
+std::string RootRelative(const std::filesystem::path& path) { return FileSystem::getRelativePath(path).generic_string(); }
 
 // assimp's strings are UTF-8.
 std::filesystem::path Utf8Path(std::string_view text) {
@@ -211,7 +215,8 @@ private:
     const std::filesystem::path& path;
     const std::string key;
     const aiScene& model;
-    Scene& scene;
+    // Null when only the mesh is wanted (LoadMesh()).
+    Scene* scene;
     ResourceManager& resources;
 
     // By assimp material index, made when a mesh first uses one.
@@ -227,7 +232,7 @@ private:
     std::set<std::string> unsupported;
 
 public:
-    Importer(const std::filesystem::path& file, const aiScene& imported, Scene& target, ResourceManager& resourceManager)
+    Importer(const std::filesystem::path& file, const aiScene& imported, Scene* target, ResourceManager& resourceManager)
         : path(file), key(ModelKey(file)), model(imported), scene(target), resources(resourceManager),
           materials(imported.mNumMaterials, nullptr) {
         for (unsigned int i = 0; i < model.mNumLights; ++i) {
@@ -250,14 +255,24 @@ public:
 
         if (model.HasAnimations()) unsupported.insert("animations");
         if (model.HasCameras()) unsupported.insert("cameras");
-        for (const std::string& feature : unsupported) {
-            Log::write(Log::Warning, "Model '", key, "': ignored ", feature, "\n");
-        }
+        ReportUnsupported();
 
         const float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count();
         Log::write(Log::Info, "Model '", key, "': ", entityCount, " entities, ", meshCount, " meshes and ",
             textureCount, " textures loaded in ", seconds, " s\n");
         return &root;
+    }
+
+    // The mesh Run() gives the model's entity, without entities, materials
+    // or textures: what a scene file needs of the model.
+    Mesh* LoadMesh(std::chrono::steady_clock::time_point start) {
+        PlaceNode(*model.mRootNode, glm::mat4(1.0f));
+        Mesh* mesh = FindOrBuildMesh(SlotMaterials());
+        ReportUnsupported();
+
+        const float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count();
+        if (mesh) Log::write(Log::Info, "Model '", key, "': mesh loaded in ", seconds, " s\n");
+        return mesh;
     }
 
 private:
@@ -346,7 +361,7 @@ private:
         }
         if (FindTexture(source, { aiTextureType_OPACITY })) unsupported.insert("opacity maps");
 
-        return scene.CreateMaterial(material);
+        return scene->CreateMaterial(material);
     }
 
     // --------
@@ -374,9 +389,11 @@ private:
 
         std::optional<TextureSource> source = ImageSource(file.C_Str());
         if (!source) return nullptr;
+        std::optional<EmbeddedImage> embedded;
+        if (std::holds_alternative<std::vector<std::uint8_t>>(*source)) embedded = EmbeddedImage { RootRelative(path), file.C_Str() };
 
         // Texture logs why it failed.
-        const ResourceHandle<Texture> handle = resources.Load<Texture>(id, std::move(*source), MakeSettings(material, *type, modes, srgb));
+        const ResourceHandle<Texture> handle = resources.Load<Texture>(id, std::move(*source), MakeSettings(material, *type, modes, srgb), std::move(embedded));
         if (!handle) return nullptr;
         ++textureCount;
         return handle.Get();
@@ -415,16 +432,8 @@ private:
     // material, a submesh each (as Unreal's Combine Meshes does). The file's
     // node hierarchy is not kept.
     void ImportMesh(Entity& root) {
-        // The assimp material of each slot, in the order they are first used.
-        std::vector<unsigned int> slotMaterials;
-        for (const PlacedMesh& placed : placedMeshes) {
-            const unsigned int material = model.mMeshes[placed.mesh]->mMaterialIndex;
-            if (std::ranges::find(slotMaterials, material) == slotMaterials.end()) slotMaterials.push_back(material);
-        }
-
-        // Built the same way every time, so a second import can reuse it.
-        Mesh* mesh = resources.GetResource<Mesh>(key);
-        if (!mesh) mesh = BuildMesh(slotMaterials);
+        const std::vector<unsigned int> slotMaterials = SlotMaterials();
+        Mesh* mesh = FindOrBuildMesh(slotMaterials);
         if (!mesh) return;
 
         std::vector<Material*> slots;
@@ -433,6 +442,23 @@ private:
         }
         root.AddComponent<MeshComponent>(mesh, std::move(slots));
         root.AddComponent<BoundingVolumeComponent>();
+    }
+
+    // The assimp material of each slot, in the order they are first used.
+    std::vector<unsigned int> SlotMaterials() const {
+        std::vector<unsigned int> slotMaterials;
+        for (const PlacedMesh& placed : placedMeshes) {
+            const unsigned int material = model.mMeshes[placed.mesh]->mMaterialIndex;
+            if (std::ranges::find(slotMaterials, material) == slotMaterials.end()) slotMaterials.push_back(material);
+        }
+        return slotMaterials;
+    }
+
+    // Built the same way every time, so a second import, or a scene file,
+    // can reuse it.
+    Mesh* FindOrBuildMesh(const std::vector<unsigned int>& slotMaterials) {
+        if (Mesh* mesh = resources.GetResource<Mesh>(key)) return mesh;
+        return BuildMesh(slotMaterials);
     }
 
     Mesh* BuildMesh(const std::vector<unsigned int>& slotMaterials) {
@@ -453,7 +479,7 @@ private:
         }
         if (meshData.indices.empty()) return nullptr;
 
-        const ResourceHandle<Mesh> handle = resources.Load<Mesh>(key, std::move(meshData));
+        const ResourceHandle<Mesh> handle = resources.Load<Mesh>(key, std::move(meshData), MeshSource(ModelMesh { RootRelative(path) }));
         if (!handle) return nullptr;
         ++meshCount;
         return handle.Get();
@@ -550,10 +576,17 @@ private:
     }
 
     Entity& AddEntity(const std::string& name, Entity* parent, const glm::mat4& transform) {
-        Entity& entity = scene.CreateEntity(scene.MakeUniqueName(name, parent), parent);
+        Entity& entity = scene->CreateEntity(scene->MakeUniqueName(name, parent), parent);
         entity.AddComponent<TransformComponent>()->SetLocalMatrix(transform);
         ++entityCount;
         return entity;
+    }
+
+    // Reported once each.
+    void ReportUnsupported() const {
+        for (const std::string& feature : unsupported) {
+            Log::write(Log::Warning, "Model '", key, "': ignored ", feature, "\n");
+        }
     }
 
     // Scene::MakeUniqueName() numbers the repeats.
@@ -580,7 +613,44 @@ Entity* ImportModel(const std::filesystem::path& path, Scene& scene, ResourceMan
         return nullptr;
     }
 
-    return Importer(path, *model, scene, resources).Run(start);
+    return Importer(path, *model, &scene, resources).Run(start);
+}
+
+Mesh* LoadModelMesh(const std::filesystem::path& path, ResourceManager& resources) {
+    if (Mesh* mesh = resources.GetResource<Mesh>(ModelKey(path))) return mesh;
+
+    const auto start = std::chrono::steady_clock::now();
+    const std::string file = Utf8String(path);
+    Assimp::Importer importer;
+    importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+    const aiScene* model = importer.ReadFile(file, PostProcessFlags);
+    if (!model || !model->mRootNode) {
+        Log::write(Log::Error, "Model '", file, "': ", importer.GetErrorString(), "\n");
+        return nullptr;
+    }
+    return Importer(path, *model, nullptr, resources).LoadMesh(start);
+}
+
+std::vector<std::optional<std::vector<std::uint8_t>>> ReadEmbeddedImages(const std::filesystem::path& path, const std::vector<std::string>& names) {
+    std::vector<std::optional<std::vector<std::uint8_t>>> images(names.size());
+
+    // No post-processing: only the images are wanted.
+    const std::string file = Utf8String(path);
+    Assimp::Importer importer;
+    const aiScene* model = importer.ReadFile(file, 0);
+    if (!model) {
+        Log::write(Log::Error, "Model '", file, "': ", importer.GetErrorString(), "\n");
+        return images;
+    }
+
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        // A height of 0 means pcData holds a file's bytes, not texels.
+        const aiTexture* embedded = model->GetEmbeddedTexture(names[i].c_str());
+        if (!embedded || embedded->mHeight != 0) continue;
+        const auto* bytes = reinterpret_cast<const std::uint8_t*>(embedded->pcData);
+        images[i] = std::vector<std::uint8_t>(bytes, bytes + embedded->mWidth);
+    }
+    return images;
 }
 
 bool IsModelFile(const std::filesystem::path& path) {

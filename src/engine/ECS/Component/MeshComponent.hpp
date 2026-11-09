@@ -30,8 +30,9 @@ private:
     std::vector<Material*> materials;
 
 public:
-    GNC_COMPONENT_TYPE(MeshComponent, "Mesh")
+    GNC_COMPONENT_TYPE(MeshComponent, "Mesh", "Mesh")
 
+    MeshComponent() = default;
     MeshComponent(Mesh* m, std::vector<Material*> mats) : mesh(m), materials(std::move(mats)) {}
     MeshComponent(Mesh* m, Material* mat) : MeshComponent(m, std::vector<Material*> { mat }) {}
 
@@ -48,10 +49,12 @@ public:
     std::size_t GetSlotCount() const { return mesh ? mesh->GetSubMeshes().size() : materials.size(); }
 
     // Each slot's material factors are listed as the mesh's own, so editing a
-    // material that several slots or meshes share changes all of them.
+    // material that several slots or meshes share changes all of them. Those
+    // have no file key: a scene file saves the materials themselves, and
+    // which one each slot holds.
     static void Reflect(PropertyList<MeshComponent>& properties) {
         properties.Add<Resource*>(
-            { .name = "Mesh", .resourceType = &typeid(Mesh) },
+            { .name = "Mesh", .key = "mesh", .resourceType = &typeid(Mesh) },
             [](const MeshComponent& component) -> Resource* { return component.GetMesh(); },
             [](MeshComponent& component, Resource* value) { component.SetMesh(dynamic_cast<Mesh*>(value)); });
 
@@ -59,6 +62,13 @@ public:
         const auto hasMaterial = [](const MeshComponent& component, std::size_t slot, PropertyInfo& info) {
             info.visible = component.GetMaterial(slot) != nullptr;
         };
+
+        // Saved, not shown: there is no material picker yet.
+        properties.AddElement<Material*>(
+            { .name = "Material", .key = "materials", .category = "Material", .visible = false }, slotCount,
+            [](const MeshComponent& component, std::size_t slot) { return component.GetMaterial(slot); },
+            [](MeshComponent& component, std::size_t slot, Material* value) { component.SetMaterial(slot, value); },
+            [](const MeshComponent&, std::size_t, PropertyInfo&) {});
 
         properties.AddElement<glm::vec3>(
             { .name = "Base Color", .category = "Material", .hint = PropertyHint::Color }, slotCount,

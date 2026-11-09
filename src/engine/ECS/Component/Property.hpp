@@ -18,18 +18,19 @@
 namespace GNC {
 
 class Resource;
+struct Material;
 
 // Properties
 // A component type's properties as data, so code that does not know the type
-// (the Inspector, later scene files) can read and write them. A type lists
-// them in a static Reflect(PropertyList<T>&), which ComponentRegistry calls.
+// (the Inspector, scene files) can read and write them. A type lists them in
+// a static Reflect(PropertyList<T>&), which ComponentRegistry calls.
 
 // ------
 // Values
 // ------
 // An enum is held as its int value. A Resource* is null or a resource of
-// PropertyInfo::resourceType.
-using PropertyValue = std::variant<bool, int, float, glm::vec3, glm::quat, Resource*>;
+// PropertyInfo::resourceType. A Material* is one of the scene's.
+using PropertyValue = std::variant<bool, int, float, glm::vec3, glm::quat, Resource*, Material*>;
 
 enum class PropertyHint {
     None,
@@ -43,6 +44,10 @@ enum class PropertyHint {
 // ----
 struct PropertyInfo {
     std::string name {};
+    // The scene file's name for it ("innerConeAngle"), apart from the label so
+    // renaming one does not break saved scenes. Empty: not saved, for a
+    // property that shows what is saved elsewhere (a mesh's material values).
+    std::string key {};
     // Shown as a heading above a run of properties with the same category.
     std::string category {};
     PropertyHint hint = PropertyHint::None;
@@ -57,6 +62,9 @@ struct PropertyInfo {
     // May carry a unit ("%.2f cd"). Empty: the editor's default.
     std::string format {};
     std::vector<std::string> enumNames {};
+    // The scene file's name for each enum value, in enumNames' order; written
+    // instead of the int, so reordering the enum keeps old files' meaning.
+    std::vector<std::string> enumKeys {};
     // A Resource* property's type, e.g. &typeid(Mesh).
     const std::type_info* resourceType = nullptr;
     bool visible = true;
@@ -70,6 +78,9 @@ struct PropertyInfo {
 // and ignored by the others.
 struct Property {
     PropertyInfo info;
+    // A default value of the property's type, for code that needs the type
+    // without a component to get from (reading a scene file).
+    PropertyValue prototype;
     std::function<PropertyValue(const Component&, std::size_t)> get;
     std::function<void(Component&, std::size_t, const PropertyValue&)> set;
     // Optional: changes a copy of info for one component before it is drawn
@@ -101,6 +112,7 @@ public:
 
         properties.push_back(Property {
             .info = std::move(info),
+            .prototype = PropertyValue(std::in_place_type<Value>),
             .get = [get](const Component& component, std::size_t) -> PropertyValue {
                 return Value(get(static_cast<const T&>(component)));
             },
@@ -130,6 +142,7 @@ public:
 
         properties.push_back(Property {
             .info = std::move(info),
+            .prototype = PropertyValue(std::in_place_type<Value>),
             .get = [get](const Component& component, std::size_t element) -> PropertyValue {
                 return Value(get(static_cast<const T&>(component), element));
             },

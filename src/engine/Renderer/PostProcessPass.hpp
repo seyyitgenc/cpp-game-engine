@@ -7,6 +7,7 @@
 
 #include "RenderPass.hpp"
 #include "RenderTarget.hpp"
+#include "ShaderTypes.hpp"
 
 namespace GNC {
 
@@ -16,8 +17,8 @@ class LightingPass;
 // Post-processing pass
 // Exposure and tonemapping from the lighting pass's linear HDR output into the
 // scene image (GetOutput()), which the Viewport panel shows through ImGui,
-// then outlines from the G-buffer's entity ids and depth. Leaves it in
-// eShaderReadOnlyOptimal. shaders/post_process.slang.
+// then the editor grid and outlines from the G-buffer's entity ids and
+// depth. Leaves it in eShaderReadOnlyOptimal. shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
 public:
     // UNORM, holding values the shader has already sRGB encoded: ImGui copies
@@ -35,6 +36,7 @@ private:
 
     // Physical light units will want a camera exposure model (EV100) here.
     float exposure = 1.0f;
+    GridPlane gridPlane = GridPlane::None;
 
 public:
     // GeometryPushConstants::entityId values in [begin, end).
@@ -62,6 +64,9 @@ public:
                     GeometryPass* gPass, LightingPass* lPass);
 
     const Attachment& GetOutput() const { return output; }
+
+    void SetExposure(float value) { exposure = value; }
+    void SetGridPlane(GridPlane plane) { gridPlane = plane; }
 
     // This frame's; either may be empty.
     void SetOutlinedIds(IdRange selected, IdRange hovered) {

@@ -10,6 +10,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -32,9 +33,13 @@ public:
 
     struct Entry {
         ComponentTypeID typeID;
+        const char* key;
         const char* name;
         std::string icon;
         std::function<void(Entity&)> addTo;
+        // A default-constructed T, for a scene file to set the values of; empty
+        // for a type without a default constructor, which cannot be loaded.
+        std::function<Component*(Entity&)> create;
         std::vector<Property> properties;
     };
 
@@ -59,6 +64,11 @@ public:
             }
         }
 
+        std::function<Component*(Entity&)> create;
+        if constexpr (std::is_default_constructible_v<T>) {
+            create = [](Entity& entity) -> Component* { return entity.AddComponent<T>(); };
+        }
+
         std::vector<Property> properties;
         if constexpr (requires(PropertyList<T>& list) { T::Reflect(list); }) {
             PropertyList<T> list;
@@ -68,9 +78,11 @@ public:
 
         entries.push_back(Entry {
             .typeID = T::StaticTypeID(),
+            .key = T::StaticTypeKey(),
             .name = T::StaticTypeName(),
             .icon = std::move(type.icon),
             .addTo = std::move(type.addTo),
+            .create = std::move(create),
             .properties = std::move(properties)
         });
     }
@@ -79,6 +91,11 @@ public:
 
     const Entry* Find(ComponentTypeID typeID) const {
         const auto it = std::ranges::find(entries, typeID, &Entry::typeID);
+        return it != entries.end() ? &*it : nullptr;
+    }
+
+    const Entry* FindByKey(std::string_view key) const {
+        const auto it = std::ranges::find_if(entries, [&](const Entry& entry) { return key == entry.key; });
         return it != entries.end() ? &*it : nullptr;
     }
 };

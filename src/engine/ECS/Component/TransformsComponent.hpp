@@ -25,7 +25,7 @@ private:
     mutable bool transformDirty = true;
 
 public:
-    GNC_COMPONENT_TYPE(TransformComponent, "Transform")
+    GNC_COMPONENT_TYPE(TransformComponent, "Transform", "Transform")
 
     void SetPosition(const glm::vec3& pos) {
         position = pos;
@@ -87,19 +87,19 @@ public:
 
     static void Reflect(PropertyList<TransformComponent>& properties) {
         properties.Add<glm::vec3>(
-            { .name = "Position", .step = 0.05f },
+            { .name = "Position", .key = "position", .step = 0.05f },
             [](const TransformComponent& transform) { return transform.GetPosition(); },
             [](TransformComponent& transform, const glm::vec3& value) { transform.SetPosition(value); });
 
         properties.Add<glm::quat>(
-            { .name = "Rotation" },
+            { .name = "Rotation", .key = "rotation" },
             [](const TransformComponent& transform) { return transform.GetRotation(); },
             [](TransformComponent& transform, const glm::quat& value) { transform.SetRotation(value); });
 
         // Not 0: that flattens the model matrix, and lights normalize their
         // local -Z axis.
         properties.Add<glm::vec3>(
-            { .name = "Scale", .min = 0.001f, .step = 0.01f },
+            { .name = "Scale", .key = "scale", .min = 0.001f, .step = 0.01f },
             [](const TransformComponent& transform) { return transform.GetScale(); },
             [](TransformComponent& transform, const glm::vec3& value) { transform.SetScale(value); });
     }

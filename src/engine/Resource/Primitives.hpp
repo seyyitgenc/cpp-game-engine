@@ -2,10 +2,13 @@
 
 #include <cmath>
 #include <cstdint>
+#include <format>
+#include <string>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
+#include "ResourceManager.hpp"
 #include "Types/Mesh.hpp"
 
 namespace GNC {
@@ -70,6 +73,27 @@ inline MeshData CreatePlane(float size) {
     data.indices = { 0, 1, 2, 0, 2, 3 };
     GenerateTangents(data);
     return data;
+}
+
+// ----------
+// Primitives
+// ----------
+// Each source's resource id is made of its arguments, so equal ones share a
+// Mesh, whoever loads them (App, a scene file).
+inline std::string PrimitiveId(const SpherePrimitive& sphere) {
+    return std::format("Sphere ({}, {}, {})", sphere.radius, sphere.stacks, sphere.slices);
+}
+inline std::string PrimitiveId(const PlanePrimitive& plane) { return std::format("Plane ({})", plane.size); }
+
+inline MeshData CreatePrimitive(const SpherePrimitive& sphere) { return CreateSphere(sphere.radius, sphere.stacks, sphere.slices); }
+inline MeshData CreatePrimitive(const PlanePrimitive& plane) { return CreatePlane(plane.size); }
+
+// nullptr when the upload fails.
+template<typename Primitive>
+Mesh* LoadPrimitive(ResourceManager& resources, const Primitive& primitive) {
+    const std::string id = PrimitiveId(primitive);
+    if (Mesh* mesh = resources.GetResource<Mesh>(id)) return mesh;
+    return resources.Load<Mesh>(id, CreatePrimitive(primitive), MeshSource(primitive)).Get();
 }
 
 } // namespace GNC

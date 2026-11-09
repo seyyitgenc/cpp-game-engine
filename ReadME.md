@@ -25,17 +25,21 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Viewport panel: the scene, rendered at the panel's size
 - Click an object in the Viewport to select it (GPU picking, exact to the pixel): the first click selects the whole model, the next one the part. The selection and what a click would select are outlined.
 - Move, rotate and scale the selection with a gizmo (ImGuizmo), in global or local space
+- Editor grid on the ground plane (y = 0), or on z = 0 in 2D scenes, with the axes colored; hidden behind objects, fading with distance (the Viewport toolbar or View > Grid)
 - Show the bounding volumes as wireframe, faint where the scene hides them (the Viewport toolbar or View > Bounding Volumes)
+- Orientation gizmo in the Viewport's corner: shows the world axes, and a click on one turns the view to look along it, around the selection
 - Entity hierarchy: transforms are relative to the parent, and deleting or deactivating an entity takes its children with it
 - Scene panel: the hierarchy, with each entity's components
 - Inspector: edits the selected entity's components
 - Create and delete entities, and add or remove components, from menus
 - Import models with assimp (glTF, OBJ, FBX, Collada, ...) from File > Import Model, as one entity tree: meshes, materials, textures and lights
+- Scenes saved as `.gncscene` files (JSON, see [docs/SceneFormat.md](docs/SceneFormat.md)) and opened from the File menu; new scenes are 2D or 3D
 - Engine panel: FPS and camera position
 
 ### Core
 
-- Entity-component system; components describe their properties once, and the Inspector edits them from that
+- Entity-component system; components describe their properties once, and the Inspector and scene files work from that
+- Camera component (perspective or orthographic, after glTF's camera); the scene names the one it is seen through
 - Event bus with listener priorities; the UI sees input first and can keep it from the scene
 - Resource manager, procedural meshes (sphere, plane)
 - Fly camera
@@ -51,7 +55,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 
 - A `make` for CMake to drive. MSYS2's `mingw-w64-x86_64-make` installs it as `mingw32-make`; pass `-G "MinGW Makefiles"` to the configure step to use it.
 
-Dear ImGui (docking branch), ImGuizmo, stb_image, Font Awesome and IconFontCppHeaders are included in `src/external`.
+Dear ImGui (docking branch), ImGuizmo, nlohmann/json, stb_image, Font Awesome and IconFontCppHeaders are included in `src/external`.
 
 ## Build and run
 
@@ -63,6 +67,8 @@ From Git Bash:
     ./run.sh                                 # or: cd bin/debug && ./engine.exe
 
 The executable, compiled shaders, fonts and models go to `bin/debug/` (or `bin/release/`). Every folder under `resources/objects` that holds a `.gltf`, `.glb`, `.obj`, `.fbx` or `.dae` is copied to `models/` there, and File > Import Model lists every file in it that assimp reads. Re-run the configure step after adding a `.cpp`, `.slang` or model file: they are collected with `file(GLOB)`.
+
+Scenes are not copied: the editor opens and saves the `.gncscene` files in `resources/scenes` in place, and starts with `Showcase.gncscene`.
 
 `backpack.obj` (from LearnOpenGL) stores its texture coordinates upside down compared with other OBJ files, so its textures come out scrambled. `cyborg.blend` fails in assimp's Blender importer; import `cyborg.obj` instead.
 
@@ -78,6 +84,8 @@ The executable, compiled shaders, fonts and models go to `bin/debug/` (or `bin/r
 | Left click in the Viewport | Select a model; click again to select the part |
 | W / E / R | Move / rotate / scale gizmo |
 | Delete | Delete the selected entity |
+| Ctrl+S | Save the scene |
+| Click an axis of the orientation gizmo | View from that side; again for the opposite side |
 | Esc | Quit |
 
 ## TODO
@@ -100,13 +108,19 @@ The executable, compiled shaders, fonts and models go to `bin/debug/` (or `bin/r
 - [ ] Undo / redo
 - [ ] Viewport icons for lights and other entities without a mesh, so they can be clicked
 - [ ] Camera control in a Viewport dragged out into its own window
+- [ ] Ask to save unsaved changes before opening another scene or quitting
+- [ ] Remember the editor camera per scene and per user, instead of starting at the scene's camera
+- [ ] Choose the scene's camera, and edit the scene's environment (ambient light, exposure), in the editor
+- [ ] A material picker for mesh slots
+- [ ] 2D scenes: an editor camera that pans, a gizmo kept to the plane, 2D components (sprite, 2D camera) in the menus
 
 ### Engine
 
 - [ ] Editor / Engine hierarchy
   - [ ] Engine as a library, linked by an editor and a game executable (`GNC_EDITOR` define)
   - [ ] Leave the editor out of game builds: ImGui panels, picking and its entity id target, gizmos
-  - [ ] Scene files, saved and loaded through the property system
+  - [x] Scene files, saved and loaded through the property system
+  - [ ] Play mode that renders through the scene's camera
   - [ ] Asset cooking: glTF to binary meshes, textures to BC7 (KTX2)
   - [ ] Pack file for the cooked assets, read through `FileSystem`
 - [ ] Free materials no entity uses any more (deleting an entity keeps its material)

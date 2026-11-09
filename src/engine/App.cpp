@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -14,6 +13,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "ECS/Component/BoundingVolumeComponent.hpp"
+#include "ECS/Component/CameraComponent.hpp"
 #include "ECS/Component/LightComponent.hpp"
 #include "ECS/Component/MeshComponent.hpp"
 #include "ECS/Component/OrbitComponent.hpp"
@@ -21,10 +21,13 @@
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
 #include "Scene/ModelImporter.hpp"
+#include "Scene/SceneSerializer.hpp"
 #include "UI/Icons.hpp"
+#include "UI/ImGuiMenu.hpp"
 #include "UI/Panels/DemoWindowPanel.hpp"
 #include "UI/Panels/EnginePanel.hpp"
 #include "UI/Panels/InspectorPanel.hpp"
+#include "UI/Panels/SaveScenePanel.hpp"
 #include "UI/Panels/ScenePanel.hpp"
 #include "UI/Panels/ViewportPanel.hpp"
 #include "Utils/FileSystem.hpp"
@@ -36,6 +39,10 @@ namespace {
 
 constexpr int WindowWidth = 1600;
 constexpr int WindowHeight = 900;
+
+// In FileSystem::getSceneDirectory(); a new 3D scene if it does not load.
+constexpr const char* StartupScene = "Showcase.gncscene";
+constexpr const char* SceneExtension = ".gncscene";
 
 // Rotation that points an entity's -Z axis (the way lights shine) along
 // direction.
@@ -56,6 +63,17 @@ std::vector<std::filesystem::path> FindModels() {
     return models;
 }
 
+std::vector<std::filesystem::path> FindScenes() {
+    std::vector<std::filesystem::path> scenes;
+    std::error_code error;
+    for (auto it = std::filesystem::directory_iterator(FileSystem::getSceneDirectory(), error);
+         !error && it != std::filesystem::directory_iterator(); it.increment(error)) {
+        if (it->is_regular_file() && it->path().extension() == SceneExtension) scenes.push_back(it->path());
+    }
+    std::ranges::sort(scenes);
+    return scenes;
+}
+
 } // namespace
 
 App::App()
@@ -69,8 +87,8 @@ App::App()
       gui(eventBus, window, vulkan, renderer) {
     SubscribeToEvents();
     RegisterComponents();
-    BuildScene();
     BuildGui();
+    if (!OpenScene(FileSystem::getSceneDirectory() / StartupScene)) NewScene(SceneDimension::ThreeD);
 }
 
 void App::Run() {
@@ -117,6 +135,10 @@ void App::RenderTraversal() {
         renderer.Resize(window.GetFramebufferExtent());
         resizePending = false;
     }
+
+    renderer.SetAmbientLight(scene.GetEnvironment().ambientColor);
+    renderer.SetExposure(scene.GetEnvironment().exposure);
+    renderer.SetGridPlane(scene.GetDimension() == SceneDimension::TwoD ? GridPlane::XY : GridPlane::XZ);
 
     // The UI first: ImGuiPass records the draw data it leaves, and the
     // Viewport panel sets the scene's size.
@@ -166,12 +188,34 @@ void App::SubscribeToEvents() {
         return true;
     }));
 
+    // As File > Save Scene.
+    subscriptions.push_back(eventBus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
+        if (e.GetKey() != GLFW_KEY_S || !(e.GetMods() & GLFW_MOD_CONTROL) || e.IsRepeat()) return false;
+        SaveOrAskForName();
+        return true;
+    }));
+
     subscriptions.push_back(eventBus.Subscribe<QuitApplicationEvent>([this](QuitApplicationEvent&) {
         window.Close();
         return true;
     }));
 
     // Scene requests from the UI (SceneEvents.hpp).
+    subscriptions.push_back(eventBus.Subscribe<NewSceneEvent>([this](NewSceneEvent& e) {
+        NewScene(e.GetDimension());
+        return true;
+    }));
+
+    subscriptions.push_back(eventBus.Subscribe<OpenSceneEvent>([this](OpenSceneEvent& e) {
+        OpenScene(e.GetPath());
+        return true;
+    }));
+
+    subscriptions.push_back(eventBus.Subscribe<SaveSceneEvent>([this](SaveSceneEvent& e) {
+        SaveScene(e.GetPath());
+        return true;
+    }));
+
     subscriptions.push_back(eventBus.Subscribe<CreateEntityEvent>([this](CreateEntityEvent& e) {
         Entity* parent = e.GetParent();
         if (parent && !scene.Contains(parent)) return true;
@@ -212,26 +256,17 @@ void App::SubscribeToEvents() {
     }));
 }
 
-Mesh* App::LoadMesh(const std::string& id, MeshData data) {
-    ResourceHandle<Mesh> handle = resources.Load<Mesh>(id, std::move(data));
-    if (!handle) {
-        throw std::runtime_error("App: failed to upload mesh '" + id + "'");
-    }
-    return handle.Get();
-}
-
 // In the order the Add Component menus list them.
 void App::RegisterComponents() {
     componentTypes.Register<TransformComponent>({ .icon = ICON_FA_UP_DOWN_LEFT_RIGHT });
 
-    // A material of its own, so it can be edited, and a bounding volume, so
-    // it is culled. The mesh is looked up when added, so this can run before
-    // BuildScene() loads it.
+    // A sphere with a material of its own, so it can be edited, and a
+    // bounding volume, so it is culled.
     componentTypes.Register<MeshComponent>({
         .icon = ICON_FA_DRAW_POLYGON,
         .addTo = [this](Entity& entity) {
             Material* material = scene.CreateMaterial({ .metallicFactor = 0.0f, .roughnessFactor = 0.5f });
-            entity.AddComponent<MeshComponent>(resources.GetResource<Mesh>("sphere"), material);
+            entity.AddComponent<MeshComponent>(LoadPrimitive(resources, SpherePrimitive {}), material);
             entity.AddComponent<BoundingVolumeComponent>();
         }
     });
@@ -239,6 +274,8 @@ void App::RegisterComponents() {
     componentTypes.Register<BoundingVolumeComponent>({ .icon = ICON_FA_VECTOR_SQUARE });
 
     componentTypes.Register<LightComponent>({ .icon = ICON_FA_LIGHTBULB });
+
+    componentTypes.Register<CameraComponent>({ .icon = ICON_FA_VIDEO });
 
     // Around where the entity is now.
     componentTypes.Register<OrbitComponent>({
@@ -251,134 +288,6 @@ void App::RegisterComponents() {
     });
 }
 
-// A PBR showcase: a material chart over a ground plane, lit by a dim sun, a
-// spot light from above, and three coloured point lights circling the chart.
-// Light intensities are in physical units (lux / candela), see LightComponent.
-void App::BuildScene() {
-    camera.SetPerspective(45.0f, camera.GetAspectRatio(), 0.1f, 100.0f);
-    camera.SetPosition({ 0.0f, 1.6f, 7.5f });
-    camera.LookAt({ 0.0f, 0.5f, 0.0f });
-
-    Mesh* sphereMesh = LoadMesh("sphere", CreateSphere(1.0f, 64, 128));
-    Mesh* planeMesh = LoadMesh("plane", CreatePlane(1.0f));
-
-    // ------
-    // Ground
-    // ------
-    Entity& ground = scene.CreateEntity("Ground");
-    auto* groundTransform = ground.AddComponent<TransformComponent>();
-    groundTransform->SetPosition({ 0.0f, -0.4f, 0.0f });
-    groundTransform->SetScale({ 30.0f, 1.0f, 30.0f });
-    ground.AddComponent<MeshComponent>(planeMesh, scene.CreateMaterial({
-        .baseColorFactor = { 0.18f, 0.18f, 0.18f, 1.0f },
-        .metallicFactor = 0.0f,
-        .roughnessFactor = 0.9f
-    }));
-    ground.AddComponent<BoundingVolumeComponent>();
-
-    // --------------
-    // Material Chart
-    // --------------
-    // Roughness rises from left to right. Bottom row: red plastic, a
-    // dielectric. Top row: gold, a metal (base color is gold's measured
-    // reflectance). The spheres sit on the ground.
-    struct ChartRow {
-        const char* name;
-        glm::vec3 baseColor;
-        float metallic;
-        float height;
-    };
-    const ChartRow rows[] = {
-        { "Plastic", { 0.8f, 0.08f, 0.08f }, 0.0f, 0.0f },
-        { "Gold", { 1.0f, 0.766f, 0.336f }, 1.0f, 1.1f },
-    };
-    constexpr int Columns = 7;
-    constexpr float Spacing = 1.1f;
-    constexpr float SphereRadius = 0.4f;
-
-    for (const ChartRow& row : rows) {
-        for (int column = 0; column < Columns; ++column) {
-            const float t = static_cast<float>(column) / static_cast<float>(Columns - 1);
-
-            Entity& sphere = scene.CreateEntity(std::string(row.name) + " " + std::to_string(column));
-            auto* transform = sphere.AddComponent<TransformComponent>();
-            transform->SetPosition({ (static_cast<float>(column) - (Columns - 1) * 0.5f) * Spacing, row.height, 0.0f });
-            transform->SetScale(glm::vec3(SphereRadius));
-            sphere.AddComponent<MeshComponent>(sphereMesh, scene.CreateMaterial({
-                .baseColorFactor = glm::vec4(row.baseColor, 1.0f),
-                .metallicFactor = row.metallic,
-                .roughnessFactor = glm::mix(0.05f, 1.0f, t)
-            }));
-            sphere.AddComponent<BoundingVolumeComponent>(BoundingVolumeComponent::Shape::Sphere);
-        }
-    }
-
-    // ---
-    // Sun
-    // ---
-    // Dim and warm, from above and behind the camera's left shoulder.
-    Entity& sun = scene.CreateEntity("Sun");
-    sun.AddComponent<TransformComponent>()->SetRotation(FacingDirection({ 0.5f, -1.0f, -0.6f }));
-    auto* sunLight = sun.AddComponent<LightComponent>(LightType::Directional);
-    sunLight->SetColor({ 1.0f, 0.93f, 0.82f });
-    sunLight->SetIntensity(1.0f); // lux
-
-    // ----
-    // Spot
-    // ----
-    // Straight down onto the middle of the chart from above and in front.
-    const glm::vec3 spotPosition { 0.0f, 5.0f, 3.0f };
-    Entity& spot = scene.CreateEntity("Spot Light");
-    auto* spotTransform = spot.AddComponent<TransformComponent>();
-    spotTransform->SetPosition(spotPosition);
-    spotTransform->SetRotation(FacingDirection(glm::vec3(0.0f, 0.5f, 0.0f) - spotPosition));
-    auto* spotLight = spot.AddComponent<LightComponent>(LightType::Spot);
-    spotLight->SetIntensity(60.0f); // candela
-    spotLight->SetRange(15.0f);
-    spotLight->SetSpotCone(glm::radians(15.0f), glm::radians(25.0f));
-
-    // ---------------------
-    // Orbiting Point Lights
-    // ---------------------
-    // Each carries a small emissive sphere, so you can see where it is. The
-    // light sits inside its own bulb and the bulb's surface faces away from
-    // it, so the bulb is not lit by its own light.
-    struct Orbiter {
-        glm::vec3 color;
-        float height;
-        float speed; // radians per second
-        float phase;
-    };
-    const Orbiter orbiters[] = {
-        { { 1.0f, 0.55f, 0.25f }, 0.6f, 0.5f, 0.0f },
-        { { 0.3f, 0.6f, 1.0f }, 1.6f, -0.35f, 2.1f },
-        { { 1.0f, 0.3f, 0.8f }, 2.4f, 0.25f, 4.2f },
-    };
-    constexpr float OrbitRadius = 4.0f;
-    constexpr float BulbRadius = 0.08f;
-
-    int index = 0;
-    for (const Orbiter& orbiter : orbiters) {
-        Entity& entity = scene.CreateEntity("Point Light " + std::to_string(index++));
-        entity.AddComponent<TransformComponent>()->SetScale(glm::vec3(BulbRadius));
-        entity.AddComponent<MeshComponent>(sphereMesh, scene.CreateMaterial({
-            .baseColorFactor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .metallicFactor = 0.0f,
-            .roughnessFactor = 1.0f,
-            .emissiveFactor = orbiter.color,
-            .emissiveStrength = 8.0f
-        }));
-        entity.AddComponent<BoundingVolumeComponent>(BoundingVolumeComponent::Shape::Sphere);
-
-        auto* light = entity.AddComponent<LightComponent>(LightType::Point);
-        light->SetColor(orbiter.color);
-        light->SetIntensity(20.0f); // candela
-        light->SetRange(12.0f);
-
-        entity.AddComponent<OrbitComponent>(glm::vec3(0.0f, orbiter.height, 0.0f), OrbitRadius, orbiter.speed, orbiter.phase);
-    }
-}
-
 // Menu entries and panels appear in the order added.
 void App::BuildGui() {
     ImGuiMenu& menuBar = gui.GetMenuBar();
@@ -387,6 +296,17 @@ void App::BuildGui() {
     // File
     // ----
     ImGuiMenu& file = menuBar.GetMenu("File");
+    ImGuiMenu& newScene = file.GetMenu("New Scene");
+    newScene.AddItem("3D", [this] { eventBus.Enqueue<NewSceneEvent>(SceneDimension::ThreeD); });
+    newScene.AddItem("2D", [this] { eventBus.Enqueue<NewSceneEvent>(SceneDimension::TwoD); });
+    // Every file in the scene directory; a save lists it again.
+    openSceneMenu = &file.GetMenu("Open Scene");
+    UpdateSceneMenu();
+    saveScenePanel = gui.AddPanel<SaveScenePanel>("Save Scene As", eventBus, scene);
+    // Ctrl+S is bound in SubscribeToEvents().
+    file.AddItem("Save Scene", [this] { SaveOrAskForName(); }, { .shortcut = "Ctrl+S" });
+    file.AddItem("Save Scene As...", [this] { saveScenePanel->Open(); });
+    file.AddSeparator();
     ImGuiMenu& importModel = file.GetMenu("Import Model");
     const std::filesystem::path modelRoot = FileSystem::getPath("models");
     const std::vector<std::filesystem::path> models = FindModels();
@@ -416,11 +336,107 @@ void App::BuildGui() {
     view.AddPanelItem(*gui.AddPanel<InspectorPanel>("Inspector", selection, componentTypes, resources, eventBus));
     view.AddPanelItem(*gui.AddPanel<EnginePanel>("Engine", camera));
     view.AddSeparator();
-    // A display setting, read when the frame is drawn, so set directly.
+    // Display settings, read when the frame is drawn, so set directly.
+    view.AddItem("Grid", [this] { renderer.SetShowGrid(!renderer.GetShowGrid()); },
+        { .checked = [this] { return renderer.GetShowGrid(); } });
     view.AddItem("Bounding Volumes", [this] { renderer.SetShowBoundingVolumes(!renderer.GetShowBoundingVolumes()); },
         { .checked = [this] { return renderer.GetShowBoundingVolumes(); } });
     view.AddSeparator();
     view.AddPanelItem(*gui.AddPanel<DemoWindowPanel>("ImGui Demo"));
+}
+
+// ------
+// Scenes
+// ------
+bool App::OpenScene(const std::filesystem::path& path) {
+    // Into a scene of its own, so a file that fails leaves this one.
+    Scene loaded;
+    if (!LoadScene(path, loaded, resources, componentTypes)) return false;
+    ReplaceScene(std::move(loaded), path);
+    return true;
+}
+
+// As Unity starts one: a camera, and in 3D a sun.
+void App::NewScene(SceneDimension dimension) {
+    Scene created;
+    created.SetDimension(dimension);
+
+    Entity& cameraEntity = created.CreateEntity("Main Camera");
+    auto* cameraTransform = cameraEntity.AddComponent<TransformComponent>();
+    if (dimension == SceneDimension::ThreeD) {
+        const glm::vec3 eye { 0.0f, 1.6f, 7.5f };
+        cameraTransform->SetPosition(eye);
+        cameraTransform->SetRotation(FacingDirection(glm::vec3(0.0f, 0.5f, 0.0f) - eye));
+        cameraEntity.AddComponent<CameraComponent>(CameraProjection::Perspective);
+
+        Entity& sun = created.CreateEntity("Sun");
+        sun.AddComponent<TransformComponent>()->SetRotation(FacingDirection({ 0.5f, -1.0f, -0.6f }));
+        sun.AddComponent<LightComponent>(LightType::Directional)->SetIntensity(3.0f); // lux
+    } else {
+        cameraTransform->SetPosition({ 0.0f, 0.0f, 10.0f });
+        cameraEntity.AddComponent<CameraComponent>(CameraProjection::Orthographic);
+    }
+    created.SetCamera(&cameraEntity);
+
+    ReplaceScene(std::move(created), {});
+}
+
+bool App::SaveScene(const std::filesystem::path& path) {
+    // Saved under a new name, the scene takes the file's.
+    if (path != scenePath) scene.SetName(path.stem().string());
+    if (!GNC::SaveScene(path, scene, componentTypes)) return false;
+
+    scenePath = path;
+    window.SetTitle("GNC Engine - " + scene.GetName());
+    UpdateSceneMenu();
+    return true;
+}
+
+void App::SaveOrAskForName() {
+    if (scenePath.empty()) saveScenePanel->Open();
+    else eventBus.Enqueue<SaveSceneEvent>(scenePath);
+}
+
+// Whatever points into the old scene lets go first, as for
+// DestroyEntityEvent. The GPU holds nothing of its entities or materials.
+void App::ReplaceScene(Scene&& next, std::filesystem::path path) {
+    selection.Clear();
+    for (const Entity* entity : scene.GetEntities()) renderer.ForgetEntity(entity);
+    scene = std::move(next);
+    scenePath = std::move(path);
+
+    window.SetTitle("GNC Engine - " + scene.GetName());
+    MoveCameraToSceneCamera();
+}
+
+// Until there is a play mode, the scene's camera is only where the editor
+// starts looking from.
+void App::MoveCameraToSceneCamera() {
+    Entity* entity = scene.GetCamera();
+    const CameraComponent* sceneCamera = entity ? entity->GetComponent<CameraComponent>() : nullptr;
+    if (!sceneCamera) return;
+
+    const TransformComponent* transform = entity->GetComponent<TransformComponent>();
+    const glm::mat4 world = transform ? transform->GetWorldMatrix() : glm::mat4(1.0f);
+    const glm::vec3 position(world[3]);
+    camera.SetPosition(position);
+    camera.LookAt(position - glm::vec3(world[2]));
+
+    if (sceneCamera->GetProjection() == CameraProjection::Perspective) {
+        camera.SetPerspective(glm::degrees(sceneCamera->GetYFov()), camera.GetAspectRatio(), sceneCamera->GetZNear(), sceneCamera->GetZFar());
+    } else {
+        camera.SetOrthographic(sceneCamera->GetYMag(), sceneCamera->GetZNear(), sceneCamera->GetZFar());
+    }
+}
+
+void App::UpdateSceneMenu() {
+    openSceneMenu->Clear();
+    const std::vector<std::filesystem::path> scenes = FindScenes();
+    for (const std::filesystem::path& path : scenes) {
+        openSceneMenu->AddItem(path.stem().string(), [this, path] { eventBus.Enqueue<OpenSceneEvent>(path); },
+            { .checked = [this, path] { return scenePath == path; } });
+    }
+    if (scenes.empty()) openSceneMenu->AddItem("No scenes found", {}, { .enabled = [] { return false; } });
 }
 
 } // namespace GNC

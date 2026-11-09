@@ -45,7 +45,7 @@ private:
     std::uint64_t fitId = 0;
 
 public:
-    GNC_COMPONENT_TYPE(BoundingVolumeComponent, "Bounding Volume")
+    GNC_COMPONENT_TYPE(BoundingVolumeComponent, "BoundingVolume", "Bounding Volume")
 
     explicit BoundingVolumeComponent(Shape volumeShape = Shape::Box) : shape(volumeShape) {}
 
@@ -68,7 +68,9 @@ public:
 
     static void Reflect(PropertyList<BoundingVolumeComponent>& properties) {
         properties.Add<int>(
-            { .name = "Shape", .hint = PropertyHint::Enum, .enumNames = { "Box", "Sphere", "Capsule", "Convex Hull" } }, // Shape's order
+            // Shape's order.
+            { .name = "Shape", .key = "shape", .hint = PropertyHint::Enum,
+              .enumNames = { "Box", "Sphere", "Capsule", "Convex Hull" }, .enumKeys = { "Box", "Sphere", "Capsule", "ConvexHull" } },
             [](const BoundingVolumeComponent& bounds) { return static_cast<int>(bounds.GetShape()); },
             [](BoundingVolumeComponent& bounds, int value) { bounds.SetShape(static_cast<Shape>(value)); });
     }

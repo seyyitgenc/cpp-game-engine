@@ -46,7 +46,7 @@ private:
     float outerConeAngle = glm::quarter_pi<float>();
 
 public:
-    GNC_COMPONENT_TYPE(LightComponent, "Light")
+    GNC_COMPONENT_TYPE(LightComponent, "Light", "Light")
 
     explicit LightComponent(LightType lightType = LightType::Point) : type(lightType) {}
 
@@ -70,17 +70,19 @@ public:
 
     static void Reflect(PropertyList<LightComponent>& properties) {
         properties.Add<int>(
-            { .name = "Type", .hint = PropertyHint::Enum, .enumNames = { "Directional", "Point", "Spot" } }, // LightType's order
+            // LightType's order. "type" names the component in a scene file.
+            { .name = "Type", .key = "lightType", .hint = PropertyHint::Enum,
+              .enumNames = { "Directional", "Point", "Spot" }, .enumKeys = { "Directional", "Point", "Spot" } },
             [](const LightComponent& light) { return static_cast<int>(light.GetType()); },
             [](LightComponent& light, int value) { light.SetType(static_cast<LightType>(value)); });
 
         properties.Add<glm::vec3>(
-            { .name = "Color", .hint = PropertyHint::Color },
+            { .name = "Color", .key = "color", .hint = PropertyHint::Color },
             [](const LightComponent& light) { return light.GetColor(); },
             [](LightComponent& light, const glm::vec3& value) { light.SetColor(value); });
 
         properties.Add<float>(
-            { .name = "Intensity", .min = 0.0f, .proportional = true },
+            { .name = "Intensity", .key = "intensity", .min = 0.0f, .proportional = true },
             [](const LightComponent& light) { return light.GetIntensity(); },
             [](LightComponent& light, float value) { light.SetIntensity(value); },
             [](const LightComponent& light, PropertyInfo& info) {
@@ -88,7 +90,7 @@ public:
             });
 
         properties.Add<float>(
-            { .name = "Range", .min = 0.0f, .step = 0.1f, .format = "%.2f" },
+            { .name = "Range", .key = "range", .min = 0.0f, .step = 0.1f, .format = "%.2f" },
             [](const LightComponent& light) { return light.GetRange(); },
             [](LightComponent& light, float value) { light.SetRange(value); },
             [](const LightComponent& light, PropertyInfo& info) {
@@ -97,16 +99,18 @@ public:
             });
 
         // Two properties, but one setter: SetSpotCone keeps inner <= outer.
+        // A larger inner angle pushes the outer one along rather than being
+        // cut to it, so a scene file can set inner first.
         auto spotOnly = [](const LightComponent& light, PropertyInfo& info) { info.visible = light.GetType() == LightType::Spot; };
 
         properties.Add<float>(
-            { .name = "Inner Cone", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
+            { .name = "Inner Cone", .key = "innerConeAngle", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
             [](const LightComponent& light) { return light.GetInnerConeAngle(); },
-            [](LightComponent& light, float value) { light.SetSpotCone(value, light.GetOuterConeAngle()); },
+            [](LightComponent& light, float value) { light.SetSpotCone(value, std::max(value, light.GetOuterConeAngle())); },
             spotOnly);
 
         properties.Add<float>(
-            { .name = "Outer Cone", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
+            { .name = "Outer Cone", .key = "outerConeAngle", .hint = PropertyHint::Angle, .min = 0.0f, .max = glm::half_pi<float>() },
             [](const LightComponent& light) { return light.GetOuterConeAngle(); },
             [](LightComponent& light, float value) { light.SetSpotCone(light.GetInnerConeAngle(), value); },
             spotOnly);

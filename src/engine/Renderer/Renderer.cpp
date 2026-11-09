@@ -118,6 +118,8 @@ bool Renderer::Render(const std::vector<Entity*>& entities) {
 
     cullingSystem.CullScene(entities);
     OrderForOutlines();
+    postProcessPass->SetExposure(exposure);
+    postProcessPass->SetGridPlane(showGrid ? gridPlane : GridPlane::None);
     if (showBoundingVolumes) AddBoundingVolumes();
 
     frame.commandBuffer.reset();

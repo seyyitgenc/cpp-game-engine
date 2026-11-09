@@ -84,8 +84,7 @@ private:
     float aspectRatio = 16.0f / 9.0f;
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
-    // Half extents of the orthographic view volume
-    float orthoHalfWidth = 10.0f;
+    // Of the orthographic view volume; the width follows the aspect ratio.
     float orthoHalfHeight = 10.0f;
 
     mutable glm::mat4 viewMatrix {1.0f};
@@ -118,6 +117,7 @@ public:
             if (projectionType == ProjectionType::Perspective) {
                 projectionMatrix = glm::perspectiveRH_ZO(glm::radians(fov), aspectRatio, nearPlane, farPlane);
             } else {
+                const float orthoHalfWidth = orthoHalfHeight * aspectRatio;
                 projectionMatrix = glm::orthoRH_ZO(-orthoHalfWidth, orthoHalfWidth,
                                                    -orthoHalfHeight, orthoHalfHeight,
                                                    nearPlane, farPlane);
@@ -218,9 +218,8 @@ public:
         projectionDirty = true;
     }
 
-    void SetOrthographic(float halfWidth, float halfHeight, float nearZ, float farZ) {
+    void SetOrthographic(float halfHeight, float nearZ, float farZ) {
         projectionType = ProjectionType::Orthographic;
-        orthoHalfWidth = halfWidth;
         orthoHalfHeight = halfHeight;
         nearPlane = nearZ;
         farPlane = farZ;

@@ -169,6 +169,9 @@ bool EditValue(const Field& field, PropertyValue& value) {
         [&](glm::vec3& v) { return EditVec3(field, v); },
         [&](glm::quat& v) { return EditRotation(field, v); },
         [&](Resource*& v) { return EditResource(field, v); },
+        // A material is edited through its own values (MeshComponent), never
+        // swapped here: there is no material picker yet.
+        [&](Material*&) { return false; },
     }, value);
 }
 

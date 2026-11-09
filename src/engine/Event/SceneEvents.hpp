@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "ECS/Component/ComponentTypeID.hpp"
+#include "Scene/SceneSettings.hpp"
 
 namespace GNC {
 
@@ -25,6 +26,48 @@ public:
     GNC_EVENT_TYPE(ImportModelEvent, EventCategory::Scene)
 
     explicit ImportModelEvent(std::filesystem::path file) : path(std::move(file)) {}
+
+    const std::filesystem::path& GetPath() const { return path; }
+};
+
+// ------------
+// Whole Scenes
+// ------------
+// Each replaces the scene; what the old one had is gone.
+class NewSceneEvent : public Event {
+private:
+    SceneDimension dimension;
+
+public:
+    GNC_EVENT_TYPE(NewSceneEvent, EventCategory::Scene)
+
+    explicit NewSceneEvent(SceneDimension sceneDimension) : dimension(sceneDimension) {}
+
+    SceneDimension GetDimension() const { return dimension; }
+};
+
+// A .gncscene file (Scene/SceneSerializer).
+class OpenSceneEvent : public Event {
+private:
+    std::filesystem::path path;
+
+public:
+    GNC_EVENT_TYPE(OpenSceneEvent, EventCategory::Scene)
+
+    explicit OpenSceneEvent(std::filesystem::path file) : path(std::move(file)) {}
+
+    const std::filesystem::path& GetPath() const { return path; }
+};
+
+// Saves the scene to path, which becomes the scene's file.
+class SaveSceneEvent : public Event {
+private:
+    std::filesystem::path path;
+
+public:
+    GNC_EVENT_TYPE(SaveSceneEvent, EventCategory::Scene)
+
+    explicit SaveSceneEvent(std::filesystem::path file) : path(std::move(file)) {}
 
     const std::filesystem::path& GetPath() const { return path; }
 };

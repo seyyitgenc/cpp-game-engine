@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -16,10 +17,14 @@
 #include "Resource/ResourceManager.hpp"
 #include "Resource/Types/Mesh.hpp"
 #include "Scene/Scene.hpp"
+#include "Scene/SceneSettings.hpp"
 #include "UI/ImGuiLayer.hpp"
 #include "UI/Selection.hpp"
 
 namespace GNC {
+
+class ImGuiMenu;
+class SaveScenePanel;
 
 // App
 // Owns everything and runs the main loop: an event, an update and a render
@@ -52,9 +57,15 @@ private:
     // After the scene, which it points into.
     Selection selection;
 
+    // The scene's file; empty for a new scene not saved yet.
+    std::filesystem::path scenePath;
+
     // After the renderer: its pipeline is built for the swapchain format.
     // After the scene, componentTypes and selection: its panels use them.
     ImGuiLayer gui;
+    // Owned by gui.
+    ImGuiMenu* openSceneMenu = nullptr;
+    SaveScenePanel* saveScenePanel = nullptr;
 
     // Acted on by the render traversal, not inside the listener.
     bool resizePending = false;
@@ -82,10 +93,25 @@ private:
     ResourceContext MakeResourceContext();
     void SubscribeToEvents();
 
-    Mesh* LoadMesh(const std::string& id, MeshData data);
     void RegisterComponents();
-    void BuildScene();
     void BuildGui();
+
+    // ------
+    // Scenes
+    // ------
+    // Replaces the scene. A file that fails to load is logged and leaves
+    // the scene as it was.
+    bool OpenScene(const std::filesystem::path& path);
+    void NewScene(SceneDimension dimension);
+    // The file becomes the scene's; a failed save is logged.
+    bool SaveScene(const std::filesystem::path& path);
+    // Saves to the scene's file, or asks for a name if it has none.
+    void SaveOrAskForName();
+
+    void ReplaceScene(Scene&& next, std::filesystem::path path);
+    // The editor camera takes the scene camera's place and projection.
+    void MoveCameraToSceneCamera();
+    void UpdateSceneMenu();
 };
 
 } // namespace GNC

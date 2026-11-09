@@ -3,6 +3,7 @@
 #include "../Component/Component.hpp"
 #include "../Component/ComponentTypeID.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -27,7 +28,12 @@ private:
     std::vector<std::unique_ptr<Component>> components;
     std::unordered_map<ComponentTypeID, Component*> componentMap;
 
-    // Set by the Scene only.
+    // The scene file's JSON of components this build does not know, written
+    // back unchanged on save so that opening a scene does not lose them.
+    std::vector<std::string> unknownComponents;
+
+    // Set by the Scene only. id is unique in the scene and kept by its file.
+    std::uint64_t id = 0;
     Entity* parent = nullptr;
     std::vector<Entity*> children;
     friend class Scene;
@@ -39,6 +45,8 @@ public:
 
     Entity(const Entity&) = delete;
     Entity& operator=(const Entity&) = delete;
+
+    std::uint64_t GetId() const { return id; }
 
     const std::string& GetName() const { return name; }
     void SetName(const std::string& entityName) { name = entityName; }
@@ -71,6 +79,9 @@ public:
 
     // In the order added.
     const std::vector<std::unique_ptr<Component>>& GetComponents() const { return components; }
+
+    const std::vector<std::string>& GetUnknownComponents() const { return unknownComponents; }
+    void AddUnknownComponent(std::string json) { unknownComponents.push_back(std::move(json)); }
 
     void Initialize() {
         for (auto& component : components) {

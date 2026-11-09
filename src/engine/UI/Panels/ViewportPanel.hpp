@@ -22,16 +22,22 @@ class Selection;
 // The Renderer's scene image, sized to the panel. A left click selects the
 // model under it, a second one the entity, and the selection gets a gizmo
 // (W/E/R pick move, rotate, scale); other mouse input goes to the camera,
-// not ImGui. In a dragged-out OS window it still shows the scene, picks and
-// manipulates, but the camera gets no input there.
+// not ImGui. The orientation gizmo in the bottom right corner turns the
+// camera to view along an axis. In a dragged-out OS window it still shows
+// the scene, picks and manipulates, but the camera gets no input there.
 class ViewportPanel : public ImGuiPanel {
 public:
     enum class GizmoTool { Move, Rotate, Scale };
+
+    // With nothing selected, the orientation gizmo turns the camera around
+    // a point this far ahead of it.
+    static constexpr float DefaultPivotDistance = 5.0f;
 
 private:
     Renderer& renderer;
     Selection& selection;
     const Camera& camera;
+    EventBus& eventBus;
 
     // As registered with the Vulkan backend, for this scene version.
     vk::DescriptorSet texture;
@@ -60,6 +66,8 @@ private:
     void UpdateTexture();
     void RenderGizmo(const ImVec2& min, const ImVec2& size);
     void RenderToolbar(const ImVec2& min);
+    // Returns whether it is hovered.
+    bool RenderOrientationGizmo(const ImVec2& min, const ImVec2& size);
 };
 
 } // namespace GNC

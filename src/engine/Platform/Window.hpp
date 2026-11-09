@@ -43,6 +43,7 @@ public:
 
     bool ShouldClose() const;
     void Close();
+    void SetTitle(const std::string& title);
 
     void PollEvents();
     // Blocks until something happens (while minimized).

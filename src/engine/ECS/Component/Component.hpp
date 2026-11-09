@@ -60,6 +60,7 @@ public:
 
     // Filled in by GNC_COMPONENT_TYPE.
     virtual ComponentTypeID GetTypeID() const = 0;
+    virtual const char* GetTypeKey() const = 0;
     virtual const char* GetTypeName() const = 0;
 
     State GetState() const { return state; }
@@ -71,17 +72,20 @@ public:
 
 } // namespace GNC
 
-// Every concrete component declares its type id and display name with this,
-// as events do with GNC_EVENT_TYPE:
+// Every concrete component declares its type id, its scene file key and its
+// display name with this, as events do with GNC_EVENT_TYPE. The key names
+// the type in saved scenes, so it must never change:
 //
-//     class LightComponent : public Component {
+//     class BoundingVolumeComponent : public Component {
 //     public:
-//         GNC_COMPONENT_TYPE(LightComponent, "Light")
+//         GNC_COMPONENT_TYPE(BoundingVolumeComponent, "BoundingVolume", "Bounding Volume")
 //     };
-#define GNC_COMPONENT_TYPE(TypeName, DisplayName)                                    \
+#define GNC_COMPONENT_TYPE(TypeName, TypeKey, DisplayName)                           \
     static ::GNC::ComponentTypeID StaticTypeID() {                                    \
         return ::GNC::ComponentTypeIDSystem::GetTypeID<TypeName>();                   \
     }                                                                                 \
+    static constexpr const char* StaticTypeKey() { return TypeKey; }                  \
     static constexpr const char* StaticTypeName() { return DisplayName; }             \
     ::GNC::ComponentTypeID GetTypeID() const override { return StaticTypeID(); }      \
+    const char* GetTypeKey() const override { return StaticTypeKey(); }               \
     const char* GetTypeName() const override { return StaticTypeName(); }

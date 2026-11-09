@@ -43,6 +43,8 @@ private:
 
     // Flat, until there is image based lighting.
     glm::vec3 ambientColor {0.03f};
+    // Here, not only in PostProcessPass, which a resize rebuilds.
+    float exposure = 1.0f;
     bool warnedAboutLightLimit = false;
 
     // Before the frames: their command buffers and sets are freed into these
@@ -64,6 +66,8 @@ private:
     // Before the passes, which read it.
     DebugDraw debugDraw;
     bool showBoundingVolumes = false;
+    bool showGrid = true;
+    GridPlane gridPlane = GridPlane::XZ;
 
     RenderPassManager renderPassManager;
     // Owned by renderPassManager.
@@ -96,6 +100,7 @@ public:
 
     // Linear RGB, already multiplied by its intensity.
     void SetAmbientLight(const glm::vec3& color) { ambientColor = color; }
+    void SetExposure(float value) { exposure = value; }
 
     // Set 0 of every pass's pipeline layout.
     const vk::raii::DescriptorSetLayout& GetGlobalSetLayout() const { return globalSetLayout; }
@@ -168,6 +173,12 @@ public:
     // the selected ones in the selection's outline color.
     void SetShowBoundingVolumes(bool show) { showBoundingVolumes = show; }
     bool GetShowBoundingVolumes() const { return showBoundingVolumes; }
+
+    // The editor grid, drawn by the post-process pass on the plane of the
+    // scene's dimension. None hides it as SetShowGrid(false) does.
+    void SetShowGrid(bool show) { showGrid = show; }
+    bool GetShowGrid() const { return showGrid; }
+    void SetGridPlane(GridPlane plane) { gridPlane = plane; }
 
 private:
     void CreateCommandPool();

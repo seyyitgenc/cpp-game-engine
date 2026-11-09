@@ -63,6 +63,13 @@ struct GpuMaterial {
     std::uint32_t pad[3] {};
 };
 
+// shaders/post_process.slang: GRID_* (the editor grid's plane)
+enum class GridPlane : std::uint32_t {
+    None,
+    XZ, // y = 0, for 3D scenes
+    XY  // z = 0, for 2D scenes
+};
+
 // shaders/post_process.slang: PostData (push constants)
 struct PostProcessPushConstants {
     float exposure = 1.0f;
@@ -72,6 +79,8 @@ struct PostProcessPushConstants {
     std::uint32_t selectedEnd = 0;
     std::uint32_t hoveredBegin = 0;
     std::uint32_t hoveredEnd = 0;
+    // A GridPlane.
+    std::uint32_t gridPlane = 0;
 };
 
 // shaders/debug_draw.slang: DrawData (push constants)
@@ -118,7 +127,8 @@ static_assert(offsetof(PostProcessPushConstants, selectedBegin) == 8);
 static_assert(offsetof(PostProcessPushConstants, selectedEnd) == 12);
 static_assert(offsetof(PostProcessPushConstants, hoveredBegin) == 16);
 static_assert(offsetof(PostProcessPushConstants, hoveredEnd) == 20);
-static_assert(sizeof(PostProcessPushConstants) == 24);
+static_assert(offsetof(PostProcessPushConstants, gridPlane) == 24);
+static_assert(sizeof(PostProcessPushConstants) == 28);
 
 static_assert(offsetof(DebugDrawPushConstants, color) == 64);
 static_assert(sizeof(DebugDrawPushConstants) == 80);

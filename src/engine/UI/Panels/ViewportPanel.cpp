@@ -22,6 +22,7 @@
 #include "Event/Events.hpp"
 #include "Renderer/Renderer.hpp"
 #include "UI/Icons.hpp"
+#include "UI/OrientationGizmo.hpp"
 #include "UI/Selection.hpp"
 
 namespace GNC {
@@ -40,7 +41,7 @@ ImGuizmo::OPERATION ToOperation(ViewportPanel::GizmoTool tool) {
 } // namespace
 
 ViewportPanel::ViewportPanel(const std::string& name, Renderer& rend, Selection& selected, const Camera& cam, EventBus& bus)
-    : ImGuiPanel(name), renderer(rend), selection(selected), camera(cam) {
+    : ImGuiPanel(name), renderer(rend), selection(selected), camera(cam), eventBus(bus) {
     // Below the camera, which keeps W and E while it looks.
     subscriptions.push_back(bus.Subscribe<KeyPressedEvent>([this](KeyPressedEvent& e) {
         if (e.IsRepeat() || e.GetMods() != 0) return false;
@@ -112,14 +113,16 @@ void ViewportPanel::Render() {
         const ImTextureID textureId = reinterpret_cast<std::uintptr_t>(static_cast<VkDescriptorSet>(texture));
         ImGui::GetWindowDrawList()->AddImage(textureId, min, ImVec2(min.x + size.x, min.y + size.y));
 
+        RenderGizmo(min, size);
+        RenderToolbar(min);
+        // Over the image, which then is not hovered.
+        const bool orientationHovered = RenderOrientationGizmo(min, size);
+
         // Not hovered while the camera looks: the cursor is captured.
         if (imageHovered) hoverPixel = toScenePixel(ImGui::GetMousePos());
         // Otherwise ImGui would want the mouse and swallow it, and the right
-        // button would not reach the camera.
-        if (imageHovered || (overGizmo && ImGui::IsWindowHovered())) ImGui::SetNextFrameWantCaptureMouse(false);
-
-        RenderGizmo(min, size);
-        RenderToolbar(min);
+        // button would not reach the camera. ImGui still sees the left clicks.
+        if (imageHovered || orientationHovered || (overGizmo && ImGui::IsWindowHovered())) ImGui::SetNextFrameWantCaptureMouse(false);
     }
     ImGui::End();
 
@@ -239,11 +242,38 @@ void ViewportPanel::RenderToolbar(const ImVec2& min) {
     ImGui::EndDisabled();
     ImGui::SameLine();
 
+    const bool showGrid = renderer.GetShowGrid();
+    if (showGrid) ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+    if (ImGui::Button(ICON_FA_BORDER_ALL)) renderer.SetShowGrid(!showGrid);
+    if (showGrid) ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("Grid");
+    ImGui::SameLine();
+
     const bool showBounds = renderer.GetShowBoundingVolumes();
     if (showBounds) ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
     if (ImGui::Button(ICON_FA_VECTOR_SQUARE)) renderer.SetShowBoundingVolumes(!showBounds);
     if (showBounds) ImGui::PopStyleColor();
     ImGui::SetItemTooltip("Bounding Volumes");
+}
+
+// Orbits around the selection, so it stays in view, or around a point
+// ahead. Sized by the font, so it follows the UI's scale.
+bool ViewportPanel::RenderOrientationGizmo(const ImVec2& min, const ImVec2& size) {
+    const float radius = ImGui::GetFontSize() * 4.0f;
+    const float margin = ImGui::GetFontSize() * 0.75f;
+    // Too small a viewport to fit it.
+    if (size.x < (radius + margin) * 2.0f || size.y < (radius + margin) * 2.0f) return false;
+
+    const ImVec2 center(min.x + size.x - margin - radius, min.y + size.y - margin - radius);
+    const std::optional<glm::vec3> direction = OrientationGizmo("##orientation", camera, center, radius);
+    const bool hovered = ImGui::IsItemHovered();
+    if (!direction) return hovered;
+
+    Entity* entity = selection.GetEntity();
+    const TransformComponent* transform = entity ? entity->GetComponent<TransformComponent>() : nullptr;
+    const glm::vec3 pivot = transform ? glm::vec3(transform->GetWorldMatrix()[3]) : camera.GetPosition() + camera.GetFront() * DefaultPivotDistance;
+    eventBus.Enqueue<AlignCameraEvent>(*direction, pivot);
+    return hovered;
 }
 
 } // namespace GNC

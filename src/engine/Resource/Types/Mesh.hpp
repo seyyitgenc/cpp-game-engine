@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -107,10 +108,33 @@ inline void GenerateTangents(MeshData& data) {
     }
 }
 
+// -----------
+// Mesh Source
+// -----------
+// How a mesh was made, so a scene file can make it again: a primitive from
+// Resource/Primitives.hpp with its arguments, or the mesh ModelImporter
+// makes of a model file, by its path relative to the executable.
+struct SpherePrimitive {
+    float radius = 1.0f;
+    std::uint32_t stacks = 64;
+    std::uint32_t slices = 128;
+};
+
+struct PlanePrimitive {
+    float size = 1.0f;
+};
+
+struct ModelMesh {
+    std::string model;
+};
+
+// monostate: made some other way, which a scene file cannot name.
+using MeshSource = std::variant<std::monostate, SpherePrimitive, PlanePrimitive, ModelMesh>;
+
 // Mesh resource
 // Built from MeshData handed in up front, procedural or imported
-// (Scene/ModelImporter):
-//     resources.Load<Mesh>("sphere", CreateSphere(1.0f, 64, 128));
+// (Scene/ModelImporter), and the source it was made from:
+//     resources.Load<Mesh>("sphere", CreateSphere(1.0f, 64, 128), MeshSource(SpherePrimitive {}));
 // Uploading needs the transfer queue and pool in the ResourceContext. Its
 // submeshes share the buffers; MeshComponent gives each a material.
 class Mesh : public Resource {
@@ -125,11 +149,15 @@ private:
 
     // Kept after upload, so Unload() + Load() can rebuild the buffers.
     MeshData data;
+    MeshSource source;
 
 public:
-    Mesh(const std::string& id, MeshData meshData) : Resource(id), data(std::move(meshData)) {
+    Mesh(const std::string& id, MeshData meshData, MeshSource meshSource = {})
+        : Resource(id), data(std::move(meshData)), source(std::move(meshSource)) {
         if (data.subMeshes.empty()) data.subMeshes.push_back({ 0, static_cast<std::uint32_t>(data.indices.size()) });
     }
+
+    const MeshSource& GetSource() const { return source; }
 
     const vk::raii::Buffer& GetVertexBuffer() const { return vertexBuffer; }
     const vk::raii::Buffer& GetIndexBuffer() const { return indexBuffer; }

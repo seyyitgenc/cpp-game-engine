@@ -1,5 +1,8 @@
 #include "CameraController.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -68,6 +71,11 @@ CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : ca
         return true;
     }, EventPriority));
 
+    subscriptions.push_back(bus.Subscribe<AlignCameraEvent>([this](AlignCameraEvent& e) {
+        Align(e.GetViewDirection(), e.GetPivot());
+        return true;
+    }, EventPriority));
+
     // Alt-tabbing away while looking would leave the cursor captured, and the
     // releases go to another window, so drop the held keys too.
     subscriptions.push_back(bus.Subscribe<WindowFocusEvent>([this](WindowFocusEvent& e) {
@@ -80,6 +88,8 @@ CameraController::CameraController(EventBus& bus, Window& win, Camera& cam) : ca
 }
 
 void CameraController::Update(float deltaTime) {
+    if (alignment) Animate(deltaTime);
+
     // Otherwise the same keys pick gizmo tools.
     if (!looking) return;
 
@@ -103,6 +113,41 @@ void CameraController::SetLooking(bool look) {
     looking = look;
     hasLastCursor = false;
     window.SetCursorCaptured(look);
+    // The user takes over.
+    if (look) alignment.reset();
+}
+
+void CameraController::Align(const glm::vec3& viewDirection, const glm::vec3& pivot) {
+    if (looking || glm::dot(viewDirection, viewDirection) <= 0.0f) return;
+
+    const glm::vec3 direction = glm::normalize(viewDirection);
+    // Straight up or down has no heading of its own: keep the current one.
+    const float targetYaw = std::abs(direction.y) > 0.999f ? camera.GetYaw() : glm::degrees(std::atan2(direction.z, direction.x));
+    const float distance = glm::length(pivot - camera.GetPosition());
+
+    alignment = Alignment {
+        .startCenter = camera.GetPosition() + camera.GetFront() * distance,
+        .pivot = pivot,
+        .distance = distance,
+        .startYaw = camera.GetYaw(),
+        .startPitch = camera.GetPitch(),
+        .yawChange = std::remainder(targetYaw - camera.GetYaw(), 360.0f),
+        .targetPitch = glm::degrees(std::asin(std::clamp(direction.y, -1.0f, 1.0f))),
+    };
+}
+
+void CameraController::Animate(float deltaTime) {
+    alignment->elapsed += deltaTime;
+    const float t = std::min(alignment->elapsed / AlignDuration, 1.0f);
+    const float eased = t * t * (3.0f - 2.0f * t);
+
+    // SetRotation keeps the pitch off the poles, and the position follows
+    // the front it actually got.
+    camera.SetRotation(alignment->startYaw + alignment->yawChange * eased, glm::mix(alignment->startPitch, alignment->targetPitch, eased));
+    const glm::vec3 center = glm::mix(alignment->startCenter, alignment->pivot, eased);
+    camera.SetPosition(center - camera.GetFront() * alignment->distance);
+
+    if (t >= 1.0f) alignment.reset();
 }
 
 } // namespace GNC

@@ -49,6 +49,10 @@ public:
 
     void AddSeparator();
 
+    // Removes every entry, for a list that changes (File > Open Scene).
+    // Never from inside Render().
+    void Clear() { entries.clear(); }
+
     // Into the current menu, or menu bar.
     void Render() const;
 };

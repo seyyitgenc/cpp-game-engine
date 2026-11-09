@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -31,6 +32,14 @@ struct TextureSettings {
 // (embedded in a model file).
 using TextureSource = std::variant<std::filesystem::path, std::vector<std::uint8_t>>;
 
+// Where an image's bytes came from, so a scene file can name it: an image
+// embedded in a model file (model relative to the executable), by the name
+// the file gives it ("*0" for glTF's, the file name for FBX's).
+struct EmbeddedImage {
+    std::string model;
+    std::string name;
+};
+
 // Texture resource
 // Decoded to RGBA8, uploaded with a full mip chain, and added to the
 // ResourceContext's TextureTable, whose slot materials use.
@@ -38,6 +47,8 @@ class Texture : public Resource {
 private:
     TextureSource source;
     TextureSettings settings;
+    // Only for bytes: where they came from.
+    std::optional<EmbeddedImage> embedded;
 
     vk::raii::DeviceMemory memory = nullptr;
     vk::raii::Image image = nullptr;
@@ -50,8 +61,9 @@ private:
     std::uint32_t tableSlot = TextureTable::White;
 
 public:
-    Texture(const std::string& id, TextureSource textureSource, TextureSettings textureSettings)
-        : Resource(id), source(std::move(textureSource)), settings(textureSettings) {}
+    Texture(const std::string& id, TextureSource textureSource, TextureSettings textureSettings,
+            std::optional<EmbeddedImage> embeddedImage = std::nullopt)
+        : Resource(id), source(std::move(textureSource)), settings(textureSettings), embedded(std::move(embeddedImage)) {}
 
     // TextureTable::White until loaded.
     std::uint32_t GetTableSlot() const { return tableSlot; }
@@ -59,6 +71,8 @@ public:
     std::uint32_t GetWidth() const { return width; }
     std::uint32_t GetHeight() const { return height; }
     const TextureSettings& GetSettings() const { return settings; }
+    const TextureSource& GetSource() const { return source; }
+    const std::optional<EmbeddedImage>& GetEmbeddedImage() const { return embedded; }
 
     std::vector<std::string> GetSourcePaths() const override;
 

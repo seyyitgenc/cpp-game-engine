@@ -77,6 +77,11 @@ target_include_directories(imguizmo PUBLIC ${IMGUIZMO_DIR})
 target_link_libraries(imguizmo PUBLIC imgui)
 set(LIBS ${LIBS} imguizmo)
 
+# nlohmann/json 3.12.0, header only: json.hpp and LICENSE.MIT from the
+# release at https://github.com/nlohmann/json/releases/tag/v3.12.0, in
+# src/external/nlohmann (on the include path through src/external). To
+# update, replace both with a newer release's.
+
 #add all executables
 file(GLOB_RECURSE SOURCE
     src/engine/*.cpp

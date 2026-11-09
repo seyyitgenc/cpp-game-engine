@@ -85,7 +85,8 @@ void PostProcessPass::Render(const FrameContext& frame) {
         .selectedBegin = selectedIds.begin,
         .selectedEnd = selectedIds.end,
         .hoveredBegin = hoveredIds.begin,
-        .hoveredEnd = hoveredIds.end
+        .hoveredEnd = hoveredIds.end,
+        .gridPlane = static_cast<std::uint32_t>(gridPlane)
     };
     commandBuffer.pushConstants<PostProcessPushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, pushConstants);
 

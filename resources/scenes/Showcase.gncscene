@@ -1,0 +1,753 @@
+{
+  "format": "gncscene",
+  "version": 1,
+  "name": "Showcase",
+  "dimension": "3D",
+  "camera": "7efadd669ab6d12c",
+  "environment": {
+    "ambientColor": [0.03, 0.03, 0.03],
+    "exposure": 1.0
+  },
+  "meshes": {
+    "Plane (1)": {
+      "primitive": "Plane",
+      "size": 1.0
+    },
+    "Sphere (1, 64, 128)": {
+      "primitive": "Sphere",
+      "radius": 1.0,
+      "stacks": 64,
+      "slices": 128
+    }
+  },
+  "textures": {},
+  "materials": {
+    "Ground": {
+      "baseColorFactor": [0.18, 0.18, 0.18, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.9,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 0": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.05,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 1": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.20833333,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 2": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.36666667,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 3": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.525,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 4": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.68333334,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 5": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 0.84166664,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Plastic 6": {
+      "baseColorFactor": [0.8, 0.08, 0.08, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 1.0,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 0": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.05,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 1": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.20833333,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 2": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.36666667,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 3": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.525,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 4": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.68333334,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 5": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 0.84166664,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Gold 6": {
+      "baseColorFactor": [1.0, 0.766, 0.336, 1.0],
+      "metallicFactor": 1.0,
+      "roughnessFactor": 1.0,
+      "emissiveFactor": [0.0, 0.0, 0.0],
+      "emissiveStrength": 1.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Point Light 0": {
+      "baseColorFactor": [0.0, 0.0, 0.0, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 1.0,
+      "emissiveFactor": [1.0, 0.55, 0.25],
+      "emissiveStrength": 8.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Point Light 1": {
+      "baseColorFactor": [0.0, 0.0, 0.0, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 1.0,
+      "emissiveFactor": [0.3, 0.6, 1.0],
+      "emissiveStrength": 8.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    },
+    "Point Light 2": {
+      "baseColorFactor": [0.0, 0.0, 0.0, 1.0],
+      "metallicFactor": 0.0,
+      "roughnessFactor": 1.0,
+      "emissiveFactor": [1.0, 0.3, 0.8],
+      "emissiveStrength": 8.0,
+      "normalScale": 1.0,
+      "occlusionStrength": 1.0,
+      "alphaMode": "Opaque",
+      "alphaCutoff": 0.5,
+      "doubleSided": false
+    }
+  },
+  "entities": [
+    {
+      "id": "7efadd669ab6d12c",
+      "name": "Main Camera",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 1.6, 7.5],
+          "rotation": [-0.07274987, 0.0, 0.0, 0.9973502],
+          "scale": [1.0, 1.0, 1.0]
+        },
+        {
+          "type": "Camera",
+          "projection": "Perspective",
+          "yfov": 0.7853982,
+          "ymag": 5.0,
+          "znear": 0.1,
+          "zfar": 100.0
+        }
+      ]
+    },
+    {
+      "id": "4523f5b45845bbb1",
+      "name": "Ground",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, -0.4, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [30.0, 1.0, 30.0]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Plane (1)",
+          "materials": ["Ground"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Box"
+        }
+      ]
+    },
+    {
+      "id": "20d85b333fca6800",
+      "name": "Plastic 0",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-3.3, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 0"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "35a94eb50a572517",
+      "name": "Plastic 1",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-2.2, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 1"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "2df2092f6f61ed4a",
+      "name": "Plastic 2",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-1.1, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 2"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "1da130b2977a83c5",
+      "name": "Plastic 3",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 3"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "8919328b32d08958",
+      "name": "Plastic 4",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [1.1, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 4"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "258773ec1ecb609f",
+      "name": "Plastic 5",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [2.2, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 5"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "51d77ce9016d8672",
+      "name": "Plastic 6",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [3.3, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Plastic 6"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "7a3d292140a25125",
+      "name": "Gold 0",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-3.3, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 0"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "e85799004129fa9f",
+      "name": "Gold 1",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-2.2, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 1"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "409c57dc718527fe",
+      "name": "Gold 2",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [-1.1, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 2"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "e564a287381fedf1",
+      "name": "Gold 3",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 3"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "76a37eaa9741e5ca",
+      "name": "Gold 4",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [1.1, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 4"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "a60021bdc5e00590",
+      "name": "Gold 5",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [2.2, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 5"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "a2291726dd72027c",
+      "name": "Gold 6",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [3.3, 1.1, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Gold 6"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        }
+      ]
+    },
+    {
+      "id": "f3a782c42d20c966",
+      "name": "Sun",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [-0.41225633, -0.30596012, -0.14925738, 0.84507716],
+          "scale": [1.0, 1.0, 1.0]
+        },
+        {
+          "type": "Light",
+          "lightType": "Directional",
+          "color": [1.0, 0.93, 0.82],
+          "intensity": 1.0,
+          "range": 0.0,
+          "innerConeAngle": 0.0,
+          "outerConeAngle": 0.7853982
+        }
+      ]
+    },
+    {
+      "id": "ee9d33f90808a9f1",
+      "name": "Spot Light",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 5.0, 3.0],
+          "rotation": [-0.47185794, 0.0, 0.0, 0.8816746],
+          "scale": [1.0, 1.0, 1.0]
+        },
+        {
+          "type": "Light",
+          "lightType": "Spot",
+          "color": [1.0, 1.0, 1.0],
+          "intensity": 60.0,
+          "range": 15.0,
+          "innerConeAngle": 0.2617994,
+          "outerConeAngle": 0.43633232
+        }
+      ]
+    },
+    {
+      "id": "36d021dc5bc222d4",
+      "name": "Point Light 0",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.08, 0.08, 0.08]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Point Light 0"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        },
+        {
+          "type": "Light",
+          "lightType": "Point",
+          "color": [1.0, 0.55, 0.25],
+          "intensity": 20.0,
+          "range": 12.0,
+          "innerConeAngle": 0.0,
+          "outerConeAngle": 0.7853982
+        },
+        {
+          "type": "Orbit",
+          "center": [0.0, 0.6, 0.0],
+          "radius": 4.0,
+          "angularSpeed": 0.5,
+          "angle": 0.0
+        }
+      ]
+    },
+    {
+      "id": "c08f5a7d92ea7767",
+      "name": "Point Light 1",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.08, 0.08, 0.08]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Point Light 1"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        },
+        {
+          "type": "Light",
+          "lightType": "Point",
+          "color": [0.3, 0.6, 1.0],
+          "intensity": 20.0,
+          "range": 12.0,
+          "innerConeAngle": 0.0,
+          "outerConeAngle": 0.7853982
+        },
+        {
+          "type": "Orbit",
+          "center": [0.0, 1.6, 0.0],
+          "radius": 4.0,
+          "angularSpeed": -0.35,
+          "angle": 2.1
+        }
+      ]
+    },
+    {
+      "id": "403b0550312dbc67",
+      "name": "Point Light 2",
+      "active": true,
+      "components": [
+        {
+          "type": "Transform",
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0, 1.0],
+          "scale": [0.08, 0.08, 0.08]
+        },
+        {
+          "type": "Mesh",
+          "mesh": "Sphere (1, 64, 128)",
+          "materials": ["Point Light 2"]
+        },
+        {
+          "type": "BoundingVolume",
+          "shape": "Sphere"
+        },
+        {
+          "type": "Light",
+          "lightType": "Point",
+          "color": [1.0, 0.3, 0.8],
+          "intensity": 20.0,
+          "range": 12.0,
+          "innerConeAngle": 0.0,
+          "outerConeAngle": 0.7853982
+        },
+        {
+          "type": "Orbit",
+          "center": [0.0, 2.4, 0.0],
+          "radius": 4.0,
+          "angularSpeed": 0.25,
+          "angle": 4.2
+        }
+      ]
+    }
+  ]
+}
