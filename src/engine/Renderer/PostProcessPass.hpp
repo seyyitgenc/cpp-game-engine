@@ -13,12 +13,14 @@ namespace GNC {
 
 class GeometryPass;
 class LightingPass;
+class SpritePass;
 
 // Post-processing pass
 // Exposure and tonemapping from the lighting pass's linear HDR output into the
 // scene image (GetOutput()), which the Viewport panel shows through ImGui,
-// then the editor grid and outlines from the G-buffer's entity ids and
-// depth. Leaves it in eShaderReadOnlyOptimal. shaders/post_process.slang.
+// then the editor grid, the sprite pass's layer over both, and the outlines
+// from the G-buffer's entity ids and depth. Leaves it in
+// eShaderReadOnlyOptimal. shaders/post_process.slang.
 class PostProcessPass : public RenderPass {
 public:
     // UNORM, holding values the shader has already sRGB encoded: ImGui copies
@@ -31,6 +33,7 @@ private:
     vk::Extent2D extent;
     GeometryPass* geometryPass;
     LightingPass* lightingPass;
+    SpritePass* spritePass;
 
     Attachment output;
 
@@ -49,8 +52,9 @@ private:
     IdRange selectedIds;
     IdRange hoveredIds;
 
-    // Set 1: the lighting output, the entity ids and depth. The pool is
-    // declared before the set, so it outlives it.
+    // Set 1: the lighting output, the entity ids, depth, and the sprite pass's
+    // layer and draw order. The pool is declared before the set, so it
+    // outlives it.
     vk::raii::DescriptorSetLayout inputSetLayout = nullptr;
     vk::raii::DescriptorPool descriptorPool = nullptr;
     vk::raii::DescriptorSet inputSet = nullptr;
@@ -61,7 +65,7 @@ private:
 public:
     PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
                     vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders,
-                    GeometryPass* gPass, LightingPass* lPass);
+                    GeometryPass* gPass, LightingPass* lPass, SpritePass* sPass);
 
     const Attachment& GetOutput() const { return output; }
 

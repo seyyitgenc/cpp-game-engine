@@ -132,13 +132,14 @@ void GeometryPass::Render(const FrameContext& frame) {
     std::uint32_t materialCount = 0;
     AddMaterial(nullptr, materialCount, materialBuffer.mapped);
 
-    // Culling only lets through active entities that have both a mesh and a
-    // transform component.
+    // Culling only lets through active entities with a transform component.
+    // Those without a mesh are SpritePass's.
     draws.clear();
     const std::vector<Entity*>& entities = cullingSystem->GetVisibleEntities();
     for (std::size_t index = 0; index < entities.size(); ++index) {
         Entity* entity = entities[index];
         const MeshComponent* meshComponent = entity->GetComponent<MeshComponent>();
+        if (!meshComponent) continue;
 
         // The component can exist before its mesh has been loaded.
         const Mesh* mesh = meshComponent->GetMesh();

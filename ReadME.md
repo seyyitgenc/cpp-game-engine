@@ -15,6 +15,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Alpha-masked and double-sided materials
 - Directional, point and spot lights in physical units (lux, candela), after glTF's `KHR_lights_punctual`; up to 64 per scene
 - Exposure and the Khronos PBR Neutral tonemapper
+- Sprites: unlit, alpha blended, drawn back to front by layer and then by depth, batched by texture; laid over the tonemapped scene, so they show their own colors, and hidden behind meshes in front of them
 - Frustum culling against a bounding volume component on each entity: a box, a sphere, a capsule or a convex hull, fitted to its mesh
 - Shaders written in Slang and compiled to SPIR-V at build time
 - Vulkan validation layers in Debug builds
@@ -33,6 +34,7 @@ A C++23 game engine with a Vulkan 1.3 renderer and a Dear ImGui editor. It is be
 - Inspector: edits the selected entity's components
 - Create and delete entities, and add or remove components, from menus
 - Import models with assimp (glTF, OBJ, FBX, Collada, ...) from File > Import Model, as one entity tree: meshes, materials, textures and lights
+- Import images as sprites from File > Import Sprite; a sprite is clicked and outlined by its visible pixels
 - Scenes saved as `.gncscene` files (JSON, see [docs/SceneFormat.md](docs/SceneFormat.md)) and opened from the File menu; new scenes are 2D or 3D
 - 2D scenes get a 2D editor: an orthographic view that pans and zooms, and a gizmo kept to the XY plane
 - Engine panel: FPS and camera position
@@ -67,7 +69,7 @@ From Git Bash:
     cmake --build build -j8
     ./run.sh                                 # or: cd bin/debug && ./engine.exe
 
-The executable, compiled shaders, fonts and models go to `bin/debug/` (or `bin/release/`). Every folder under `resources/objects` that holds a `.gltf`, `.glb`, `.obj`, `.fbx` or `.dae` is copied to `models/` there, and File > Import Model lists every file in it that assimp reads. Re-run the configure step after adding a `.cpp`, `.slang` or model file: they are collected with `file(GLOB)`.
+The executable, compiled shaders, fonts, models and textures go to `bin/debug/` (or `bin/release/`). Every folder under `resources/objects` that holds a `.gltf`, `.glb`, `.obj`, `.fbx` or `.dae` is copied to `models/` there, and File > Import Model lists every file in it that assimp reads. Every `.png`, `.jpg`, `.jpeg`, `.bmp` and `.tga` under `resources/textures` is copied to `textures/`, and File > Import Sprite lists them. Re-run the configure step after adding a `.cpp`, `.slang`, model or texture file: they are collected with `file(GLOB)`.
 
 Scenes are not copied: the editor opens and saves the `.gncscene` files in `resources/scenes` in place, and starts with `Showcase.gncscene`.
 
@@ -101,6 +103,12 @@ Scenes are not copied: the editor opens and saves the `.gncscene` files in `reso
 - [ ] G-buffer debug views
 - [ ] Shader hot reloading (pipelines are not rebuilt yet)
 - [ ] GPU timings per render pass
+- [ ] 2D
+  - [x] Sprite component and a batched sprite pass: alpha blended, drawn in a sort order (layer, then z)
+  - [ ] Sprite sheets and frame animation
+  - [ ] Text rendering: MSDF font atlas, word wrap and alignment in a box, inline icons and colored keywords
+  - [ ] Sprite effects: tint, outline, dissolve
+  - [ ] 2D particles
 
 ### Editor
 
@@ -134,3 +142,70 @@ Scenes are not copied: the editor opens and saves the `.gncscene` files in `reso
   - [ ] Collision tests between colliders
 - [ ] Third person camera
 - [ ] Scope stopwatch
+- [ ] Tweening: position, rotation, scale and color over time with easing curves; sequences and callbacks
+- [ ] Game UI, apart from ImGui (which stays the editor's)
+  - [ ] Hover, click and drag and drop on sprites, hit tested on their bounds (the editor's picking is left out of game builds)
+  - [ ] Buttons, panels, tooltips
+  - [ ] Layout anchored to the screen, following the window size
+- [ ] Audio (miniaudio): sound effects and music, volume groups
+- [ ] Lua scripting (Lua 5.4 + sol2)
+  - [ ] Scripts loaded through `FileSystem`, sandboxed (no `io`, `os`)
+  - [ ] Coroutines that wait for the game: a player's choice, an animation
+  - [ ] Hot reload without restarting
+  - [ ] Script errors logged with the file and line, never a crash
+- [ ] Networking
+  - [ ] Transport (ENet or GameNetworkingSockets): reliable, ordered messages between a host and clients
+  - [ ] Message serialization with a protocol version
+  - [ ] Lobby: host, join by code or address, ready up
+  - [ ] Steam lobbies and relay, so nobody has to forward ports
+- [ ] Seeded random number generator with independent streams
+- [ ] Save files: settings, an unfinished run
+
+### Game
+
+A roguelike deck-builder for friends: each player plays their own run at the same time, and players sabotage each other to get ahead.
+
+- [ ] Paper prototype with friends, before any code
+- [ ] Rules core, in C++ apart from the engine and the ECS
+  - [ ] Game state: players, zones (draw pile, hand, discard, exhaust), cards, statuses, HP, energy, gold
+  - [ ] Actions in, events out; every action validated against the state
+  - [ ] Effect queue that resolves effects in order and fires triggers
+  - [ ] Deterministic: a seeded stream per player and per system (map, shuffles, rewards, events), so one inserted card does not change later rolls
+  - [ ] Action log: a seed and its log replay a game
+  - [ ] Console client, playable over the network before any art
+- [ ] Lua content API
+  - [ ] Verbs: draw, deal damage, block, apply a status, gain energy or gold, add, remove or exhaust cards, send cards to a player, choose a card or target
+  - [ ] Triggers for relics and statuses: turn start and end, card played, damage taken, card received from a player
+  - [ ] Simple cards as JSON data built from these verbs; Lua for the rest
+  - [ ] Determinism rules for scripts: no `math.random` or `os.time`, no `pairs()` over string keys in game logic (Lua 5.4 seeds string hashes per run)
+- [ ] Run structure
+  - [ ] Map generated per act from the seed: a node graph of fights, elites, shops, rest sites, events and the boss
+  - [ ] Fights: enemies with intents, turns, rewards (a card choice, gold, relics)
+  - [ ] Shops, rest sites (heal or upgrade), events with text and choices
+  - [ ] Card upgrades and card removal
+- [ ] Multiplayer
+  - [ ] Parallel runs, one per player, simulated by the host; clients send actions and receive events
+  - [ ] Hidden information: hands and draw piles never leave the host
+  - [ ] Sabotage queued and applied at a safe point: the start of the target's next turn, fight or map step
+  - [ ] The others' progress shown: floor, HP, gold, deck size
+  - [ ] Win condition (first to beat the boss, last alive, or best score; to decide)
+  - [ ] Reconnect from the seed and the action log
+- [ ] Sabotage
+  - [ ] Sabotage cards: junk cards into a deck, enemy buffs, reward theft, gold tax, map fog
+  - [ ] Counterplay: block, reflect, cleanse
+  - [ ] Catch-up, so the leader is the natural target: sabotage costs more against a player who is behind, and being hit gives a resource
+- [ ] Presentation
+  - [ ] Cards drawn from a template: frame, art, cost, name, rules text with keyword icons
+  - [ ] Hand: fanned out, zoom on hover, drag to play, targeting arrow
+  - [ ] Cards animate between zones
+  - [ ] Screens: map, fight (with enemy intents), rewards, shop, event, lobby
+  - [ ] Notifications ("Ali sent you 2 Curses") and an effect when a sabotage lands
+  - [ ] Sound and music
+- [ ] Tools
+  - [ ] Card editor: definition, text, art and Lua effect, with a live preview from the card template
+  - [ ] Relic, enemy (HP, intent pattern), encounter and event editors
+  - [ ] Map generation preview from a seed
+  - [ ] In-game debug console: set the seed, add a card or relic, jump to a floor, send a sabotage, kill the enemy
+  - [ ] Headless bot simulator: full runs, win rate per card and relic, time per floor, how often the leader at halfway wins
+  - [ ] Replay viewer: step through a seed and its action log
+- [ ] First playable: 2 players, 1 act (about 10 floors and a boss), about 30 cards, 5 enemies, 2 elites, 5 relics, 4 or 5 sabotage cards and 1 counter card

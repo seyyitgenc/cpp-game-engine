@@ -30,6 +30,19 @@ public:
     const std::filesystem::path& GetPath() const { return path; }
 };
 
+// An image file, imported with Scene/SpriteImporter.
+class ImportSpriteEvent : public Event {
+private:
+    std::filesystem::path path;
+
+public:
+    GNC_EVENT_TYPE(ImportSpriteEvent, EventCategory::Scene)
+
+    explicit ImportSpriteEvent(std::filesystem::path file) : path(std::move(file)) {}
+
+    const std::filesystem::path& GetPath() const { return path; }
+};
+
 // ------------
 // Whole Scenes
 // ------------

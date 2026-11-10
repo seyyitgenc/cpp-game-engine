@@ -4,6 +4,7 @@
 
 #include "../ECS/Component/BoundingVolumeComponent.hpp"
 #include "../ECS/Component/MeshComponent.hpp"
+#include "../ECS/Component/SpriteComponent.hpp"
 #include "../ECS/Component/TransformsComponent.hpp"
 
 #include "../Camera/Camera.hpp"
@@ -91,6 +92,12 @@ public:
         camera = cam;
     }
 
+    const Camera* GetCamera() const {
+        return camera;
+    }
+
+    // What the camera may see of the active entities that have a transform
+    // and something to draw: a mesh, a sprite, or both.
     void CullScene(const std::vector<Entity*>& allEntities) {
         visibleEntities.clear();
 
@@ -102,17 +109,25 @@ public:
             if (!entity->IsActiveInHierarchy()) continue;
 
             auto meshComponent = entity->GetComponent<MeshComponent>();
-            if (!meshComponent) continue;
+            auto spriteComponent = entity->GetComponent<SpriteComponent>();
+            if (!meshComponent && !spriteComponent) continue;
 
             auto transformComponent = entity->GetComponent<TransformComponent>();
             if (!transformComponent) continue;
 
-            // Without a volume, it could be anywhere.
-            auto boundsComponent = entity->GetComponent<BoundingVolumeComponent>();
-            const BoundingVolume* volume = boundsComponent && boundsComponent->IsActive() ? boundsComponent->GetVolume() : nullptr;
-            if (!volume || frustum.Intersects(*volume, transformComponent->GetWorldMatrix())) {
-                visibleEntities.push_back(entity);
+            const glm::mat4 world = transformComponent->GetWorldMatrix();
+            bool visible = false;
+            if (meshComponent) {
+                // Without a volume, it could be anywhere.
+                auto boundsComponent = entity->GetComponent<BoundingVolumeComponent>();
+                const BoundingVolume* volume = boundsComponent && boundsComponent->IsActive() ? boundsComponent->GetVolume() : nullptr;
+                visible = !volume || frustum.Intersects(*volume, world);
             }
+            if (!visible && spriteComponent) {
+                const glm::vec3 half(spriteComponent->GetSize() * 0.5f, 0.0f);
+                visible = frustum.Intersects(AABBBoundingBox3D { -half, half }, world);
+            }
+            if (visible) visibleEntities.push_back(entity);
         }
     }
 

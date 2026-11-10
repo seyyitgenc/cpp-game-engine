@@ -68,7 +68,7 @@ Godot does with `.scn` and as the TODO list's asset cooking plans.
 | `camera` | The id of the entity whose `Camera` the scene is seen through, or `null`; see Cameras. |
 | `environment` | Scene-wide render settings. |
 | `meshes` | Every mesh the scene uses, by resource id. |
-| `textures` | Every texture its materials use, by resource id. |
+| `textures` | Every texture its materials and sprites use, by resource id. |
 | `materials` | The scene's materials, by material id. |
 | `entities` | The root entities, in order, each holding its children. |
 
@@ -87,8 +87,9 @@ z = 10, looking down -z, which the editor camera starts from. In a 2D scene
 the editor camera stays orthographic and looks down -z: the right button
 drags the view and the wheel zooms. The gizmo moves and scales in x and y
 and rotates about z, the grid lies on z = 0, and there is no orientation
-gizmo. Still to come: Add Component menus that offer the 2D components (a
-sprite, a 2D camera).
+gizmo. What a 2D scene shows is mostly sprites (the `Sprite` component),
+which work in 3D scenes too. Still to come: Add Component menus that offer
+only the 2D components, and a 2D camera.
 
 ## Values
 
@@ -243,12 +244,36 @@ of the `materials` table. Version 1's components:
 | `Transform` | `position` vec3, `rotation` quat, `scale` vec3; local to the nearest ancestor with a transform |
 | `Mesh` | `mesh` mesh, `materials` array of material ids or `null`, slot i for submesh i |
 | `BoundingVolume` | `shape`: `"Box"`, `"Sphere"`, `"Capsule"` or `"ConvexHull"`. The volume itself is refitted on load. |
+| `Sprite` | `texture` texture, `color` vec3 linear (multiplied with the texture's), `opacity` (0 to 1), `pixelsPerUnit` (texture pixels to a unit), `flipX`, `flipY` bool, `layer` int; see Sprites |
 | `Light` | `lightType` (`"Directional"`, `"Point"`, `"Spot"`), `color` vec3 linear, `intensity` (cd, or lux for directional), `range`, `innerConeAngle`, `outerConeAngle` (radians) |
 | `Orbit` | `center` vec3, `radius`, `angularSpeed` (radians per second), `angle` (radians, where it is now) |
 | `Camera` | `projection` (`"Perspective"`, `"Orthographic"`), `yfov` (vertical, radians), `ymag` (half the orthographic view's height), `znear`, `zfar` |
 
 `type` is reserved in every component, which is why the light's type is
 `lightType`.
+
+## Sprites
+
+A sprite is a rectangle in its entity's XY plane, centered on the entity's
+origin and drawn unlit: its texture, times `color`, at `opacity`. Its size
+is not stored: it is the texture's size in pixels over `pixelsPerUnit`
+(Unity's "pixels per unit"), so a 256 x 128 image at 128 is 2 x 1 units
+before the transform's scale. With `texture` `null` it is a white square, one
+unit a side. `flipX` and `flipY` mirror the image, not the entity.
+
+Sprites are drawn back to front and blended, in this order:
+
+1. `layer`, lower first: a higher layer is always on top, whatever the
+   depths (Unity's "order in layer", Godot's `z_index`).
+2. Depth, farthest from the camera first. In a 2D scene that is z: a larger
+   z is on top.
+3. The entity `id`, so two sprites with the same layer and depth keep one
+   order, though an arbitrary one. Give sprites that overlap different
+   layers or depths.
+
+File > Import Sprite gives the texture the image's path as its id
+(`"textures/card.png"`) and `"ClampToEdge"` wrapping; with `"Repeat"`,
+filtering would bring the opposite edge in at the sprite's border.
 
 ## Cameras
 

@@ -63,6 +63,27 @@ struct GpuMaterial {
     std::uint32_t pad[3] {};
 };
 
+// shaders/sprite.slang: GpuSprite (set 2, binding 0, std430)
+// Built from a SpriteComponent by SpritePass.
+struct GpuSprite {
+    // The unit square (0..1 in x and y) to world space.
+    glm::mat4 model {1.0f};
+    // Linear RGB tint; a is the opacity.
+    glm::vec4 color {1.0f};
+    // xy: the UV at the square's (0, 0) corner; zw: the step to its (1, 1).
+    // Images have their origin at the top left.
+    glm::vec4 uvRect {0.0f, 1.0f, 1.0f, -1.0f};
+    // As GeometryPushConstants::entityId.
+    std::uint32_t entityId = 0;
+    std::uint32_t pad[3] {};
+};
+
+// shaders/sprite.slang: BatchData (push constants)
+struct SpritePushConstants {
+    // A TextureTable slot.
+    std::uint32_t texture = 0;
+};
+
 // shaders/post_process.slang: GRID_* (the editor grid's plane)
 enum class GridPlane : std::uint32_t {
     None,
@@ -121,6 +142,11 @@ static_assert(offsetof(GpuMaterial, normalTexture) == 56);
 static_assert(offsetof(GpuMaterial, occlusionTexture) == 60);
 static_assert(offsetof(GpuMaterial, emissiveTexture) == 64);
 static_assert(sizeof(GpuMaterial) == 80);
+
+static_assert(offsetof(GpuSprite, color) == 64);
+static_assert(offsetof(GpuSprite, uvRect) == 80);
+static_assert(offsetof(GpuSprite, entityId) == 96);
+static_assert(sizeof(GpuSprite) == 112);
 
 static_assert(offsetof(PostProcessPushConstants, encodeSrgb) == 4);
 static_assert(offsetof(PostProcessPushConstants, selectedBegin) == 8);

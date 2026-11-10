@@ -17,11 +17,13 @@
 #include "ECS/Component/LightComponent.hpp"
 #include "ECS/Component/MeshComponent.hpp"
 #include "ECS/Component/OrbitComponent.hpp"
+#include "ECS/Component/SpriteComponent.hpp"
 #include "ECS/Component/TransformsComponent.hpp"
 #include "Event/Events.hpp"
 #include "Resource/Primitives.hpp"
 #include "Scene/ModelImporter.hpp"
 #include "Scene/SceneSerializer.hpp"
+#include "Scene/SpriteImporter.hpp"
 #include "UI/Icons.hpp"
 #include "UI/ImGuiMenu.hpp"
 #include "UI/Panels/DemoWindowPanel.hpp"
@@ -61,6 +63,18 @@ std::vector<std::filesystem::path> FindModels() {
     }
     std::ranges::sort(models);
     return models;
+}
+
+// Every image among those the textures target copied next to the executable.
+std::vector<std::filesystem::path> FindImages() {
+    std::vector<std::filesystem::path> images;
+    std::error_code error;
+    for (auto it = std::filesystem::recursive_directory_iterator(FileSystem::getPath("textures"), error);
+         !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error)) {
+        if (it->is_regular_file() && IsImageFile(it->path())) images.push_back(it->path());
+    }
+    std::ranges::sort(images);
+    return images;
 }
 
 std::vector<std::filesystem::path> FindScenes() {
@@ -243,6 +257,11 @@ void App::SubscribeToEvents() {
         return true;
     }));
 
+    subscriptions.push_back(eventBus.Subscribe<ImportSpriteEvent>([this](ImportSpriteEvent& e) {
+        if (Entity* sprite = ImportSprite(e.GetPath(), scene, resources)) selection.Select(sprite);
+        return true;
+    }));
+
     // Everything else that points at the entity or a descendant lets go
     // first.
     subscriptions.push_back(eventBus.Subscribe<DestroyEntityEvent>([this](DestroyEntityEvent& e) {
@@ -272,6 +291,8 @@ void App::RegisterComponents() {
     });
 
     componentTypes.Register<BoundingVolumeComponent>({ .icon = ICON_FA_VECTOR_SQUARE });
+
+    componentTypes.Register<SpriteComponent>({ .icon = ICON_FA_IMAGE });
 
     componentTypes.Register<LightComponent>({ .icon = ICON_FA_LIGHTBULB });
 
@@ -314,6 +335,18 @@ void App::BuildGui() {
         importModel.AddItem(model.lexically_relative(modelRoot).generic_string(), [this, model] { eventBus.Enqueue<ImportModelEvent>(model); });
     }
     if (models.empty()) importModel.AddItem("No models found", {}, { .enabled = [] { return false; } });
+    // A submenu for each folder: there are many images.
+    ImGuiMenu& importSprite = file.GetMenu("Import Sprite");
+    const std::filesystem::path imageRoot = FileSystem::getPath("textures");
+    const std::vector<std::filesystem::path> images = FindImages();
+    for (const std::filesystem::path& image : images) {
+        ImGuiMenu* menu = &importSprite;
+        for (const std::filesystem::path& folder : image.lexically_relative(imageRoot).parent_path()) {
+            menu = &menu->GetMenu(folder.string());
+        }
+        menu->AddItem(image.filename().string(), [this, image] { eventBus.Enqueue<ImportSpriteEvent>(image); });
+    }
+    if (images.empty()) importSprite.AddItem("No images found", {}, { .enabled = [] { return false; } });
     file.AddSeparator();
     // Asks to quit, as Esc does (see SubscribeToEvents()).
     file.AddItem("Quit", [this] { eventBus.Enqueue<QuitApplicationEvent>(); }, { .shortcut = "Esc" });

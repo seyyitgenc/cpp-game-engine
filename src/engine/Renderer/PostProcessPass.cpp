@@ -6,6 +6,7 @@
 #include "GeometryPass.hpp"
 #include "LightingPass.hpp"
 #include "ShaderTypes.hpp"
+#include "SpritePass.hpp"
 #include "Utils/VulkanHelpers.hpp"
 
 namespace GNC {
@@ -17,6 +18,8 @@ enum InputBinding : std::uint32_t {
     HdrColorBinding = 0,
     EntityIdBinding = 1,
     DepthBinding = 2,
+    SpriteLayerBinding = 3,
+    SpriteOrderBinding = 4,
     InputBindingCount
 };
 
@@ -24,8 +27,8 @@ enum InputBinding : std::uint32_t {
 
 PostProcessPass::PostProcessPass(const std::string& name, const RenderTargetContext& renderContext, vk::Extent2D renderExtent,
                                  vk::DescriptorSetLayout globalSetLayout, const PassShaders& shaders,
-                                 GeometryPass* gPass, LightingPass* lPass)
-    : RenderPass(name), context(renderContext), extent(renderExtent), geometryPass(gPass), lightingPass(lPass) {
+                                 GeometryPass* gPass, LightingPass* lPass, SpritePass* sPass)
+    : RenderPass(name), context(renderContext), extent(renderExtent), geometryPass(gPass), lightingPass(lPass), spritePass(sPass) {
     output = Attachment(context, extent, OutputFormat,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor);
@@ -147,11 +150,13 @@ void PostProcessPass::CreateDescriptorSet() {
     });
     inputSet = std::move(sets.front());
 
-    // The layouts the lighting and geometry passes leave these in.
+    // The layouts the lighting, geometry and sprite passes leave these in.
     std::array<vk::DescriptorImageInfo, InputBindingCount> imageInfos;
     imageInfos[HdrColorBinding] = { .imageView = *lightingPass->GetOutput().view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
     imageInfos[EntityIdBinding] = { .imageView = *geometryPass->GetGBuffer().entityId.view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
     imageInfos[DepthBinding] = { .imageView = *geometryPass->GetGBuffer().depth.view, .imageLayout = vk::ImageLayout::eDepthStencilReadOnlyOptimal };
+    imageInfos[SpriteLayerBinding] = { .imageView = *spritePass->GetOutput().view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
+    imageInfos[SpriteOrderBinding] = { .imageView = *spritePass->GetDrawOrder().view, .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal };
 
     std::array<vk::WriteDescriptorSet, InputBindingCount> writes;
     for (std::uint32_t i = 0; i < InputBindingCount; ++i) {

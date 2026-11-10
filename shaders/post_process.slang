@@ -1,17 +1,22 @@
 // Post-process pass: exposure, then tonemapping, from linear HDR into the
-// scene image the Viewport shows, then the editor's grid and outlines. sRGB
-// encoding happens here when the target format does not do it (the scene
-// image is UNORM).
+// scene image the Viewport shows, then the editor's grid, the sprite layer
+// and the editor's outlines. sRGB encoding happens here when the target
+// format does not do it (the scene image is UNORM).
 
+import common.color;
 import common.frame;
 import common.fullscreen;
 
-// Set 1 (PostProcessPass::CreateDescriptorSet): the lighting pass output and
-// the G-buffer's entity ids and depth. Set 0 is the per-frame global set; the
-// outlines use its camera.
+// Set 1 (PostProcessPass::CreateDescriptorSet): the lighting pass output, the
+// G-buffer's entity ids and depth, and the sprite pass outputs. Set 0 is the
+// per-frame global set; the grid and the outlines use its camera.
 [[vk::binding(0, 1)]] Texture2D<float4> hdrColor;
 [[vk::binding(1, 1)]] Texture2D<uint> entityIds;
 [[vk::binding(2, 1)]] Texture2D<float> depth;
+// sRGB encoded and premultiplied by alpha (shaders/sprite.slang).
+[[vk::binding(3, 1)]] Texture2D<float4> spriteLayer;
+// 1 + the draw order of the pixel's topmost sprite; 0 where there is none.
+[[vk::binding(4, 1)]] Texture2D<uint> spriteOrder;
 
 // C++: PostProcessPushConstants in Renderer/ShaderTypes.hpp.
 struct PostData {
@@ -87,13 +92,6 @@ float3 PbrNeutralToneMap(float3 color) {
     return lerp(color, float3(newPeak), g);
 }
 
-// The sRGB transfer function, for when the hardware does not apply it.
-float3 LinearToSrgb(float3 color) {
-    float3 low = color * 12.92;
-    float3 high = 1.055 * pow(color, 1.0 / 2.4) - 0.055;
-    return select(color <= 0.0031308, low, high);
-}
-
 bool IsSelected(uint id) {
     return id >= post.selectedBegin && id < post.selectedEnd;
 }
@@ -120,6 +118,7 @@ float3 ApplyOutlines(float3 color, int2 pixel) {
     const bool outsideHovered = !IsHovered(center);
     if (!outsideSelected && !outsideHovered) return color;
     const float centerDepth = ViewDepth(depth.Load(int3(pixel, 0)));
+    const uint centerOrder = spriteOrder.Load(int3(pixel, 0));
 
     uint width, height;
     entityIds.GetDimensions(width, height);
@@ -136,9 +135,14 @@ float3 ApplyOutlines(float3 color, int2 pixel) {
             const uint id = entityIds.Load(texel);
             const bool selected = outsideSelected && IsSelected(id);
             const bool hovered = outsideHovered && IsHovered(id);
+            if (!selected && !hovered) continue;
             // Only on what lies behind: drawn around something in front of
             // the entity, it would look like that thing's own outline.
-            if ((selected || hovered) && centerDepth >= ViewDepth(depth.Load(texel)) * (1.0 - OUTLINE_DEPTH_TOLERANCE)) {
+            // Sprites write no depth, so a sprite is in front of another
+            // when it was drawn later.
+            const uint order = spriteOrder.Load(texel);
+            if (order != 0 && centerOrder > order) continue;
+            if (centerDepth >= ViewDepth(depth.Load(texel)) * (1.0 - OUTLINE_DEPTH_TOLERANCE)) {
                 nearSelected = nearSelected || selected;
                 nearHovered = nearHovered || hovered;
             }
@@ -234,5 +238,10 @@ float4 fragMain(VSOutput input) : SV_Target {
         color = LinearToSrgb(saturate(color));
     }
     color = ApplyGrid(color, input.position.xy);
+
+    // Over the grid: sprites write no depth for it to hide behind.
+    const float4 sprites = spriteLayer.Load(int3(pixel, 0));
+    color = color * (1.0 - sprites.a) + sprites.rgb;
+
     return float4(ApplyOutlines(color, pixel), 1.0);
 }

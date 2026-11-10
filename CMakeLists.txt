@@ -203,6 +203,37 @@ endforeach()
 add_custom_target(models ALL ${MODEL_COPY_COMMANDS} COMMENT "Copying models" VERBATIM)
 add_dependencies(${PROJECT_NAME} models)
 
+# Textures
+# Every image of these formats under resources/textures is copied, in its
+# folder, to textures/ next to the executable, where File > Import Sprite
+# lists them (Scene/SpriteImporter: IsImageFile).
+set(TEXTURE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/resources/textures)
+set(TEXTURE_OUTPUT_DIR ${ENGINE_OUTPUT_DIR}/textures)
+set(TEXTURE_EXTENSIONS png jpg jpeg bmp tga)
+set(TEXTURE_PATTERNS)
+foreach(EXTENSION ${TEXTURE_EXTENSIONS})
+    list(APPEND TEXTURE_PATTERNS ${TEXTURE_SOURCE_DIR}/*.${EXTENSION})
+endforeach()
+file(GLOB_RECURSE TEXTURE_FILES ${TEXTURE_PATTERNS})
+
+set(TEXTURE_COPIES)
+foreach(TEXTURE ${TEXTURE_FILES})
+    file(RELATIVE_PATH TEXTURE_RELATIVE_PATH ${TEXTURE_SOURCE_DIR} ${TEXTURE})
+    set(TEXTURE_COPY ${TEXTURE_OUTPUT_DIR}/${TEXTURE_RELATIVE_PATH})
+    get_filename_component(TEXTURE_COPY_DIR ${TEXTURE_COPY} DIRECTORY)
+    add_custom_command(
+        OUTPUT ${TEXTURE_COPY}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${TEXTURE_COPY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEXTURE} ${TEXTURE_COPY}
+        DEPENDS ${TEXTURE}
+        COMMENT "Copying textures/${TEXTURE_RELATIVE_PATH}"
+        VERBATIM)
+    list(APPEND TEXTURE_COPIES ${TEXTURE_COPY})
+endforeach()
+
+add_custom_target(textures ALL DEPENDS ${TEXTURE_COPIES})
+add_dependencies(${PROJECT_NAME} textures)
+
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -std=c++23)
 # target_compile_options(${PROJECT_NAME} PRIVATE -std=c++23)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address,undefined,leak)

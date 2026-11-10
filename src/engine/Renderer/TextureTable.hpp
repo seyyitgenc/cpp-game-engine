@@ -13,12 +13,12 @@ namespace GNC {
 
 // Texture table
 // Every loaded texture as one combined image sampler in a single array, set 1
-// of the geometry pass, which materials index into. Free slots hold White, so
-// the whole array is always valid and no descriptor indexing features are
-// needed.
+// of the geometry and sprite passes, which materials and sprites index into.
+// Free slots hold White, so the whole array is always valid and no descriptor
+// indexing features are needed.
 class TextureTable {
 public:
-    // shaders/geometry_pass.slang: MAX_TEXTURES
+    // shaders/geometry_pass.slang, shaders/sprite.slang: MAX_TEXTURES
     static constexpr std::uint32_t Capacity = 1024;
 
     // For a material without the texture: they leave its factors unchanged.

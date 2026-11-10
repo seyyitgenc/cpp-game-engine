@@ -24,6 +24,7 @@
 #include "ImGuiPass.hpp"
 #include "LightingPass.hpp"
 #include "PostProcessPass.hpp"
+#include "SpritePass.hpp"
 
 namespace GNC {
 
@@ -439,7 +440,7 @@ void Renderer::RecordPick(FrameData& frame) {
     };
     frame.commandBuffer.pipelineBarrier2(vk::DependencyInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &toHost });
 
-    // What GeometryPass numbered the ids by.
+    // What the geometry and sprite passes numbered the ids by.
     frame.pickEntities = cullingSystem.GetVisibleEntities();
 }
 
@@ -461,9 +462,9 @@ void Renderer::ReadPick(FrameData& frame) {
     frame.hoverPending = false;
 }
 
-// GeometryPass numbers the ids by the visible list, so this order puts each
-// outlined subtree in one run of ids: selected only, selected and hovered,
-// then hovered only.
+// The geometry and sprite passes number the ids by the visible list, so this
+// order puts each outlined subtree in one run of ids: selected only, selected
+// and hovered, then hovered only.
 void Renderer::OrderForOutlines() {
     std::vector<Entity*>& visible = cullingSystem.GetVisibleEntities();
     auto selected = [this](const Entity* entity) { return entity->IsInSubtree(outlinedSelected); };
@@ -512,12 +513,14 @@ void Renderer::SetupRenderPasses() {
     Shader geometryFragment("geometry_pass", vk::ShaderStageFlagBits::eFragment);
     Shader lightingVertex("lighting_pass", vk::ShaderStageFlagBits::eVertex);
     Shader lightingFragment("lighting_pass", vk::ShaderStageFlagBits::eFragment);
+    Shader spriteVertex("sprite", vk::ShaderStageFlagBits::eVertex);
+    Shader spriteFragment("sprite", vk::ShaderStageFlagBits::eFragment);
     Shader postVertex("post_process", vk::ShaderStageFlagBits::eVertex);
     Shader postFragment("post_process", vk::ShaderStageFlagBits::eFragment);
     Shader debugVertex("debug_draw", vk::ShaderStageFlagBits::eVertex);
     Shader debugFragment("debug_draw", vk::ShaderStageFlagBits::eFragment);
-    for (Shader* shader : { &geometryVertex, &geometryFragment, &lightingVertex, &lightingFragment, &postVertex, &postFragment,
-                            &debugVertex, &debugFragment }) {
+    for (Shader* shader : { &geometryVertex, &geometryFragment, &lightingVertex, &lightingFragment, &spriteVertex, &spriteFragment,
+                            &postVertex, &postFragment, &debugVertex, &debugFragment }) {
         LoadShader(*shader, shaderContext);
     }
 
@@ -533,12 +536,22 @@ void Renderer::SetupRenderPasses() {
     // Without dependencies, pass order is hash map order.
     lightingPass->AddDependency(geometryPass->GetName());
 
+    // After the geometry pass, whose ids and depth it uses; after the
+    // lighting pass only to fix the order.
+    auto spritePass = renderPassManager.AddRenderPass<SpritePass>("SpritePass",
+        context, sceneExtent, *globalSetLayout,
+        PassShaders { *spriteVertex.GetShaderModule(), *spriteFragment.GetShaderModule() },
+        &cullingSystem, textureTable, geometryPass);
+    spritePass->AddDependency(geometryPass->GetName());
+    spritePass->AddDependency(lightingPass->GetName());
+
     postProcessPass = renderPassManager.AddRenderPass<PostProcessPass>("PostProcessPass",
         context, sceneExtent, *globalSetLayout,
         PassShaders { *postVertex.GetShaderModule(), *postFragment.GetShaderModule() },
-        geometryPass, lightingPass);
+        geometryPass, lightingPass, spritePass);
     postProcessPass->AddDependency(geometryPass->GetName());
     postProcessPass->AddDependency(lightingPass->GetName());
+    postProcessPass->AddDependency(spritePass->GetName());
 
     auto debugDrawPass = renderPassManager.AddRenderPass<DebugDrawPass>("DebugDrawPass",
         context, sceneExtent, *globalSetLayout,
